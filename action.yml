@@ -1,0 +1,10 @@
+name: 'Project "Piper"'
+description: 'CI/CD tooling for the SAP Ecosystem'
+inputs:
+  command:
+    description: 'command to run'
+    required: true
+    default: 'help'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
