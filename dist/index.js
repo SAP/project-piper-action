@@ -953,14 +953,20 @@ module.exports = require("os");
 
 const core = __webpack_require__(470);
 const tc = __webpack_require__(533);
+const exec = __webpack_require__(986);
+const fs = __webpack_require__(747);
 
 async function run() {
   try {
     const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/download/v1.12.0/piper');
-
+    fs.chmod(piperPath, 0o775, (err) => {
+      if (err) throw err;
+      console.log('Piper is executable');
+    })
     const command = core.getInput('command');
     console.log(`running piper ${piperPath} with command ${command}`)
 
+    await exec.exec(`${piperPath} ${command}`);
   }
   catch (error) {
     core.setFailed(error.message);
