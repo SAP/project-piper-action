@@ -17,9 +17,10 @@ Please refer to the [GitHub Actions](https://help.github.com/en/actions) documen
 To include Project "Piper" GitHub Action in your workflow, use this snippet:
 
 ```yaml
-uses: sap/project-piper-action@master
-with:
-  command: help
+    - name: Show piper help page
+      uses: SAP/project-piper-action@master
+      with:
+        command: help
 ```
 
 The key `command` needs to be replaced with the command you want to use.
