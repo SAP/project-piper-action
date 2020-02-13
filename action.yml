@@ -5,6 +5,10 @@ inputs:
     description: 'command to run'
     required: true
     default: 'help'
+  flags:
+    description: 'flags/arguments for command'
+    required: false
+    default: ''
 runs:
   using: 'node12'
   main: 'dist/index.js'
