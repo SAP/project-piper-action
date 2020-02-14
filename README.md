@@ -50,6 +50,14 @@ docker run -it --rm project-piper-action bash
 $ node index.js
 ```
 
+For convinience those steps are wrapped into `startDevEnv.sh`.
+
+To provide _inputs_, you may set environment variables with the right names as in this example:
+
+```
+INPUT_COMMAND=version INPUT_FLAGS='-v' node index.js
+```
+
 ## Limitations
 
 This software runs on [GitHub Actions](https://github.com/features/actions) with Linux hosts.
