@@ -14,22 +14,40 @@ This software runs on [GitHub Actions](https://github.com/features/actions) with
 
 Please refer to the [GitHub Actions](https://help.github.com/en/actions) documentation for general information on how to use actions.
 
-To include Project "Piper" GitHub Action in your workflow, use this snippet:
+As an example, if your projects uses [Karma](https://karma-runner.github.io/latest/index.html) you can run it like this:
 
 ```yaml
-    - name: Show piper help page
-      uses: SAP/project-piper-action@master
+on: push
+name: Test
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+    - uses: SAP/project-piper-action@master
       with:
-        command: help
+        command: karmaExecuteTests
 ```
 
 The key `command` needs to be replaced with the command you want to use.
 The `help` command shows which commands are available.
 
+Optionally you may use `flags` to provide command line arguments.
+
 ## Configuration
 
 Configuration is done in `.pipeline/config.yml` in your project's repository.
 See [here](https://sap.github.io/jenkins-library/configuration/) for information on configuration.
+
+Based on the Karma example above, you might need to configure it differently based on how your project is set up.
+An example might be:
+
+```yaml
+steps:
+  karmaExecuteTests:
+    installCommand: npm install --quiet --no-audit
+    runCommand: npm test
+```
 
 ## Download and Installation for Development
 
