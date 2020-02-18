@@ -951,21 +951,20 @@ module.exports = require("os");
 /***/ 104:
 /***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
 
-const core = __webpack_require__(470);
-const tc = __webpack_require__(533);
-const exec = __webpack_require__(986);
-const fs = __webpack_require__(747);
+const core = __webpack_require__(470)
+const tc = __webpack_require__(533)
+const exec = __webpack_require__(986)
+const fs = __webpack_require__(747)
 
-async function run() {
+async function run () {
   try {
-    const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/latest/download/piper');
+    const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
     fs.chmodSync(piperPath, 0o775)
     const command = core.getInput('command')
     const flags = core.getInput('flags')
-    await exec.exec(`${piperPath} ${command} ${flags}`);
-  }
-  catch (error) {
-    core.setFailed(error.message);
+    await exec.exec(`${piperPath} ${command} ${flags}`)
+  } catch (error) {
+    core.setFailed(error.message)
   }
 }
 
