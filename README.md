@@ -6,10 +6,6 @@ SAP implements tooling for continuous delivery in [project "Piper"](https://sap.
 
 This repository contains a GitHub Action to integrate with project "Piper".
 
-## Requirements
-
-This software runs on [GitHub Actions](https://github.com/features/actions) with Linux hosts.
-
 ## Usage
 
 Please refer to the [GitHub Actions](https://help.github.com/en/actions) documentation for general information on how to use actions.
@@ -49,7 +45,7 @@ steps:
     runCommand: npm test
 ```
 
-## Download and Installation for Development
+## Development Setup
 
 First, install the dependencies and build the distributable:
 
@@ -59,6 +55,7 @@ npm run package
 ```
 
 You'll get a distributable file in `dest`.
+Make sure the distributable is up-to-date before you push.
 
 To try it out locally, you may use Docker:
 
@@ -84,9 +81,10 @@ This software runs on [GitHub Actions](https://github.com/features/actions) with
 
 No known issues as of now.
 
-## How to obtain support
+# How to obtain support
 
-Please open an [issue on GitHub](https://github.com/sap/project-piper-action/issues).
+Feel free to open new issues for feature requests, bugs or general feedback on
+the [GitHub issues page of this project](https://github.com/sap/project-piper-action/issues).
 
 ## License
 
