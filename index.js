@@ -1,5 +1,5 @@
-const run = require('./src/piper');
+const run = require('./src/piper')
 
 if (require.main === module) {
-  run();
+  run()
 }
