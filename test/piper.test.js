@@ -9,7 +9,6 @@ const fs = require('fs')
 
 const run = require('../src/piper.js');
 
-/* eslint-disable no-undef */
 describe('Piper', () => {
   beforeEach(() => {
     tc.downloadTool
