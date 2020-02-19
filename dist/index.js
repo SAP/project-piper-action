@@ -4458,7 +4458,7 @@ const fs = __webpack_require__(747)
 async function run () {
   try {
     const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
-    //fs.chmodSync(piperPath, 0o775)
+    fs.chmodSync(piperPath, 0o775)
     const command = core.getInput('command')
     const flags = core.getInput('flags')
     await exec.exec(`${piperPath} ${command} ${flags}`)
