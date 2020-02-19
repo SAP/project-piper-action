@@ -951,10 +951,10 @@ module.exports = require("os");
 /***/ 104:
 /***/ (function(__unusedmodule, __unusedexports, __webpack_require__) {
 
-const run = __webpack_require__(775);
+const run = __webpack_require__(775)
 
 if (require.main === require.cache[eval('__filename')]) {
-  run();
+  run()
 }
 
 
