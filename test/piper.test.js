@@ -13,20 +13,29 @@ describe('Piper', () => {
   beforeEach(() => {
     tc.downloadTool
       .mockReturnValue('./piper')
-    core.getInput
-      .mockReturnValueOnce('version')
-      .mockReturnValueOnce('--noTelemetry')
-
-      fs.chmodSync = jest.fn()
+    core.getInput.mockImplementation(key => {
+      switch (key) {
+        case 'command':
+          return 'version'
+        case 'flags':
+          return '--noTelemetry'
+        default:
+          return ''
+      }
+    })
+    fs.chmodSync = jest.fn()
   })
   afterEach(() => {
+    tc.downloadTool.mockReset()
+    core.getInput.mockReset()
+    fs.chmodSync.mockReset()
   })
 
-  test('', async () => {
-
+  test('default', async () => {
     await run();
 
     expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
     expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
+    expect(core.setFailed).not.toHaveBeenCalled()
   });
 });
