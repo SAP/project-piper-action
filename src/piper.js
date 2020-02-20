@@ -8,6 +8,7 @@ async function run () {
     const command = core.getInput('command', { required: true })
     const flags = core.getInput('flags')
 
+    console.log('Loading piper as latest release')
     const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
     fs.chmodSync(piperPath, 0o775)
     await exec.exec(`${piperPath} ${command} ${flags}`)
