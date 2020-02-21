@@ -14,6 +14,7 @@ describe('Piper', () => {
     tc.downloadTool
       .mockReturnValue('./piper')
     core.getInput
+      .mockReturnValueOnce('v1.10.0')
       .mockReturnValueOnce('version')
       .mockReturnValueOnce('--noTelemetry')
 
@@ -26,6 +27,7 @@ describe('Piper', () => {
 
     await run();
 
+    expect(tc.downloadTool).toHaveBeenCalledWith('https://github.com/SAP/jenkins-library/releases/download/v1.10.0/piper')
     expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
     expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
   });
