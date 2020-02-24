@@ -9,6 +9,10 @@ inputs:
     description: 'flags/arguments for command'
     required: false
     default: ''
+  piper-version:
+    description: 'specify a version of the piper binary to use, may be "master", "latest" or a released tag'
+    required: false
+    default: 'latest'
 runs:
   using: 'node12'
   main: 'dist/index.js'
