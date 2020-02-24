@@ -10,17 +10,14 @@ const run = require('../src/piper.js');
 
 describe('Piper', () => {
   let inputs
-  let inputSpy
 
   beforeEach(() => {
     inputs = {};
 
-    inputSpy = jest.spyOn(core, 'getInput');
-    failedSpy = jest.spyOn(core, 'setFailed');
     fs.chmodSync = jest.fn()
-
     tc.downloadTool.mockReturnValue('./piper')
-    inputSpy.mockImplementation((name, options) => {
+    jest.spyOn(core, 'setFailed')
+    jest.spyOn(core, 'getInput').mockImplementation((name, options) => {
       let val = inputs[name]
       if (options && options.required && !val) {
         throw new Error(`Input required and not supplied: ${name}`);
@@ -39,7 +36,7 @@ describe('Piper', () => {
 
     await run();
 
-    expect(failedSpy).not.toHaveBeenCalled()
+    expect(core.setFailed).not.toHaveBeenCalled()
     expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
     expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
   });
