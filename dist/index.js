@@ -4457,10 +4457,10 @@ const fs = __webpack_require__(747)
 
 async function run () {
   try {
-    const piperPath = await tc.downloadTool(getDownloadUrl())
-    fs.chmodSync(piperPath, 0o775)
     const command = core.getInput('command')
     const flags = core.getInput('flags')
+    const piperPath = await tc.downloadTool(getDownloadUrl())
+    fs.chmodSync(piperPath, 0o775)
     await exec.exec(`${piperPath} ${command} ${flags}`)
   } catch (error) {
     core.setFailed(error.message)
