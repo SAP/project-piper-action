@@ -12,7 +12,10 @@ describe('Piper', () => {
   let inputs
 
   beforeEach(() => {
-    inputs = {};
+    inputs = {
+      'command': 'version',
+      'flags': '--noTelemetry'
+    };
 
     fs.chmodSync = jest.fn()
     tc.downloadTool.mockReturnValue('./piper')
@@ -31,15 +34,40 @@ describe('Piper', () => {
   })
 
   test('default', async () => {
-    inputs['command'] = 'version'
-    inputs['flags'] = '--noTelemetry'
+    inputs['piper-version'] = ''
+
+    await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(tc.downloadTool).toHaveBeenCalledWith('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
+    expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
+    expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
+  });
+
+  test('download of latest version', async () => {
+    inputs['piper-version'] = 'latest'
+
+    await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(tc.downloadTool).toHaveBeenCalledWith('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
+  });
+
+  test('download of specific version', async () => {
     inputs['piper-version'] = 'v1.10.0'
 
     await run();
 
     expect(core.setFailed).not.toHaveBeenCalled()
     expect(tc.downloadTool).toHaveBeenCalledWith('https://github.com/SAP/jenkins-library/releases/download/v1.10.0/piper')
-    expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
-    expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
+  });
+
+  test('download of master version', async () => {
+    inputs['piper-version'] = 'master'
+
+    await run();
+
+    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(tc.downloadTool).toHaveBeenCalledWith('https://github.com/SAP/jenkins-library/releases/latest/download/piper_master')
   });
 });
