@@ -4457,10 +4457,8 @@ const fs = __webpack_require__(747)
 
 async function run () {
   try {
-    const command = core.getInput('command', { required: true })
+    const command = core.getInput('command')
     const flags = core.getInput('flags')
-
-    console.log('Loading piper as latest release')
     const piperPath = await tc.downloadTool('https://github.com/SAP/jenkins-library/releases/latest/download/piper')
     fs.chmodSync(piperPath, 0o775)
     await exec.exec(`${piperPath} ${command} ${flags}`)

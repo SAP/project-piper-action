@@ -1,4 +1,3 @@
-//jest.mock('@actions/core');
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
 
@@ -11,12 +10,11 @@ const run = require('../src/piper.js');
 
 describe('Piper', () => {
   let inputs
-  let inputSpy, logSpy, failedSpy
+  let inputSpy
 
   beforeEach(() => {
     inputs = {};
 
-    logSpy = jest.spyOn(console, 'log');
     inputSpy = jest.spyOn(core, 'getInput');
     failedSpy = jest.spyOn(core, 'setFailed');
     fs.chmodSync = jest.fn()
@@ -28,10 +26,6 @@ describe('Piper', () => {
         throw new Error(`Input required and not supplied: ${name}`);
       }
       return val.trim();
-    });
-    logSpy.mockImplementation(line => {
-      // uncomment to debug
-      // process.stderr.write('log:' + line + '\n');
     });
   })
   afterEach(() => {
@@ -45,16 +39,8 @@ describe('Piper', () => {
 
     await run();
 
-    expect(core.setFailed).not.toHaveBeenCalled()
+    expect(failedSpy).not.toHaveBeenCalled()
     expect(fs.chmodSync).toHaveBeenCalledWith('./piper', 0o775);
     expect(exec.exec).toHaveBeenCalledWith('./piper version --noTelemetry');
-  });
-
-  test('without command value', async () => {
-    inputs['command'] = '';
-
-    await run();
-
-    expect(failedSpy).toHaveBeenCalledWith('Input required and not supplied: command')
   });
 });
