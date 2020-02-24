@@ -16,19 +16,20 @@ async function run () {
 }
 
 function getDownloadUrl() {
-  const version = core.getInput('version')
-  if (version === 'release') {
+  const version = core.getInput('piper-version')
+  const commonUrlPrefix = 'https://github.com/SAP/jenkins-library/releases'
+  if (version === 'latest') {
     console.log("Downloading latest release of piper")
-    return 'https://github.com/SAP/jenkins-library/releases/latest/download/piper'
+    return `${commonUrlPrefix}/latest/download/piper`
   } else if (version === 'master') {
     console.log("Downloading latest build of master branch of piper")
-    return 'https://github.com/SAP/jenkins-library/releases/latest/download/piper_master'
+    return `${commonUrlPrefix}/latest/download/piper_master`
   } else if (/^v\d+\./.test(version)) {
     console.log(`Downloading version ${version} of piper`)
-    return `https://github.com/SAP/jenkins-library/releases/download/${version}/piper`
+    return `${commonUrlPrefix}/download/${version}/piper`
   } else {
     console.log(`WARN: ${version} was not recognized as valid piper version, downloading latest release`)
-    return 'https://github.com/SAP/jenkins-library/releases/latest/download/piper'
+    return `${commonUrlPrefix}/latest/download/piper`
   }
 }
 

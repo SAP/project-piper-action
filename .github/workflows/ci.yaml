@@ -32,10 +32,10 @@ jobs:
       with:
         command: version
         flags: "-v --noTelemetry"
-        version: master
+        piper-version: master
     - name: Run action to show Project Piper version using v1.13.0
       uses: ./
       with:
         command: version
         flags: "-v --noTelemetry"
-        version: v1.13.0
+        piper-version: v1.13.0

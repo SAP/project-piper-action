@@ -9,8 +9,8 @@ inputs:
     description: 'flags/arguments for command'
     required: false
     default: ''
-  version:
-    description: 'specify a version of the piper binary to use, may be "master", "release" or a released tag'
+  piper-version:
+    description: 'specify a version of the piper binary to use, may be "master", "latest" or a released tag'
     required: false
     default: 'release'
 runs:
