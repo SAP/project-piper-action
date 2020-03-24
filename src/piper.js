@@ -1,6 +1,7 @@
 const core = require('@actions/core')
 const tc = require('@actions/tool-cache')
 const exec = require('@actions/exec')
+const glob = require('@actions/glob')
 const fs = require('fs')
 
 async function run () {
@@ -10,6 +11,7 @@ async function run () {
     const piperPath = await tc.downloadTool(getDownloadUrl())
     fs.chmodSync(piperPath, 0o775)
     await exec.exec(`${piperPath} ${command} ${flags}`)
+    showReports()
   } catch (error) {
     core.setFailed(error.message)
   }
@@ -31,6 +33,15 @@ function getDownloadUrl() {
     console.log(`WARN: ${version} was not recognized as valid piper version, downloading latest release`)
     return `${commonUrlPrefix}/latest/download/piper`
   }
+}
+
+function showReports() {
+  const patterns = ['**/TEST*xml']
+  const globber = glob.create(patterns.join('\n'))
+  const files = globber.glob()
+  files.forEach(reportFile => {
+    console.log(reportFile)
+  })
 }
 
 module.exports = run;
