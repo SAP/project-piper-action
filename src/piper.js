@@ -1,7 +1,6 @@
 const core = require('@actions/core')
 const tc = require('@actions/tool-cache')
 const exec = require('@actions/exec')
-const http = require('@actions/http-client')
 const fs = require('fs')
 
 async function run () {
@@ -12,7 +11,7 @@ async function run () {
     let piperPath
     // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
     if (/^devel:/.test(version)) {
-      piperPath = buildDevelopmentBranch(version)
+      piperPath = await buildDevelopmentBranch(version)
     } else {
       piperPath = await tc.downloadTool(getDownloadUrl(version))
     }
@@ -49,12 +48,7 @@ async function buildDevelopmentBranch(version) {
   const commitish = versionComponents[3]
 
   const zip = await tc.downloadTool(`https://github.com/${githubOrg}/${repo}/archive/${commitish}.zip`)
-  console.log("xxzip")
-  console.log(zip)
-
   const unzippedPath = await tc.extractZip(zip);
-  console.log("xxunzippedPath")
-  console.log(unzippedPath)
   process.chdir(`${unzippedPath}/${repo}-${commitish}`)
   process.env.CGO_ENABLED = '0'
   await exec.exec(`go build -ldflags "-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitish} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=https://github.com/${githubOrg}/${repo} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=https://github.com/${githubOrg}/${repo}" -o piper`)

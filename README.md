@@ -73,8 +73,6 @@ To provide _inputs_, you may set environment variables with the right names as i
 INPUT_COMMAND=version INPUT_FLAGS='-v' node index.js
 ```
 
-env "INPUT_PIPER-VERSION=devel:SAP:jenkins-library:b0144614e529018f661152769b5543243e6bf033" INPUT_COMMAND=version INPUT_FLAGS='-v' node index.js
-
 ## Limitations
 
 This software runs on [GitHub Actions](https://github.com/features/actions) with Linux hosts.
