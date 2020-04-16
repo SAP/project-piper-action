@@ -4501,11 +4501,14 @@ async function buildDevelopmentBranch(version) {
   const commitish = versionComponents[3]
 
   const zip = await tc.downloadTool(`https://github.com/${githubOrg}/${repo}/archive/${commitish}.zip`)
-  const unzippedPath = await tc.extractZip(zip);
-  process.chdir(`${unzippedPath}/${repo}-${commitish.replace(/\//g, '-')}`)
+  const unzippedPath = await tc.extractZip(zip)
+  const oldWorkingDir = process.cwd()
+  const checkedOutSourcesPath = `${unzippedPath}/${repo}-${commitish.replace(/\//g, '-')}`
+  process.chdir(checkedOutSourcesPath)
   process.env.CGO_ENABLED = '0'
   await exec.exec(`go build -ldflags "-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitish} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=https://github.com/${githubOrg}/${repo} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=https://github.com/${githubOrg}/${repo}" -o piper`)
-  return process.cwd() + "/piper"
+  process.chdir(oldWorkingDir)
+  return `${checkedOutSourcesPath}/piper`
 }
 
 module.exports = run;
