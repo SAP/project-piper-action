@@ -3696,6 +3696,7 @@ var HttpCodes;
     HttpCodes[HttpCodes["RequestTimeout"] = 408] = "RequestTimeout";
     HttpCodes[HttpCodes["Conflict"] = 409] = "Conflict";
     HttpCodes[HttpCodes["Gone"] = 410] = "Gone";
+    HttpCodes[HttpCodes["TooManyRequests"] = 429] = "TooManyRequests";
     HttpCodes[HttpCodes["InternalServerError"] = 500] = "InternalServerError";
     HttpCodes[HttpCodes["NotImplemented"] = 501] = "NotImplemented";
     HttpCodes[HttpCodes["BadGateway"] = 502] = "BadGateway";
@@ -4459,16 +4460,23 @@ async function run () {
   try {
     const command = core.getInput('command')
     const flags = core.getInput('flags')
-    const piperPath = await tc.downloadTool(getDownloadUrl())
+    const version = core.getInput('piper-version')
+    let piperPath
+    // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
+    if (/^devel:/.test(version)) {
+      piperPath = await buildDevelopmentBranch(version)
+    } else {
+      piperPath = await tc.downloadTool(getDownloadUrl(version))
+    }
     fs.chmodSync(piperPath, 0o775)
+    await exec.exec(`${piperPath} version`)
     await exec.exec(`${piperPath} ${command} ${flags}`)
   } catch (error) {
     core.setFailed(error.message)
   }
 }
 
-function getDownloadUrl() {
-  const version = core.getInput('piper-version')
+function getDownloadUrl(version) {
   const commonUrlPrefix = 'https://github.com/SAP/jenkins-library/releases'
   if (version === 'latest') {
     console.log("Downloading latest release of piper")
@@ -4483,6 +4491,24 @@ function getDownloadUrl() {
     console.log(`WARN: ${version} was not recognized as valid piper version, downloading latest release`)
     return `${commonUrlPrefix}/latest/download/piper`
   }
+}
+
+async function buildDevelopmentBranch(version) {
+  console.log("Building a dev version of piper from " + version)
+  const versionComponents = version.split(":")
+  const githubOrg = versionComponents[1]
+  const repo = versionComponents[2]
+  const commitish = versionComponents[3]
+
+  const zip = await tc.downloadTool(`https://github.com/${githubOrg}/${repo}/archive/${commitish}.zip`)
+  const unzippedPath = await tc.extractZip(zip)
+  const oldWorkingDir = process.cwd()
+  const checkedOutSourcesPath = `${unzippedPath}/${repo}-${commitish.replace(/\//g, '-')}`
+  process.chdir(checkedOutSourcesPath)
+  process.env.CGO_ENABLED = '0'
+  await exec.exec(`go build -ldflags "-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitish} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=https://github.com/${githubOrg}/${repo} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=https://github.com/${githubOrg}/${repo}" -o piper`)
+  process.chdir(oldWorkingDir)
+  return `${checkedOutSourcesPath}/piper`
 }
 
 module.exports = run;
