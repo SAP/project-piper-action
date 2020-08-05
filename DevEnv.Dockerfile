@@ -14,3 +14,4 @@ ENV PATH="/opt/go/bin:${PATH}"
 
 COPY dist/index.js /home/actions/index.js
 WORKDIR /home/actions
+
