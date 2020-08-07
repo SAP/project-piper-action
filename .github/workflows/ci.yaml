@@ -14,8 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: npm ci
-    - run: npm run package
+    - run: ./build.sh
     - run: git diff --name-only --exit-code
 
   integration:
