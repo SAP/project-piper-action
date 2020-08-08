@@ -23,9 +23,22 @@ runs:
 
     - run: |
         echo '::group::Installing Project "Piper" version ${{ inputs.version }}'
-        wget https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
+
+        if [[ "${{ inputs.version }}" == "latest" ]]; then
+          echo "Latest release"
+          wget --quiet -O piper https://github.com/SAP/jenkins-library/releases/latest/download/piper
+        elif [[ "${{ inputs.version }}" == "v"* ]]; then
+          echo "Release ${{ inputs.version }}"
+          wget --quiet -O piper https://github.com/SAP/jenkins-library/releases/download/${{ inputs.version }}/piper
+        else
+          echo "Last commit from master branch"
+          wget --quiet -O piper https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
+        fi
+
+        wget --quiet https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
         sudo mv piper_master /usr/local/bin/piper
         sudo chmod 777 /usr/local/bin/piper
+        /usr/local/bin/piper version
         echo '::endgroup'
       shell: bash
 
