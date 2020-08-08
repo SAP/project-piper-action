@@ -18,6 +18,7 @@ runs:
         echo Installing Project "Piper" version ${{ inputs.version }}
         wget https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
         sudo mv piper_master /usr/local/bin/piper
+        sudo chmod 777 /usr/local/bin/piper
       shell: bash
 
     - run: /usr/local/bin/piper mavenBuild
