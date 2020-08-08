@@ -21,8 +21,11 @@ runs:
       shell: bash
 
     - run: /usr/local/bin/piper mavenBuild
+      shell: bash
 
     - run: /usr/local/bin/piper mavenExecuteIntegration
+      shell: bash
 
     - run: /usr/local/bin/piper mavenExecuteStaticCodeChecks
+      shell: bash
 
