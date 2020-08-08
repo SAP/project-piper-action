@@ -1,10 +1,28 @@
 name: 'Project "Piper"'
 description: 'CI/CD tooling for the SAP Ecosystem'
 inputs:
-  command:
-    description: 'command to run'
-    required: true
-    default: 'help'
+  version:
+    description: 'version of project "Piper" binary to run'
+    required: false
+    default: 'master'
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "composite"
+  steps:
+    - run: |
+        java -version
+        mvn -v
+        cat /etc/os-release
+      shell: bash
+
+    - run: |
+        Installing Project "Piper" version ${{ inputs.version }}
+        wget https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
+        sudo mv piper_master /usr/local/bin/piper
+      shell: bash
+
+    - run: /usr/local/bin/piper mavenBuild
+
+    - run: /usr/local/bin/piper mavenExecuteIntegration
+
+    - run: /usr/local/bin/piper mavenExecuteStaticCodeChecks
+
