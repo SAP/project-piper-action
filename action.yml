@@ -9,24 +9,40 @@ runs:
   using: "composite"
   steps:
     - run: |
+        echo '::group::Check Environment'
         java -version
         mvn -v
         cat /etc/os-release
+        if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+          echo "$OSTYPE"
+        else
+          echo "Only linux is supported as of now"; exit 1
+        fi
+        echo '::endgroup'
       shell: bash
 
     - run: |
-        echo Installing Project "Piper" version ${{ inputs.version }}
+        echo '::group::Installing Project "Piper" version ${{ inputs.version }}'
         wget https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
         sudo mv piper_master /usr/local/bin/piper
         sudo chmod 777 /usr/local/bin/piper
+        echo '::endgroup'
       shell: bash
 
-    - run: /usr/local/bin/piper mavenBuild
+    - run: |
+        echo '::group::Build'
+        /usr/local/bin/piper mavenBuild
+        echo '::endgroup'
       shell: bash
 
-    - run: /usr/local/bin/piper mavenExecuteIntegration
+    - run: |
+        echo '::group::Integration Tests'
+        /usr/local/bin/piper mavenExecuteIntegration
+        echo '::endgroup'
       shell: bash
 
-    - run: /usr/local/bin/piper mavenExecuteStaticCodeChecks
+    - run: |
+        echo '::group::Static Code Checks'
+        /usr/local/bin/piper mavenExecuteStaticCodeChecks
+        echo '::endgroup'
       shell: bash
-
