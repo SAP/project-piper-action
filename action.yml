@@ -15,7 +15,7 @@ runs:
       shell: bash
 
     - run: |
-        Installing Project "Piper" version ${{ inputs.version }}
+        echo Installing Project "Piper" version ${{ inputs.version }}
         wget https://github.com/SAP/jenkins-library/releases/latest/download/piper_master
         sudo mv piper_master /usr/local/bin/piper
       shell: bash
