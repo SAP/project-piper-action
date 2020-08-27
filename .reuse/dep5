@@ -24,10 +24,12 @@ Disclaimer: The code in this project may include calls to APIs (“API Calls”)
  you any rights to use or access any SAP External Product, or provide any third
  parties the right to use of access any SAP External Product, through API Calls.
 
-Files: dist/**
-Copyright: ???
-License: ???
+Files: dist/index.js
+Copyright: 2018-2020 SAP SE or an SAP affiliate company and project "Piper" contributors
+           Copyright 2019 GitHub
+License: Apache-2.0
+         MIT
 
 Files: *
-Copyright:  2018-2020 SAP SE or an SAP affiliate company and project "Piper" contributors
+Copyright: 2018-2020 SAP SE or an SAP affiliate company and project "Piper" contributors
 License: Apache-2.0
