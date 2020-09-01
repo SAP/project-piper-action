@@ -41,7 +41,7 @@ Optionally you may use `flags` to provide command line arguments.
 Configuration is done in `.pipeline/config.yml` in your project's repository.
 See [here](https://sap.github.io/jenkins-library/configuration/) for information on configuration.
 
-Based on the Karma example above, you might need to configure it differently based on how your project is set up.
+For example, if you use [Karma](https://karma-runner.github.io/latest/index.html), you might need to configure it differently based on how your project is set up.
 An example might be:
 
 ```yaml
