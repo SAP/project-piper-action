@@ -10,19 +10,25 @@ This repository contains a GitHub Action to integrate with project "Piper".
 
 Please refer to the [GitHub Actions](https://help.github.com/en/actions) documentation for general information on how to use actions.
 
-As an example, if your projects uses [Karma](https://karma-runner.github.io/latest/index.html) you can run it like this:
+As an example, if your projects uses [Maven](https://maven.apache.org/index.html) you can run it like this:
 
 ```yaml
-on: push
-name: Test
+name: CI
+on:
+  push:
 jobs:
   build:
     runs-on: ubuntu-18.04
     steps:
-    - uses: actions/checkout@v1
-    - uses: SAP/project-piper-action@master
-      with:
-        command: karmaExecuteTests
+      - uses: actions/checkout@v1
+      - name: mavenBuild
+        uses: SAP/project-piper-action@master
+        with:
+          command: mavenBuild
+      - name: mavenExecuteStaticCodeChecks
+        uses: SAP/project-piper-action@master
+        with:
+          command: mavenExecuteStaticCodeChecks
 ```
 
 The key `command` needs to be replaced with the command you want to use.
