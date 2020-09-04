@@ -1,0 +1,47 @@
+name: CI
+
+on: [push]
+
+jobs:
+  units:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: npm ci
+    - run: npm test
+
+  dist-is-up-to-date:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - run: npm ci
+    - run: npm run package
+    - run: git diff --name-only --exit-code
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run action to show Project Piper version
+      uses: ./
+      with:
+        command: version
+        flags: "-v --noTelemetry"
+    - name: Run action to show Project Piper version using latest master
+      uses: ./
+      with:
+        command: version
+        flags: "-v --noTelemetry"
+        piper-version: master
+    - name: Run action to show Project Piper version using v1.13.0
+      uses: ./
+      with:
+        command: version
+        flags: "-v --noTelemetry"
+        piper-version: v1.13.0
+    - name: Run action to show Project Piper version using devel:SAP:jenkins-library:b0144614e529018f661152769b5543243e6bf033
+      uses: ./
+      with:
+        command: version
+        flags: "-v --noTelemetry"
+        piper-version: devel:SAP:jenkins-library:b0144614e529018f661152769b5543243e6bf033
