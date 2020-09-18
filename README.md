@@ -5,6 +5,8 @@ It is applicable to projects both for SAP Cloud Platform and SAP on-premise plat
 SAP implements tooling for continuous delivery in [project "Piper"](https://sap.github.io/jenkins-library/).
 
 This repository contains a GitHub Action to integrate with project "Piper".
+It allows you to use project "Piper" in a convinient way with GitHub Actions.
+You might also manually download the [cli](https://sap.github.io/jenkins-library/cli/) and use it in a shell script, if the action does not what you need.
 
 ## Usage
 
@@ -65,7 +67,7 @@ Make sure the distributable is up-to-date before you push.
 
 To try it out locally, you may use Docker:
 
-```
+```bash
 docker build . -f DevEnv.Dockerfile -t project-piper-action
 docker run -it --rm project-piper-action bash
 $ node index.js
@@ -75,7 +77,7 @@ For convinience those steps are wrapped into `startDevEnv.sh`.
 
 To provide _inputs_, you may set environment variables with the right names as in this example:
 
-```
+```bash
 INPUT_COMMAND=version INPUT_FLAGS='-v' node index.js
 ```
 
@@ -87,7 +89,7 @@ This software runs on [GitHub Actions](https://github.com/features/actions) with
 
 No known issues as of now.
 
-# How to obtain support
+## How to obtain support
 
 Feel free to open new issues for feature requests, bugs or general feedback on
 the [GitHub issues page of this project](https://github.com/sap/project-piper-action/issues).
