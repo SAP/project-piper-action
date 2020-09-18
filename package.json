@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint index.js",
-    "package": "ncc build index.js -o dist",
-    "test": "eslint index.js && jest"
+    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt",
+    "test": "jest",
+    "all": "npm run lint && npm run prepare && npm run test"
   },
   "repository": {
     "type": "git",
@@ -15,7 +16,12 @@
   "keywords": [
     "GitHub",
     "Actions",
-    "JavaScript"
+    "JavaScript",
+    "Continuous Integration",
+    "Continuous Delivery",
+    "CI/CD",
+    "SAP",
+    "SAP Cloud Platform"
   ],
   "author": "SAP SE",
   "contributors": [
