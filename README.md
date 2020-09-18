@@ -59,7 +59,7 @@ First, install the dependencies and build the distributable:
 
 ```bash
 npm install
-npm run package
+npm run prepare
 ```
 
 You'll get a distributable file in `dest`.
