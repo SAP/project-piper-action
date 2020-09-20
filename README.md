@@ -38,6 +38,22 @@ The `help` command shows which commands are available.
 
 Optionally you may use `flags` to provide command line arguments.
 
+### Usage in shell scripts
+
+If you need to be more flexible in how you use the project "piper" binary, you might also use the `binary` output provided by this action.
+It is the path to your installed project "piper" binary once the action was run a first time.
+Consider the following example:
+
+```yaml
+      - name: Install piper
+        id: piper
+        uses: SAP/project-piper-action@master
+        with:
+          command: version
+      - run: |
+          ${{ steps.piper.outputs.binary }} mavenBuild
+```
+
 ## Configuration
 
 Configuration is done in `.pipeline/config.yml` in your project's repository.
