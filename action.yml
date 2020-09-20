@@ -13,6 +13,9 @@ inputs:
     description: 'specify a version of the piper binary to use, may be "master", "latest" or a released tag'
     required: false
     default: 'latest'
+outputs:
+  binary:
+    description: Path to installed piper binary
 runs:
   using: 'node12'
   main: 'dist/index.js'
