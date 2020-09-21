@@ -1,4 +1,4 @@
-name: 'Project "Piper"'
+name: "Project 'Piper'"
 description: 'CI/CD tooling for the SAP Ecosystem'
 inputs:
   command:
