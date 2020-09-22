@@ -4897,6 +4897,7 @@ async function run () {
     fs.chmodSync(piperPath, 0o775)
     await exec.exec(`${piperPath} version`)
     await exec.exec(`${piperPath} ${command} ${flags}`)
+    core.setOutput('binary', piperPath)
   } catch (error) {
     core.setFailed(error.message)
   }
