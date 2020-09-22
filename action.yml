@@ -1,4 +1,4 @@
-name: 'Project Piper CI/CD'
+name: 'Project Piper'
 description: 'CI/CD tooling for the SAP Ecosystem'
 inputs:
   command:
@@ -16,3 +16,6 @@ inputs:
 runs:
   using: 'node12'
   main: 'dist/index.js'
+branding:
+  icon: 'play'  
+  color: 'green'
