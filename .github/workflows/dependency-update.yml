@@ -12,7 +12,7 @@ jobs:
       run: |
         npm install
         npm update
-        npm run build && npm run package
+        npm run all
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v3
       with:
