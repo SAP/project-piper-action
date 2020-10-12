@@ -4,6 +4,5 @@ updates:
     directory: '/'
     assignees:
       - "fwilhe"
-      - "CCFenner"
     schedule:
       interval: 'weekly'

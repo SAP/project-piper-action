@@ -1,0 +1,24 @@
+name: Automated dependency update
+on:
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 10 * * 5'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Update dependencies
+      run: |
+        npm install
+        npm update
+        npm run all
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        title: "Automated dependency updates"
+        commit-message: "Automated dependency updates"
+        body: "Created by running npm update"
+        author: "Florian Wilhelm <florian.wilhelm02@sap.com>"
+        assignees: fwilhe
+        token: ${{ secrets.PAT }}
