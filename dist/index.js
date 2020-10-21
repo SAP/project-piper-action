@@ -4946,12 +4946,16 @@ const core = __webpack_require__(186)
 const tc = __webpack_require__(784)
 const exec = __webpack_require__(514)
 const fs = __webpack_require__(747)
+const io = __webpack_require__(436)
 
 async function run () {
   try {
     const command = core.getInput('command')
     const flags = core.getInput('flags')
     const version = core.getInput('piper-version')
+
+    setupCfCliIfRequired(command)
+
     let piperPath
     // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
     if (/^devel:/.test(version)) {
@@ -4967,25 +4971,44 @@ async function run () {
   }
 }
 
+async function setupCfCliIfRequired(command) {
+  if (!command.includes("cloudFoundry")) {
+    core.debug("Not installing cf cli because command does not contain cloudFoundry")
+    return
+  }
+
+  let cfPath = await io.which('cf', false)
+
+  if (cfPath !== '') {
+    core.debug(`Found existing cf at ${cfPath}`)
+    return
+  }
+
+  const cfTgz = await tc.downloadTool('https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6')
+  cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
+  core.addPath('piper-cf-cli')
+  await exec.exec('cf', '-v')
+}
+
 function getDownloadUrl(version) {
   const commonUrlPrefix = 'https://github.com/SAP/jenkins-library/releases'
   if (version === 'latest') {
-    console.log("Downloading latest release of piper")
+    core.info("Downloading latest release of piper")
     return `${commonUrlPrefix}/latest/download/piper`
   } else if (version === 'master') {
-    console.log("Downloading latest build of master branch of piper")
+    core.info("Downloading latest build of master branch of piper")
     return `${commonUrlPrefix}/latest/download/piper_master`
   } else if (/^v\d+\./.test(version)) {
-    console.log(`Downloading version ${version} of piper`)
+    core.info(`Downloading version ${version} of piper`)
     return `${commonUrlPrefix}/download/${version}/piper`
   } else {
-    console.log(`WARN: ${version} was not recognized as valid piper version, downloading latest release`)
+    core.info(`WARN: ${version} was not recognized as valid piper version, downloading latest release`)
     return `${commonUrlPrefix}/latest/download/piper`
   }
 }
 
 async function buildDevelopmentBranch(version) {
-  console.log("Building a dev version of piper from " + version)
+  core.info("Building a dev version of piper from " + version)
   const versionComponents = version.split(":")
   const githubOrg = versionComponents[1]
   const repo = versionComponents[2]
