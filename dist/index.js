@@ -4954,7 +4954,9 @@ async function run () {
     const flags = core.getInput('flags')
     const version = core.getInput('piper-version')
 
+    console.log(`>>>dbg command ${command}`)
     setupCfCliIfRequired(command)
+    await exec.exec('cf', '-v') 
 
     let piperPath
     // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
@@ -4972,6 +4974,7 @@ async function run () {
 }
 
 async function setupCfCliIfRequired(command) {
+  console.log(`>>>dbg command ${command}`)
   if (!command.includes('cloudFoundry')) {
     core.info("Not installing cf cli because command does not contain cloudFoundry")
     return
@@ -4979,6 +4982,7 @@ async function setupCfCliIfRequired(command) {
 
   let cfPath = await io.which('cf', false)
 
+  console.log(`>>>dbg cfPath ${cfPath}`)
   if (cfPath !== '') {
     core.info(`Found existing cf at ${cfPath}`)
     await exec.exec('cf', '-v')
@@ -4989,6 +4993,8 @@ async function setupCfCliIfRequired(command) {
   cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
   core.addPath('piper-cf-cli')
   await exec.exec('cf', '-v')
+
+
 }
 
 function getDownloadUrl(version) {
