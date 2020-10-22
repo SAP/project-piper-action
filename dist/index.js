@@ -4977,9 +4977,8 @@ async function setupCfCliIfRequired(command) {
     return
   }
 
-  let cfPath = await io.which('cf', false)
+  const cfPath = await io.which('cf', false)
 
-  console.log(`>>>dbg cfPath ${cfPath}`)
   if (cfPath.length > 0) {
     core.info(`Found existing cf at ${cfPath}`)
     await exec.exec('cf', '-v')
@@ -4987,8 +4986,7 @@ async function setupCfCliIfRequired(command) {
   }
 
   const cfTgz = await tc.downloadTool('https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6')
-  cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
-  console.log(`>>>dbg cfPath ${cfPath}`)
+  await tc.extractTar(cfTgz, 'piper-cf-cli')
 
   core.addPath('piper-cf-cli')
   await exec.exec('cf', '-v')
