@@ -4956,7 +4956,7 @@ async function run () {
 
     console.log(`>>>dbg command ${command}`)
     setupCfCliIfRequired(command)
-    await exec.exec('cf', '-v') 
+    await exec.exec('cf', '-v')
 
     let piperPath
     // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
@@ -4980,17 +4980,19 @@ async function setupCfCliIfRequired(command) {
     return
   }
 
-  let cfPath = await io.which('cf', false)
+  // let cfPath = await io.which('cf', false)
 
-  console.log(`>>>dbg cfPath ${cfPath}`)
-  if (cfPath !== '') {
-    core.info(`Found existing cf at ${cfPath}`)
-    await exec.exec('cf', '-v')
-    return
-  }
+  // console.log(`>>>dbg cfPath ${cfPath}`)
+  // if (cfPath !== '') {
+  //   core.info(`Found existing cf at ${cfPath}`)
+  //   await exec.exec('cf', '-v')
+  //   return
+  // }
 
   const cfTgz = await tc.downloadTool('https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6')
-  cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
+  let cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
+  console.log(`>>>dbg cfPath ${cfPath}`)
+  
   core.addPath('piper-cf-cli')
   await exec.exec('cf', '-v')
 
