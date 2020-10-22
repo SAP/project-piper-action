@@ -28,15 +28,16 @@ async function run () {
 }
 
 async function setupCfCliIfRequired(command) {
-  if (!command.includes("cloudFoundry")) {
-    core.debug("Not installing cf cli because command does not contain cloudFoundry")
+  if (!command.includes('cloudFoundry')) {
+    core.info("Not installing cf cli because command does not contain cloudFoundry")
     return
   }
 
   let cfPath = await io.which('cf', false)
 
   if (cfPath !== '') {
-    core.debug(`Found existing cf at ${cfPath}`)
+    core.info(`Found existing cf at ${cfPath}`)
+    await exec.exec('cf', '-v')
     return
   }
 
