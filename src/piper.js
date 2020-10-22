@@ -10,9 +10,7 @@ async function run () {
     const flags = core.getInput('flags')
     const version = core.getInput('piper-version')
 
-    console.log(`>>>dbg command ${command}`)
     await setupCfCliIfRequired(command)
-    await exec.exec('cf', '-v')
 
     let piperPath
     // Format for development versions (all parts required): 'devel:GH_ORG:REPO_NAME:COMMITISH
@@ -30,29 +28,26 @@ async function run () {
 }
 
 async function setupCfCliIfRequired(command) {
-  console.log(`>>>dbg command ${command}`)
   if (!command.includes('cloudFoundry')) {
     core.info("Not installing cf cli because command does not contain cloudFoundry")
     return
   }
 
-  // let cfPath = await io.which('cf', false)
+  let cfPath = await io.which('cf', false)
 
-  // console.log(`>>>dbg cfPath ${cfPath}`)
-  // if (cfPath !== '') {
-  //   core.info(`Found existing cf at ${cfPath}`)
-  //   await exec.exec('cf', '-v')
-  //   return
-  // }
+  console.log(`>>>dbg cfPath ${cfPath}`)
+  if (cfPath.length > 0) {
+    core.info(`Found existing cf at ${cfPath}`)
+    await exec.exec('cf', '-v')
+    return
+  }
 
   const cfTgz = await tc.downloadTool('https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6')
-  let cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
+  cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
   console.log(`>>>dbg cfPath ${cfPath}`)
 
   core.addPath('piper-cf-cli')
   await exec.exec('cf', '-v')
-
-
 }
 
 function getDownloadUrl(version) {
