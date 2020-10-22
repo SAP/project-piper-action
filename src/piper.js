@@ -11,7 +11,7 @@ async function run () {
     const version = core.getInput('piper-version')
 
     console.log(`>>>dbg command ${command}`)
-    setupCfCliIfRequired(command)
+    await setupCfCliIfRequired(command)
     await exec.exec('cf', '-v')
 
     let piperPath
@@ -48,7 +48,7 @@ async function setupCfCliIfRequired(command) {
   const cfTgz = await tc.downloadTool('https://packages.cloudfoundry.org/stable?release=linux64-binary&source=github&version=v6')
   let cfPath = await tc.extractTar(cfTgz, 'piper-cf-cli')
   console.log(`>>>dbg cfPath ${cfPath}`)
-  
+
   core.addPath('piper-cf-cli')
   await exec.exec('cf', '-v')
 
