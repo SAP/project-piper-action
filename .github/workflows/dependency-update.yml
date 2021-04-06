@@ -1,8 +1,6 @@
 name: Automated dependency update
 on:
   workflow_dispatch:
-  schedule:
-    - cron:  '0 10 * * 5'
 jobs:
   build:
     runs-on: ubuntu-latest
