@@ -55,7 +55,13 @@ steps:
 
 ## Development Setup
 
-First, install the dependencies and build the distributable:
+First, add the Github npm repository for the @sap scope by making sure that your `~/.npmrc` contains the following line
+
+```
+@sap:registry=https://npm.pkg.github.com
+```
+
+Then install the dependencies and build the distributable:
 
 ```bash
 npm install
