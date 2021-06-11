@@ -11,6 +11,7 @@ RUN tar xzf /tmp/go.tgz -C /opt; rm /tmp/go.tgz
 USER actions
 
 ENV PATH="/opt/go/bin:${PATH}"
+ENV RUNNER_TOOL_CACHE=/tmp RUNNER_TEMP=/tmp
 
-COPY dist/index.js /home/actions/index.js
+COPY dist /home/actions
 WORKDIR /home/actions
