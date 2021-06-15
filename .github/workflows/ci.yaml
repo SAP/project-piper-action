@@ -7,6 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Use Node.js 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+        registry-url: https://npm.pkg.github.com/
     - run: npm ci
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
@@ -16,6 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Use Node.js 12.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 12.x
+        registry-url: https://npm.pkg.github.com/
     - run: npm ci
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
