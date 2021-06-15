@@ -8,6 +8,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: npm ci
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.PAT }}
     - run: npm test
 
   dist-is-up-to-date:
@@ -15,6 +17,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: npm ci
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.PAT }}
     - run: npm run prepare
     - run: git diff --name-only --exit-code
 
