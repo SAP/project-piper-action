@@ -46,16 +46,10 @@ jobs:
       with:
         command: version
         flags: "-v --noTelemetry"
-        piper-version: master
+        piper-version: latest
     - name: Run action to show Project Piper version using v1.13.0
       uses: ./
       with:
         command: version
         flags: "-v --noTelemetry"
         piper-version: v1.13.0
-    - name: Run action to show Project Piper version using devel:SAP:jenkins-library:b0144614e529018f661152769b5543243e6bf033
-      uses: ./
-      with:
-        command: version
-        flags: "-v --noTelemetry"
-        piper-version: devel:SAP:jenkins-library:b0144614e529018f661152769b5543243e6bf033
