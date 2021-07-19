@@ -4,15 +4,14 @@ on: [push]
 
 jobs:
   units:
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js 14.x
-      uses: actions/setup-node@v1
+    - uses: actions/setup-node@v1
       with:
         node-version: 14.x
         registry-url: https://npm.pkg.github.com/
-        #scope: "@sap"
     - run: npm ci
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
@@ -22,12 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Use Node.js 14.x
-      uses: actions/setup-node@v1
+    - uses: actions/setup-node@v1
       with:
         node-version: 14.x
         registry-url: https://npm.pkg.github.com/
-        #scope: "@sap"
     - run: npm ci
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
@@ -35,6 +32,7 @@ jobs:
     - run: git diff --name-only --exit-code
 
   integration:
+    name: Integration Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
