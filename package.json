@@ -34,7 +34,7 @@
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.4",
-    "@sap/project-piper-action-utils": "^1.0.1"
+    "@sap/project-piper-action-utils": "^1.0.2"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.27.0",
