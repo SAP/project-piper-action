@@ -34,7 +34,7 @@
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.4",
-    "@sap/project-piper-action-utils": "^1.0.1"
+    "@sap/project-piper-action-utils": "^1.0.2"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.27.0",
@@ -42,7 +42,7 @@
     "eslint-config-standard": "^16.0.2",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.3.1",
+    "eslint-plugin-promise": "^5.1.0",
     "eslint-plugin-standard": "^5.0.0",
     "jest": "^27.0.6"
   }
