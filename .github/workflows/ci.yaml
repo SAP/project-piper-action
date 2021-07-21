@@ -1,6 +1,12 @@
 name: CI
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
 
 jobs:
   units:
@@ -11,8 +17,9 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: 14.x
+        cache: 'npm'
         registry-url: https://npm.pkg.github.com/
-    - run: npm ci
+    - run: npm ci --ignore-scripts
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
     - run: npm test
@@ -24,8 +31,9 @@ jobs:
     - uses: actions/setup-node@v1
       with:
         node-version: 14.x
+        cache: 'npm'
         registry-url: https://npm.pkg.github.com/
-    - run: npm ci
+    - run: npm ci --ignore-scripts
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PAT }}
     - run: npm run prepare
@@ -41,12 +49,18 @@ jobs:
       with:
         command: version
         flags: "-v --noTelemetry"
-    - name: Run action to show Project Piper version using latest master
+    - name: Run action to show Project Piper version using latest
       uses: ./
       with:
         command: version
         flags: "-v --noTelemetry"
         piper-version: latest
+    - name: Run action to show Project Piper version using master
+      uses: ./
+      with:
+        command: version
+        flags: "-v --noTelemetry"
+        piper-version: master
     - name: Run action to show Project Piper version using v1.13.0
       uses: ./
       with:
