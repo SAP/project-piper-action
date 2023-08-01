@@ -2,8 +2,6 @@ version: 2
 updates:
   - package-ecosystem: 'npm'
     directory: '/'
-    assignees:
-      - "fwilhe"
     schedule:
       interval: 'weekly'
 #    allow: 'production'
