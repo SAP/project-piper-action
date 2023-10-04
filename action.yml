@@ -1,21 +1,54 @@
 name: 'Project "Piper" Action'
 description: 'CI/CD tooling for the SAP Ecosystem'
 inputs:
-  command:
-    description: 'command to run'
-    required: true
-    default: 'help'
+  step-name:
+    description: 'Name of Piper step to execute'
+    required: false
   flags:
-    description: 'flags/arguments for command'
+    description: 'Flags/arguments for step'
     required: false
-    default: ''
   piper-version:
-    description: 'specify a version of the piper binary to use, may be "master", "latest" or a released tag'
+    description: 'Specify Piper binary to use, may be "master", "latest" or a released tag'
     required: false
-    default: 'latest'
+  piper-owner:
+    description: 'Owner of the repository from where to load the Piper binary'
+    required: false
+  piper-repository:
+    description: 'Repository from where to load the Piper binary'
+    required: false
+  sap-piper-version:
+    description: 'Specify SAP Piper binary to use, may be "master", "latest" or a released tag'
+    required: false
+  sap-piper-owner:
+    description: 'Owner of the repository from where to load the SAP-internal Piper binary'
+    required: false
+  sap-piper-repository:
+    description: 'Repository from where to load the SAP-internal Piper binary'
+    required: false
+  github-token:
+    description: 'Token to access GitHub API'
+    required: false
+  github-enterprise-token:
+    description: 'Token to access GitHub Enterprise API'
+    required: false
+  docker-image:
+    description: 'Docker image to run Piper in'
+    required: false
+  docker-options:
+    description: 'Docker options to start the container with'
+    required: false
+  custom-defaults-paths:
+    description: 'Specify comma-separated custom defaults paths'
+    required: false
+  export-pipeline-environment:
+    description: 'Exports pipeline environment to share between jobs as variable with the name "pipelineEnv"'
+    required: false
+  create-check-if-step-active-maps:
+    description: 'Creates maps with active stages and steps using checkIfStepActive and outputs them at `.pipeline/stage_out.json` and `.pipeline/step_out.json`'
+    required: false
 runs:
-  using: 'node16'
+  using: 'node20'
   main: 'dist/index.js'
 branding:
-  icon: 'play'  
+  icon: 'play'
   color: 'green'

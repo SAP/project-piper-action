@@ -1,0 +1,23 @@
+env:
+  browser: true
+  node: true
+  es6: true
+  jest: true
+extends:
+  - standard-with-typescript
+  - plugin:n/recommended
+plugins:
+  - jest
+  - n
+globals:
+  Atomics: readonly
+  SharedArrayBuffer: readonly
+parserOptions:
+  ecmaVersion: 2018
+  project: ./tsconfig.eslint.json
+rules:
+  no-console: error
+  n/no-unsupported-features/es-syntax: [error, ignores: [modules]]
+  n/no-missing-import: off
+ignorePatterns:
+  - dist/*.js

@@ -1,4 +1,6 @@
 node_modules/
 .vscode
 go*linux-amd64.tar.gz
-.idea
+.idea/
+reports/
+**/.DS_store

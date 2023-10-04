@@ -1,0 +1,23 @@
+name: "Documentation"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.md'
+
+jobs:
+  markdownlint:
+    runs-on: ubuntu-latest
+    name: 'Markdown Format'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm install --global markdownlint-cli
+      - run: markdownlint --disable MD013 -- .

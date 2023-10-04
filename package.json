@@ -2,11 +2,14 @@
   "name": "project-piper-action",
   "version": "0.0.1",
   "description": "CI/CD tooling for the SAP Ecosystem",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "lint": "eslint index.js",
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt",
+    "lint": "eslint src/**/*.ts test/**/*.ts",
+    "lint:ci": "eslint src/**/*.ts test/**/*.ts --format json-relative --output-file reports/eslint-report.json",
+    "dist:build": "ncc build src/main.ts -o dist --source-map --license licenses.txt",
+    "dist:update": "npm run dist:build && git add dist/** && git commit -m 'update dist folder' && git push",
     "test": "jest",
+    "test:ci": "JEST_JUNIT_OUTPUT_DIR=reports/ JEST_JUNIT_OUTPUT_NAME=TEST-jest.xml jest --ci --reporters=default --reporters=jest-junit --reporters=jest-sonar --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcovonly --coverageDirectory=reports/",
     "all": "npm run lint && npm run prepare && npm run test"
   },
   "repository": {
@@ -32,18 +35,43 @@
   },
   "homepage": "https://sap.github.io/jenkins-library/",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "@actions/exec": "^1.0.4",
-    "@sap/project-piper-action-utils": "^1.0.2"
+    "@actions/artifact": "1.1.0",
+    "@actions/core": "1.10.0",
+    "@actions/exec": "1.1.1",
+    "@actions/github": "5.1.1",
+    "@actions/glob": "0.4.0",
+    "@actions/tool-cache": "2.0.1",
+    "@octokit/core": "4.2.0",
+    "@octokit/rest": "19.0.13",
+    "@octokit/types": "11.0.0",
+    "expect": "29.7.0",
+    "js-data": "3.0.11",
+    "node-fetch": "2.7.0",
+    "ts-node": "10.9.1",
+    "uuid": "9.0.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.27.0",
-    "eslint": "^7.31.0",
-    "eslint-config-standard": "^16.0.2",
-    "eslint-plugin-import": "^2.22.1",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.3.1",
-    "eslint-plugin-standard": "^5.0.0",
-    "jest": "^27.0.6"
+    "@types/jest": "29.5.5",
+    "@types/node-fetch": "2.6.5",
+    "@types/uuid": "9.0.3",
+    "@typescript-eslint/eslint-plugin": "6.7.2",
+    "@typescript-eslint/parser": "6.7.2",
+    "@vercel/ncc": "0.38.0",
+    "eslint": "8.50.0",
+    "eslint-config-standard-with-typescript": "39.0.0",
+    "eslint-formatter-json-relative": "0.1.0",
+    "eslint-plugin-import": "2.28.1",
+    "eslint-plugin-jest": "27.4.0",
+    "eslint-plugin-n": "16.1.0",
+    "eslint-plugin-promise": "6.1.1",
+    "jest": "29.7.0",
+    "jest-junit": "16.0.0",
+    "jest-sonar": "0.2.16",
+    "process": "0.11.10",
+    "ts-jest": "29.1.1",
+    "typescript": "5.2.2"
+  },
+  "engines": {
+    "node": ">=v16.17.1"
   }
 }
