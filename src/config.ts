@@ -5,7 +5,7 @@ import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
 import { downloadFileFromGitHub, getHost } from './github'
-import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl } from './enterprise'
+import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl, getEnterpriseStageConfigUrl } from './enterprise'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
@@ -93,7 +93,7 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
 }
 
 export async function downloadStageConfig (token: string, owner: string, repository: string): Promise<void> {
-  await downloadFileFromGitHub(getEnterpriseDefaultsUrl(owner, repository), token)
+  await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
     .then(response => {
       const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
       fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
