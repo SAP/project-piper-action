@@ -19438,7 +19438,7 @@ function saveDefaultConfigs(defaultConfigs) {
 exports.saveDefaultConfigs = saveDefaultConfigs;
 function downloadStageConfig(token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, github_1.downloadFileFromGitHub)((0, enterprise_1.getEnterpriseDefaultsUrl)(owner, repository), token)
+        yield (0, github_1.downloadFileFromGitHub)((0, enterprise_1.getEnterpriseStageConfigUrl)(owner, repository), token)
             .then(response => {
             const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary');
             fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig);
