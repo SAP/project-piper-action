@@ -19669,7 +19669,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
-exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
+exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
 function isEnterpriseStep(stepName) {
     if (stepName === '') {
