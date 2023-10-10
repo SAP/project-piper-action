@@ -89,7 +89,9 @@ function getOrchestratorEnvVars (): string[] {
     '--env',
     'GITHUB_BASE_REF',
     '--env',
-    'GITHUB_EVENT_PULL_REQUEST_NUMBER'
+    'GITHUB_EVENT_PULL_REQUEST_NUMBER',
+    '--env',
+    'PIPER_ACTION_GITHUB_ENTERPRISE_TOKEN'
   ]
 }
 
