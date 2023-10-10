@@ -8,7 +8,7 @@ import * as execute from '../src/execute'
 import * as github from '../src/github'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
-import {GITHUB_COM_API_URL} from "../src/github";
+import { GITHUB_COM_API_URL } from '../src/github'
 
 describe('Piper', () => {
   let inputs: any
@@ -68,21 +68,21 @@ describe('Piper', () => {
     inputs['sap-piper-owner'] = 'project-piper'
     inputs['sap-piper-repository'] = 'testRepo'
     inputs['create-check-if-step-active-maps'] = 'true'
-    process.env.GITHUB_SERVER_URL = "https://githubenterprise.test.com/"
-    process.env.GITHUB_API_URL = "https://api.githubenterprise.test.com/"
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
 
     await piper.run()
 
     expect(github.downloadPiperBinary).toHaveBeenCalledWith(
-        inputs['step-name'],
-        inputs['sap-piper-version'],
-        "https://api.githubenterprise.test.com/",
-        inputs['github-enterprise-token'],
-        inputs['sap-piper-owner'],
-        inputs['sap-piper-repository']
+      inputs['step-name'],
+      inputs['sap-piper-version'],
+      'https://api.githubenterprise.test.com/',
+      inputs['github-enterprise-token'],
+      inputs['sap-piper-owner'],
+      inputs['sap-piper-repository']
     )
     expect(config.createCheckIfStepActiveMaps).toHaveBeenCalledWith(
-        inputs['github-enterprise-token'], inputs['sap-piper-owner'], inputs['sap-piper-repository'])
+      inputs['github-enterprise-token'], inputs['sap-piper-owner'], inputs['sap-piper-repository'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
@@ -106,12 +106,12 @@ describe('Piper', () => {
     await piper.run()
 
     expect(github.downloadPiperBinary).toHaveBeenCalledWith(
-        inputs['step-name'],
-        inputs['piper-version'],
-        GITHUB_COM_API_URL,
-        inputs['github-token'],
-        inputs['piper-owner'],
-        inputs['piper-repository']
+      inputs['step-name'],
+      inputs['piper-version'],
+      GITHUB_COM_API_URL,
+      inputs['github-token'],
+      inputs['piper-owner'],
+      inputs['piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })

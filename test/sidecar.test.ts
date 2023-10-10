@@ -33,7 +33,7 @@ describe('Sidecar', () => {
     retrieveDefaultConfig: false,
     customDefaultsPaths: '',
     createCheckIfStepActiveMaps: false,
-    exportPipelineEnvironment: false,
+    exportPipelineEnvironment: false
   }
 
   const piperPath = './piper'

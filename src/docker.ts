@@ -64,12 +64,12 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
   }
 
   dockerRunArgs.push(
-      ...parseDockerEnvVars(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars),
-      ...getProxyEnvVars(),
-      ...getOrchestratorEnvVars(),
-      ...getVaultEnvVars(),
-      dockerImage,
-      'cat'
+    ...parseDockerEnvVars(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars),
+    ...getProxyEnvVars(),
+    ...getOrchestratorEnvVars(),
+    ...getVaultEnvVars(),
+    dockerImage,
+    'cat'
   )
 
   await dockerExecReadOutput(dockerRunArgs)
