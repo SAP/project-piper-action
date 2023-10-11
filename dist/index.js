@@ -19666,10 +19666,13 @@ function getVaultEnvVars() {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
+exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.WDF_ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
-exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
+// to be reverted once stage config files in piper-library are aligned 
+exports.WDF_ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
+exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
+const GITHUB_WDF_SERVER_URL = 'https://github.wdf.sap.corp';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
 function isEnterpriseStep(stepName) {
     if (stepName === '') {
@@ -19692,11 +19695,21 @@ function getEnterpriseDefaultsUrl(owner, repository) {
 exports.getEnterpriseDefaultsUrl = getEnterpriseDefaultsUrl;
 function getEnterpriseStageConfigUrl(owner, repository) {
     if (onGitHubEnterprise() && owner !== '' && repository !== '') {
+        if (onGitHubWDF()) {
+            return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.WDF_ENTERPRISE_STAGE_CONFIG_FILENAME}`;
+        }
         return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_STAGE_CONFIG_FILENAME}`;
     }
     return '';
 }
 exports.getEnterpriseStageConfigUrl = getEnterpriseStageConfigUrl;
+// to be deleted once stage config files in piper-library are aligned 
+function onGitHubWDF() {
+    if (process.env.GITHUB_SERVER_URL === GITHUB_WDF_SERVER_URL) {
+        return true;
+    }
+    return false;
+}
 
 
 /***/ }),
