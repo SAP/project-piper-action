@@ -1,4 +1,4 @@
-name: Misc
+name: Integration
 
 on:
   push:
@@ -9,28 +9,8 @@ on:
       - main
 
 jobs:
-  package-lock-is-up-to-date:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 16
-    - run: npm install --ignore-scripts
-    - run: git diff --name-only --exit-code
-
-  dist-is-up-to-date:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 16
-    - run: npm clean-install
-    - run: npm run dist:build
-    - run: git diff --name-only --exit-code
-
-  integration:
+  test:
+    name: Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
