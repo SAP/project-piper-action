@@ -1,0 +1,27 @@
+name: Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [latest, master, v1.300.0]
+        step: [version]
+        # step: [version, npmExecuteScripts]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run action to show Project Piper version
+        uses: ./
+        with:
+          piper-version: ${{ matrix.version }}
+          step-name: ${{ matrix.step }}
+          flags: "--verbose --noTelemetry"
