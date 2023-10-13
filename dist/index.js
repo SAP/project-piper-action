@@ -20195,7 +20195,8 @@ function getActionConfig(options) {
             }
         }
         let stepNameValue = getValue('step-name');
-        if (stepNameValue === '') {
+        // TODO: remove command input
+        if (stepNameValue === undefined || stepNameValue === '') {
             stepNameValue = getValue('command');
         }
         return {

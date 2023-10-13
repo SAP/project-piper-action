@@ -100,7 +100,8 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
   }
 
   let stepNameValue = getValue('step-name')
-  if (stepNameValue === '') {
+  // TODO: remove command input
+  if (stepNameValue === undefined || stepNameValue === '') {
     stepNameValue = getValue('command')
   }
 
