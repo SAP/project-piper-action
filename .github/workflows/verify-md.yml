@@ -1,4 +1,4 @@
-name: "Documentation"
+name: "Markdown"
 
 on:
   push:
@@ -12,8 +12,8 @@ on:
 
 jobs:
   markdownlint:
+    name: 'Lint'
     runs-on: ubuntu-latest
-    name: 'Markdown Format'
     steps:
       - uses: actions/checkout@v4
       - name: Markdown Linting
