@@ -16,7 +16,7 @@ jobs:
       matrix:
         version: [latest, master, v1.300.0]
         step: [version]
-        # step: [version, npmExecuteScripts]
+          # step: [version, npmExecuteScripts]
     steps:
     - uses: actions/checkout@v4
     - name: Run action to show Project Piper version
