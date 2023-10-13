@@ -1,4 +1,4 @@
-name: CI
+name: Typescript
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -25,6 +26,7 @@ jobs:
         path: reports/eslint-report.json
 
   unit:
+    name: Test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -58,6 +60,7 @@ jobs:
 #        lcov-file: reports/lcov.info
 
   sonar:
+    name: Sonar
     runs-on: ubuntu-latest
     if: always()
     needs: [lint, unit]
