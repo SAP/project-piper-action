@@ -20194,8 +20194,12 @@ function getActionConfig(options) {
                 enterpriseApi = process.env.GITHUB_API_URL;
             }
         }
+        let stepNameValue = getValue('step-name');
+        if (stepNameValue === '') {
+            stepNameValue = getValue('command');
+        }
         return {
-            stepName: getValue('step-name'),
+            stepName: stepNameValue,
             flags: getValue('flags'),
             piperVersion: getValue('piper-version'),
             piperOwner: getValue('piper-owner', 'SAP'),
