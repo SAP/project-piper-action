@@ -20,4 +20,4 @@ jobs:
       - name: Install yamllint
         run: pip install yamllint
       - name: Lint YAML files
-        run: yamllint -c .yamllint.yml action.yml .yamllint.yml .markdownlint.yml .log4brains.yml .eslintrc.yaml .github/dependabot.yml .github/workflows/*.yml
+        run: yamllint -c .yamllint.yml action.yml .yamllint.yml .markdownlint.yml .log4brains.yml .eslintrc.yaml .github/workflows/*.yml
