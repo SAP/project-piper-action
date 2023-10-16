@@ -9,6 +9,7 @@ import * as github from '../src/github'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
 import { GITHUB_COM_API_URL } from '../src/github'
+import { internalActionVariables } from '../src/piper'
 
 describe('Piper', () => {
   let inputs: any
@@ -38,8 +39,8 @@ describe('Piper', () => {
     }
 
     fs.chmodSync = jest.fn()
-    jest.spyOn(github, 'downloadPiperBinary').mockReturnValue('./piper' as unknown as Promise<string>)
-    jest.spyOn(github, 'buildPiperFromSource').mockReturnValue('./piper' as unknown as Promise<string>)
+    jest.spyOn(github, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
+    jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -48,6 +49,7 @@ describe('Piper', () => {
     jest.spyOn(docker, 'cleanupContainers').mockImplementation()
     jest.spyOn(pipelineEnv, 'loadPipelineEnv').mockImplementation()
     jest.spyOn(pipelineEnv, 'exportPipelineEnv').mockImplementation()
+    jest.spyOn(core, 'setFailed').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
       if (options !== undefined) {
@@ -59,6 +61,16 @@ describe('Piper', () => {
 
       return val.trim()
     })
+  })
+
+  afterEach(() => {
+    jest.resetAllMocks()
+    jest.clearAllMocks()
+
+    internalActionVariables.piperBinPath = ''
+    internalActionVariables.sidecarNetworkID = ''
+    internalActionVariables.dockerContainerID = ''
+    internalActionVariables.sidecarContainerID = ''
   })
 
   test('isEnterpriseStep', async () => {
@@ -113,6 +125,21 @@ describe('Piper', () => {
       inputs['piper-owner'],
       inputs['piper-repository']
     )
+    expect(docker.cleanupContainers).toHaveBeenCalled()
+  })
+
+  test('failed obtaining piper binary', async () => {
+    inputs['step-name'] = 'getConfig'
+    inputs['piper-version'] = '1.2.2'
+    inputs['github-token'] = 'testGithubToken'
+    inputs['piper-owner'] = 'SAP'
+    inputs['piper-repository'] = 'jenkins-library'
+    jest.spyOn(github, 'downloadPiperBinary').mockReturnValue(Promise.resolve(''))
+
+    await piper.run()
+    expect(core.setFailed).toBeCalledWith('Piper binary path is empty. Please check your action inputs.')
+    expect(internalActionVariables.piperBinPath).toEqual('')
+    expect(execute.executePiper).not.toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 })

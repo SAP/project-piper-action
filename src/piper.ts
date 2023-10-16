@@ -1,4 +1,4 @@
-import { debug, exportVariable, getInput, setFailed, type InputOptions } from '@actions/core'
+import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
 import { GITHUB_COM_API_URL, GITHUB_COM_SERVER_URL, buildPiperFromSource, downloadPiperBinary } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -7,22 +7,18 @@ import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 
+// Global runtime variables that is accessible within a single action execution
+export const internalActionVariables = {
+  piperBinPath: '',
+  dockerContainerID: '',
+  sidecarNetworkID: '',
+  sidecarContainerID: ''
+}
+
 export async function run (): Promise<void> {
   try {
     const actionCfg = await getActionConfig({ required: false })
-    let piperPath
-
-    if (isEnterpriseStep(actionCfg.stepName)) {
-      piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
-    } else {
-      if (/^devel:/.test(actionCfg.piperVersion)) {
-        piperPath = await buildPiperFromSource(actionCfg.piperVersion)
-      } else {
-        piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
-      }
-    }
-    chmodSync(piperPath, 0o775)
-    exportVariable('piperPath', piperPath)
+    await preparePiperBinary(actionCfg)
 
     await loadPipelineEnv()
     await executePiper('version')
@@ -48,6 +44,24 @@ export async function run (): Promise<void> {
   } finally {
     await cleanupContainers()
   }
+}
+
+async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
+  let piperPath
+  if (isEnterpriseStep(actionCfg.stepName)) {
+    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  } else if (actionCfg.piperVersion.startsWith('devel:')) {
+    piperPath = await buildPiperFromSource(actionCfg.piperVersion)
+  } else {
+    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  }
+  if (piperPath === undefined || piperPath === '') {
+    throw new Error('Piper binary path is empty. Please check your action inputs.')
+  }
+
+  internalActionVariables.piperBinPath = piperPath
+  debug('obtained piper binary at '.concat(piperPath))
+  chmodSync(piperPath, 0o775)
 }
 
 export interface ActionConfiguration {

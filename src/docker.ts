@@ -1,9 +1,10 @@
 import { dirname } from 'path'
-import { debug, exportVariable, info } from '@actions/core'
+import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { v4 as uuidv4 } from 'uuid'
 import type { ActionConfiguration } from './piper'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
+import { internalActionVariables } from './piper'
 
 export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
@@ -21,15 +22,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     return
   }
 
-  const piperPath = process.env.piperPath
-  if (piperPath === undefined) {
-    await Promise.reject(new Error('piperPath environmental variable is undefined!'))
-    return
-  }
-
+  const piperPath = internalActionVariables.piperBinPath
   const containerID = uuidv4()
   const cwd = process.cwd()
-  exportVariable('PIPER_ACTION_dockerContainerID', containerID)
+  internalActionVariables.dockerContainerID = containerID
   info(`Starting image ${dockerImage} as container ${containerID}`)
 
   let dockerOptionsArray: string[] = []
@@ -53,7 +49,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--name', containerID
   ]
 
-  const networkID = process.env.PIPER_ACTION_dockerNetworkID ?? ''
+  const networkID = internalActionVariables.sidecarNetworkID
   if (networkID !== '') {
     dockerRunArgs.push('--network', networkID)
 
@@ -76,13 +72,9 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 }
 
 export async function cleanupContainers (): Promise<void> {
-  await stopContainer(process.env.PIPER_ACTION_dockerContainerID ?? '')
-  await stopContainer(process.env.PIPER_ACTION_sidecarContainerID ?? '')
-  await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '')
-
-  delete process.env.PIPER_ACTION_dockerContainerID
-  delete process.env.PIPER_ACTION_sidecarContainerID
-  delete process.env.PIPER_ACTION_dockerNetworkID
+  await stopContainer(internalActionVariables.dockerContainerID)
+  await stopContainer(internalActionVariables.sidecarContainerID)
+  await removeNetwork(internalActionVariables.sidecarNetworkID)
 }
 
 export async function stopContainer (containerID: string): Promise<void> {

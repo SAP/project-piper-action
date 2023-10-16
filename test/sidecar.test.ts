@@ -1,10 +1,9 @@
 import * as exec from '@actions/exec'
 import * as core from '@actions/core'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from '../src/sidecar'
-import { type ActionConfiguration } from '../src/piper'
+import { type ActionConfiguration, internalActionVariables } from '../src/piper'
 import { getOrchestratorEnvVars, getProxyEnvVars, getVaultEnvVars } from '../src/docker'
 import * as docker from '../src/docker'
-import { exportVariable } from '@actions/core'
 
 jest.mock('@actions/core')
 
@@ -36,7 +35,6 @@ describe('Sidecar', () => {
     exportPipelineEnvironment: false
   }
 
-  const piperPath = './piper'
   const expectedNetworkId = 'testNetworkId12345'
 
   beforeEach(() => {
@@ -47,26 +45,14 @@ describe('Sidecar', () => {
     jest.resetAllMocks()
     jest.clearAllMocks()
 
-    delete process.env.piperPath
-    delete process.env.PIPER_ACTION_dockerNetworkID
-    delete process.env.PIPER_ACTION_dockerContainerID
-    delete process.env.PIPER_ACTION_sidecarContainerID
-  })
-
-  test('Piper path', async () => {
-    delete process.env.piperPath
-    await expect(startSidecar(actionConfig, {}, 'image1'))
-      .rejects.toEqual(Error('piperPath environmental variable is undefined!'))
-
-    process.env.piperPath = piperPath
-    await startSidecar(actionConfig, {}, 'image1')
-    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Starting image'))
+    internalActionVariables.sidecarNetworkID = ''
+    internalActionVariables.dockerContainerID = ''
+    internalActionVariables.sidecarContainerID = ''
   })
 
   test('Start container without docker options', async () => {
     const sidecarImage = 'golang:1'
-    process.env.piperPath = piperPath
-    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
+    internalActionVariables.sidecarNetworkID = expectedNetworkId
 
     const expectedDockerFlags = [
       'run',
@@ -89,8 +75,7 @@ describe('Sidecar', () => {
     const actCfg = {
       sidecarOptions: '-u 0'
     }
-    process.env.piperPath = piperPath
-    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
+    internalActionVariables.sidecarNetworkID = expectedNetworkId
     const expectedSideOptions = '-u 0'
     const expectedDockerFlags = [
       'run',
@@ -114,7 +99,6 @@ describe('Sidecar', () => {
     const expectedDockerFlags = ['network', 'create', expect.anything()]
 
     await createNetwork()
-    expect(core.exportVariable).toHaveBeenCalled()
     expect(docker.dockerExecReadOutput).toHaveBeenCalledWith(expectedDockerFlags)
     expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining('Creating network'))
     expect(core.info).toHaveBeenNthCalledWith(2, 'Network created')
@@ -147,11 +131,11 @@ describe('Sidecar', () => {
   })
 
   test('Remove network', async () => {
-    await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '') // env var here is undefined
+    await removeNetwork('')
     expect(core.debug).toHaveBeenCalledWith('no network to remove')
     expect(exec.exec).not.toHaveBeenCalled()
 
-    exportVariable('PIPER_ACTION_dockerNetworkID', expectedNetworkId)
+    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
     await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '')
     expect(exec.exec).not.toHaveBeenCalledWith('docker', ['network', 'remove', expectedNetworkId])
   })
