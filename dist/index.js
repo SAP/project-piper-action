@@ -19625,11 +19625,14 @@ function startContainer(actionCfg, ctxConfig) {
 }
 exports.startContainer = startContainer;
 function cleanupContainers() {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         yield stopContainer((_a = process.env.PIPER_ACTION_dockerContainerID) !== null && _a !== void 0 ? _a : '');
         yield stopContainer((_b = process.env.PIPER_ACTION_sidecarContainerID) !== null && _b !== void 0 ? _b : '');
-        yield (0, sidecar_1.removeNetwork)();
+        yield (0, sidecar_1.removeNetwork)((_c = process.env.PIPER_ACTION_dockerNetworkID) !== null && _c !== void 0 ? _c : '');
+        delete process.env.PIPER_ACTION_dockerContainerID;
+        delete process.env.PIPER_ACTION_sidecarContainerID;
+        delete process.env.PIPER_ACTION_dockerNetworkID;
     });
 }
 exports.cleanupContainers = cleanupContainers;
@@ -20376,10 +20379,8 @@ function createNetwork() {
     });
 }
 exports.createNetwork = createNetwork;
-function removeNetwork() {
-    var _a;
+function removeNetwork(networkID) {
     return __awaiter(this, void 0, void 0, function* () {
-        const networkID = (_a = process.env.PIPER_ACTION_dockerNetworkID) !== null && _a !== void 0 ? _a : '';
         if (networkID === '') {
             (0, core_1.debug)('no network to remove');
             return;

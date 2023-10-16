@@ -66,8 +66,7 @@ export async function createNetwork (): Promise<void> {
   info('Network created')
 }
 
-export async function removeNetwork (): Promise<void> {
-  const networkID = process.env.PIPER_ACTION_dockerNetworkID ?? ''
+export async function removeNetwork (networkID: string): Promise<void> {
   if (networkID === '') {
     debug('no network to remove')
     return
