@@ -41,6 +41,18 @@ inputs:
   docker-options:
     description: 'Docker options to start the container with'
     required: false
+  docker-env-vars:
+    description: 'The environment variables to pass to the docker container, as JSON string (e.g. {"testKey": "testValue"})'
+    required: false
+  sidecar-image:
+    description: 'Docker image to run as a sidecar next to the main container'
+    required: false
+  sidecar-options:
+    description: 'Docker options to start the sidecar container with'
+    required: false
+  sidecar-env-vars:
+    description: 'The environment variables to pass to the sidecar container'
+    required: false
   custom-defaults-paths:
     description: 'Specify comma-separated custom defaults paths'
     required: false
