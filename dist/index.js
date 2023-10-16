@@ -19352,6 +19352,7 @@ const artifact = __importStar(__nccwpck_require__(2605));
 const execute_1 = __nccwpck_require__(5938);
 const github_1 = __nccwpck_require__(978);
 const enterprise_1 = __nccwpck_require__(4340);
+const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
 function getDefaultConfig(server, token, owner, repository, customDefaultsPaths) {
@@ -19398,7 +19399,7 @@ function downloadDefaultConfig(server, token, owner, repository, customDefaultsP
         }
         defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray);
         const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat();
-        const piperPath = process.env.piperPath;
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t download default config: piperPath not defined!');
         }
@@ -19469,9 +19470,6 @@ function checkIfStepActive(stepName, stageName, outputMaps) {
         }
         flags.push('--stage', stageName);
         flags.push('--step', stepName);
-        if (process.env.piperPath === undefined) {
-            throw new Error('could not find Piper path');
-        }
         const result = yield (0, execute_1.executePiper)('checkIfStepActive', flags);
         return result.exitCode;
     });
@@ -19526,7 +19524,7 @@ function readContextConfig(stepName) {
             return yield Promise.resolve({});
         }
         const stageName = process.env.GITHUB_JOB;
-        const piperPath = process.env.piperPath;
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t get context config: piperPath not defined!');
         }
@@ -19564,6 +19562,7 @@ const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
 const uuid_1 = __nccwpck_require__(5840);
 const sidecar_1 = __nccwpck_require__(9124);
+const piper_1 = __nccwpck_require__(309);
 function runContainers(actionCfg, ctxConfig) {
     return __awaiter(this, void 0, void 0, function* () {
         const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage;
@@ -19576,20 +19575,16 @@ function runContainers(actionCfg, ctxConfig) {
 }
 exports.runContainers = runContainers;
 function startContainer(actionCfg, ctxConfig) {
-    var _a, _b;
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
         if (dockerImage === undefined || dockerImage === '') {
             return;
         }
-        const piperPath = process.env.piperPath;
-        if (piperPath === undefined) {
-            yield Promise.reject(new Error('piperPath environmental variable is undefined!'));
-            return;
-        }
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
         const cwd = process.cwd();
-        (0, core_1.exportVariable)('PIPER_ACTION_dockerContainerID', containerID);
+        piper_1.internalActionVariables.dockerContainerID = containerID;
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
@@ -19611,10 +19606,10 @@ function startContainer(actionCfg, ctxConfig) {
             ...dockerOptionsArray,
             '--name', containerID
         ];
-        const networkID = (_a = process.env.PIPER_ACTION_dockerNetworkID) !== null && _a !== void 0 ? _a : '';
+        const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
             dockerRunArgs.push('--network', networkID);
-            const networkAlias = (_b = ctxConfig.dockerName) !== null && _b !== void 0 ? _b : '';
+            const networkAlias = (_a = ctxConfig.dockerName) !== null && _a !== void 0 ? _a : '';
             if (networkAlias !== '') {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
@@ -19625,14 +19620,10 @@ function startContainer(actionCfg, ctxConfig) {
 }
 exports.startContainer = startContainer;
 function cleanupContainers() {
-    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
-        yield stopContainer((_a = process.env.PIPER_ACTION_dockerContainerID) !== null && _a !== void 0 ? _a : '');
-        yield stopContainer((_b = process.env.PIPER_ACTION_sidecarContainerID) !== null && _b !== void 0 ? _b : '');
-        yield (0, sidecar_1.removeNetwork)((_c = process.env.PIPER_ACTION_dockerNetworkID) !== null && _c !== void 0 ? _c : '');
-        delete process.env.PIPER_ACTION_dockerContainerID;
-        delete process.env.PIPER_ACTION_sidecarContainerID;
-        delete process.env.PIPER_ACTION_dockerNetworkID;
+        yield stopContainer(piper_1.internalActionVariables.dockerContainerID);
+        yield stopContainer(piper_1.internalActionVariables.sidecarContainerID);
+        yield (0, sidecar_1.removeNetwork)(piper_1.internalActionVariables.sidecarNetworkID);
     });
 }
 exports.cleanupContainers = cleanupContainers;
@@ -19793,12 +19784,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.executePiper = void 0;
 const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
+const piper_1 = __nccwpck_require__(309);
 function executePiper(stepName, flags, ignoreDefaults, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
-        const piperPath = process.env.piperPath;
-        if (piperPath === undefined) {
-            throw new Error('Can\'t execute Piper: piperPath not defined!');
-        }
         let piperOutput = '';
         let piperError = '';
         let options = {
@@ -19821,8 +19809,9 @@ function executePiper(stepName, flags, ignoreDefaults, execOptions) {
         if (ignoreDefaults !== false && defaultsFlags !== undefined) {
             flags = flags.concat(JSON.parse(defaultsFlags));
         }
-        const containerID = process.env.PIPER_ACTION_dockerContainerID;
-        if (containerID === undefined) {
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        const containerID = piper_1.internalActionVariables.dockerContainerID;
+        if (containerID === '') {
             return yield (0, exec_1.exec)(piperPath, [
                 stepName,
                 ...flags
@@ -20184,7 +20173,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.run = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(2186);
 const github_1 = __nccwpck_require__(978);
 const fs_1 = __nccwpck_require__(7147);
@@ -20193,24 +20182,18 @@ const config_1 = __nccwpck_require__(6373);
 const pipelineEnv_1 = __nccwpck_require__(269);
 const docker_1 = __nccwpck_require__(6512);
 const enterprise_1 = __nccwpck_require__(4340);
+// Global runtime variables that is accessible within a single action execution
+exports.internalActionVariables = {
+    piperBinPath: '',
+    dockerContainerID: '',
+    sidecarNetworkID: '',
+    sidecarContainerID: ''
+};
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const actionCfg = yield getActionConfig({ required: false });
-            let piperPath;
-            if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
-                piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
-            }
-            else {
-                if (/^devel:/.test(actionCfg.piperVersion)) {
-                    piperPath = yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
-                }
-                else {
-                    piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-                }
-            }
-            (0, fs_1.chmodSync)(piperPath, 0o775);
-            (0, core_1.exportVariable)('piperPath', piperPath);
+            yield preparePiperBinary(actionCfg);
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             yield (0, execute_1.executePiper)('version');
             if ((0, enterprise_1.onGitHubEnterprise)()) {
@@ -20240,6 +20223,26 @@ function run() {
     });
 }
 exports.run = run;
+function preparePiperBinary(actionCfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let piperPath;
+        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+            piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        }
+        else if (actionCfg.piperVersion.startsWith('devel:')) {
+            piperPath = yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
+        }
+        else {
+            piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        }
+        if (piperPath === undefined || piperPath === '') {
+            throw new Error('Piper binary path is empty. Please check your action inputs.');
+        }
+        exports.internalActionVariables.piperBinPath = piperPath;
+        (0, core_1.debug)('obtained piper binary at '.concat(piperPath));
+        (0, fs_1.chmodSync)(piperPath, 0o775);
+    });
+}
 function getActionConfig(options) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
@@ -20326,17 +20329,13 @@ const exec_1 = __nccwpck_require__(1514);
 const docker_1 = __nccwpck_require__(6512);
 const uuid_1 = __nccwpck_require__(5840);
 const core_1 = __nccwpck_require__(2186);
+const piper_1 = __nccwpck_require__(309);
 const NETWORK_PREFIX = 'sidecar-';
 function startSidecar(actionCfg, ctxConfig, sidecarImage) {
-    var _a, _b;
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const piperPath = process.env.piperPath;
-        if (piperPath === undefined) {
-            yield Promise.reject(new Error('piperPath environmental variable is undefined!'));
-            return;
-        }
         const containerID = (0, uuid_1.v4)();
-        (0, core_1.exportVariable)('PIPER_ACTION_sidecarContainerID', containerID);
+        piper_1.internalActionVariables.sidecarContainerID = containerID;
         (0, core_1.info)(`Starting image ${sidecarImage} as sidecar ${containerID}`);
         const sidecarOptions = actionCfg.sidecarOptions !== '' ? actionCfg.sidecarOptions : ctxConfig.sidecarOptions;
         let sidecarOptionsArray = [];
@@ -20353,10 +20352,10 @@ function startSidecar(actionCfg, ctxConfig, sidecarImage) {
             ...sidecarOptionsArray,
             '--name', containerID
         ];
-        const networkID = (_a = process.env.PIPER_ACTION_dockerNetworkID) !== null && _a !== void 0 ? _a : '';
+        const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
             dockerRunArgs.push('--network', networkID);
-            const networkAlias = (_b = ctxConfig.dockerName) !== null && _b !== void 0 ? _b : '';
+            const networkAlias = (_a = ctxConfig.dockerName) !== null && _a !== void 0 ? _a : '';
             if (networkAlias !== '') {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
@@ -20374,7 +20373,7 @@ function createNetwork() {
         if (result === '') {
             return;
         }
-        (0, core_1.exportVariable)('PIPER_ACTION_dockerNetworkID', networkName);
+        piper_1.internalActionVariables.sidecarNetworkID = networkName;
         (0, core_1.info)('Network created');
     });
 }
