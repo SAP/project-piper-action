@@ -105,8 +105,14 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     }
   }
 
+  let stepNameValue = getValue('step-name')
+  // TODO: remove command input
+  if (stepNameValue === undefined || stepNameValue === '') {
+    stepNameValue = getValue('command')
+  }
+
   return {
-    stepName: getValue('step-name'),
+    stepName: stepNameValue,
     flags: getValue('flags'),
     piperVersion: getValue('piper-version'),
     piperOwner: getValue('piper-owner', 'SAP'),

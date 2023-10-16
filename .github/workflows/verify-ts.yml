@@ -1,0 +1,114 @@
+name: Typescript
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm clean-install
+      - run: npm run lint:ci
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: lint report
+          path: reports/eslint-report.json
+
+  unit:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm clean-install
+      - run: npm run test:ci
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test report
+          path: reports/sonar-report.xml
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage report
+          path: reports/lcov.info
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: reports/TEST-jest.xml
+          comment_mode: off
+      # action does not support GH Enterprise
+      #- uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
+      #  if: always() && github.event_name == 'pull_request'
+      #  env:
+      #    GITHUB_API_URL:
+      #  with:
+      #    lcov-file: reports/lcov.info
+
+  sonar:
+    name: Sonar
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, unit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v3
+        with:
+          name: lint report
+          path: reports
+      - uses: actions/download-artifact@v3
+        with:
+          name: test report
+          path: reports
+      - uses: actions/download-artifact@v3
+        with:
+          name: coverage report
+          path: reports
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: SonarQube Quality Gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  package-lock-is-up-to-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm install --ignore-scripts
+      - run: git diff --name-only --exit-code
+
+  dist-is-up-to-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm clean-install
+      - run: npm run dist:build
+      - run: git diff --name-only --exit-code
