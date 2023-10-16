@@ -49,6 +49,8 @@ describe('Sidecar', () => {
 
     delete process.env.piperPath
     delete process.env.PIPER_ACTION_dockerNetworkID
+    delete process.env.PIPER_ACTION_dockerContainerID
+    delete process.env.PIPER_ACTION_sidecarContainerID
   })
 
   test('Piper path', async () => {
@@ -145,12 +147,12 @@ describe('Sidecar', () => {
   })
 
   test('Remove network', async () => {
-    await removeNetwork()
+    await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '') // env var here is undefined
     expect(core.debug).toHaveBeenCalledWith('no network to remove')
     expect(exec.exec).not.toHaveBeenCalled()
 
     exportVariable('PIPER_ACTION_dockerNetworkID', expectedNetworkId)
-    await removeNetwork()
+    await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '')
     expect(exec.exec).not.toHaveBeenCalledWith('docker', ['network', 'remove', expectedNetworkId])
   })
 })

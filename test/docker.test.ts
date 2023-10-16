@@ -256,7 +256,7 @@ describe('Docker', () => {
     expect(exec.exec).not.toHaveBeenCalled()
   })
 
-  test('cleanup containers', async () => {
+  test('cleanupContainers (nothing to clean)', async () => {
     jest.spyOn(sidecar, 'removeNetwork').mockImplementation()
 
     await cleanupContainers() // no PIPER_ACTION_dockerContainerID and PIPER_ACTION_sidecarContainerID
@@ -264,17 +264,22 @@ describe('Docker', () => {
     expect(sidecar.removeNetwork).toHaveBeenCalled()
   })
 
-  test('cleanup containers 2', async () => {
+  test('cleanupContainers normal', async () => {
     jest.spyOn(sidecar, 'removeNetwork').mockImplementation()
 
     const expectedContainerId = 'golang:1'
     const expectedSidecarId = 'sidecar:1'
+    const expectedNetworkId = 'someNetworkId123'
     process.env.PIPER_ACTION_dockerContainerID = expectedContainerId
     process.env.PIPER_ACTION_sidecarContainerID = expectedSidecarId
+    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
     await cleanupContainers()
 
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedContainerId], expect.anything())
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedSidecarId], expect.anything())
-    expect(sidecar.removeNetwork).toHaveBeenCalled()
+    expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
+    expect(process.env.PIPER_ACTION_dockerContainerID).toBeUndefined()
+    expect(process.env.PIPER_ACTION_sidecarContainerID).toBeUndefined()
+    expect(process.env.PIPER_ACTION_dockerNetworkID).toBeUndefined()
   })
 })

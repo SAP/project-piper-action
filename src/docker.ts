@@ -78,7 +78,11 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 export async function cleanupContainers (): Promise<void> {
   await stopContainer(process.env.PIPER_ACTION_dockerContainerID ?? '')
   await stopContainer(process.env.PIPER_ACTION_sidecarContainerID ?? '')
-  await removeNetwork()
+  await removeNetwork(process.env.PIPER_ACTION_dockerNetworkID ?? '')
+
+  delete process.env.PIPER_ACTION_dockerContainerID
+  delete process.env.PIPER_ACTION_sidecarContainerID
+  delete process.env.PIPER_ACTION_dockerNetworkID
 }
 
 export async function stopContainer (containerID: string): Promise<void> {
