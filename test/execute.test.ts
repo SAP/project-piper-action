@@ -1,7 +1,6 @@
 import * as exec from '@actions/exec'
 
 import { executePiper } from '../src/execute'
-import { exportVariable } from '@actions/core'
 
 jest.mock('@actions/exec')
 
@@ -23,8 +22,6 @@ describe('Config', () => {
     process.env.GITHUB_JOB = githubJob
     jest.resetAllMocks()
     jest.clearAllMocks()
-
-    delete process.env.PIPER_ACTION_dockerContainerID
   })
 
   test('Execute Piper without flags', async () => {
@@ -57,20 +54,20 @@ describe('Config', () => {
 
   test('Execute Piper inside container without flags', async () => {
     const stepName = 'version'
-    exportVariable('PIPER_ACTION_dockerContainerID', 'testID')
+    const containerID = 'testID'
 
-    const piperExec = await executePiper(stepName, undefined)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', process.env.PIPER_ACTION_dockerContainerID, '/piper/piper', stepName, ...stageNameArg], expectedOptions)
+    const piperExec = await executePiper(stepName, undefined, containerID)
+    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', containerID, '/piper/piper', stepName, ...stageNameArg], expectedOptions)
     expect(piperExec.exitCode).toBe(0)
   })
 
   test('Execute Piper inside container with one flag', async () => {
     const stepName = 'version'
     const piperFlags = ['--verbose']
-    exportVariable('PIPER_ACTION_dockerContainerID', 'testID')
+    const containerID = 'testID'
 
-    const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', process.env.PIPER_ACTION_dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
+    const piperExec = await executePiper(stepName, piperFlags, containerID)
+    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', containerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
@@ -78,10 +75,10 @@ describe('Config', () => {
   test('Execute Piper inside container with multiple flags', async () => {
     const stepName = 'mavenBuild'
     const piperFlags = ['--createBOM', '--globalSettingsFile', 'global_settings.xml']
-    exportVariable('PIPER_ACTION_dockerContainerID', 'testID')
+    const containerID = 'testID'
 
-    const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', process.env.PIPER_ACTION_dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
+    const piperExec = await executePiper(stepName, piperFlags, containerID)
+    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', containerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
