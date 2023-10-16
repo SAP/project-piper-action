@@ -11,7 +11,7 @@ export async function loadPipelineEnv (): Promise<void> {
   const pipelineEnv = process.env.PIPER_ACTION_PIPELINE_ENV
   const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } }
 
-  await executePiper('writePipelineEnv', undefined, undefined, undefined, execOptions).catch(err => {
+  await executePiper('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
     throw new Error(`Can't load pipeline environment: ${err as string}`)
   })
 }
