@@ -1,19 +1,20 @@
 import { exec } from '@actions/exec'
-import { dockerExecReadOutput, getOrchestratorEnvVars, getProxyEnvVars, getVaultEnvVars } from './docker'
+import {
+  dockerExecReadOutput,
+  getOrchestratorEnvVars,
+  getProxyEnvVars,
+  getVaultEnvVars
+} from './docker'
 import { v4 as uuidv4 } from 'uuid'
-import { debug, exportVariable, info, warning } from '@actions/core'
+import { debug, info, warning } from '@actions/core'
 import type { ActionConfiguration } from './piper'
+import { internalActionVariables } from './piper'
 
 const NETWORK_PREFIX = 'sidecar-'
 
 export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: any, sidecarImage: string): Promise<void> {
-  const piperPath = process.env.piperPath
-  if (piperPath === undefined) {
-    await Promise.reject(new Error('piperPath environmental variable is undefined!')); return
-  }
-
   const containerID = uuidv4()
-  exportVariable('PIPER_ACTION_sidecarContainerID', containerID)
+  internalActionVariables.sidecarContainerID = containerID
   info(`Starting image ${sidecarImage} as sidecar ${containerID}`)
 
   const sidecarOptions = actionCfg.sidecarOptions !== '' ? actionCfg.sidecarOptions : ctxConfig.sidecarOptions
@@ -32,7 +33,7 @@ export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: a
     '--name', containerID
   ]
 
-  const networkID = process.env.PIPER_ACTION_dockerNetworkID ?? ''
+  const networkID = internalActionVariables.sidecarNetworkID
   if (networkID !== '') {
     dockerRunArgs.push('--network', networkID)
 
@@ -62,7 +63,7 @@ export async function createNetwork (): Promise<void> {
     return
   }
 
-  exportVariable('PIPER_ACTION_dockerNetworkID', networkName)
+  internalActionVariables.sidecarNetworkID = networkName
   info('Network created')
 }
 

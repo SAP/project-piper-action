@@ -3,7 +3,7 @@ import path from 'path'
 import * as exec from '@actions/exec'
 import * as core from '@actions/core'
 import * as sidecar from '../src/sidecar'
-import { type ActionConfiguration } from '../src/piper'
+import { type ActionConfiguration, internalActionVariables } from '../src/piper'
 import {
   cleanupContainers,
   getOrchestratorEnvVars,
@@ -54,20 +54,21 @@ describe('Docker', () => {
   beforeEach(() => {
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(0))
     jest.spyOn(sidecar, 'parseDockerEnvVars').mockReturnValue(expectedDockerEnvVars)
+
+    internalActionVariables.piperBinPath = piperPath
   })
 
   afterEach(() => {
     jest.resetAllMocks()
     jest.clearAllMocks()
 
-    delete process.env.piperPath
-    delete process.env.PIPER_ACTION_dockerNetworkID
-    delete process.env.PIPER_ACTION_dockerContainerID
-    delete process.env.PIPER_ACTION_sidecarContainerID
+    internalActionVariables.sidecarNetworkID = ''
+    internalActionVariables.dockerContainerID = ''
+    internalActionVariables.sidecarContainerID = ''
   })
 
   test('Docker image name', async () => {
-    process.env.piperPath = piperPath
+    internalActionVariables.piperBinPath = piperPath
     actionConfig.dockerImage = ''
     await startContainer(actionConfig, {})
     expect(core.info).not.toHaveBeenCalledWith(expect.stringContaining('Starting image'))
@@ -83,22 +84,9 @@ describe('Docker', () => {
     expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Starting image image1:321 as container'))
   })
 
-  test('Piper path', async () => {
-    actionConfig.dockerImage = 'image1'
-
-    delete process.env.piperPath
-    await expect(startContainer(actionConfig, {}))
-      .rejects.toEqual(Error('piperPath environmental variable is undefined!'))
-
-    process.env.piperPath = piperPath
-    await startContainer(actionConfig, {})
-    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Starting image'))
-  })
-
   test('Start container without docker options', async () => {
     actionConfig.dockerImage = 'image1'
     const cwd = process.cwd()
-    process.env.piperPath = piperPath
 
     const expectedDockerFlags = [
       'run',
@@ -126,7 +114,6 @@ describe('Docker', () => {
     actionConfig.dockerImage = 'image1'
     actionConfig.dockerOptions = '-u 0'
     const cwd = process.cwd()
-    process.env.piperPath = piperPath
 
     const expectedDockerFlags = [
       'run',
@@ -158,7 +145,6 @@ describe('Docker', () => {
       dockerOptions: '-u 0'
     }
     const cwd = process.cwd()
-    process.env.piperPath = piperPath
 
     const expectedDockerOptions = '-u 0'
     const expectedDockerFlags = [
@@ -191,10 +177,9 @@ describe('Docker', () => {
       dockerName: 'testNetworkAlias12345'
     }
     const cwd = process.cwd()
-    process.env.piperPath = piperPath
 
     const expectedNetworkId = 'testNetworkId12345'
-    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
+    internalActionVariables.sidecarNetworkID = expectedNetworkId
     const expectedNetworkAlias = 'testNetworkAlias12345'
     const expectedDockerOptions = '-u 0'
     const expectedDockerFlags = [
@@ -223,7 +208,6 @@ describe('Docker', () => {
   })
 
   test('Run container', async () => {
-    process.env.piperPath = piperPath
     actionConfig.dockerImage = 'dockerImg:123'
     await runContainers(actionConfig, {})
     expect(core.info).not.toHaveBeenCalledWith('Network created')
@@ -231,7 +215,6 @@ describe('Docker', () => {
   })
 
   test('Run containers with sidecar', async () => {
-    process.env.piperPath = piperPath
     actionConfig.sidecarImage = 'scImage:123'
     actionConfig.dockerImage = 'dockerImg:123'
     await runContainers(actionConfig, {})
@@ -270,16 +253,13 @@ describe('Docker', () => {
     const expectedContainerId = 'golang:1'
     const expectedSidecarId = 'sidecar:1'
     const expectedNetworkId = 'someNetworkId123'
-    process.env.PIPER_ACTION_dockerContainerID = expectedContainerId
-    process.env.PIPER_ACTION_sidecarContainerID = expectedSidecarId
-    process.env.PIPER_ACTION_dockerNetworkID = expectedNetworkId
+    internalActionVariables.dockerContainerID = expectedContainerId
+    internalActionVariables.sidecarContainerID = expectedSidecarId
+    internalActionVariables.sidecarNetworkID = expectedNetworkId
     await cleanupContainers()
 
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedContainerId], expect.anything())
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedSidecarId], expect.anything())
     expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
-    expect(process.env.PIPER_ACTION_dockerContainerID).toBeUndefined()
-    expect(process.env.PIPER_ACTION_sidecarContainerID).toBeUndefined()
-    expect(process.env.PIPER_ACTION_dockerNetworkID).toBeUndefined()
   })
 })
