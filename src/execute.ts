@@ -8,7 +8,7 @@ export interface piperExecResult {
 }
 
 export async function executePiper (
-  stepName: string, flags?: string[], ignoreDefaults?: boolean, execOptions?: ExecOptions
+  stepName: string, flags?: string[], containerID?: string, ignoreDefaults?: boolean, execOptions?: ExecOptions
 ): Promise<piperExecResult> {
   const piperPath = process.env.piperPath
   if (piperPath === undefined) {
@@ -41,7 +41,6 @@ export async function executePiper (
     flags = flags.concat(JSON.parse(defaultsFlags))
   }
 
-  const containerID = process.env.PIPER_ACTION_dockerContainerID
   if (containerID === undefined) {
     return await exec(piperPath, [
       stepName,
