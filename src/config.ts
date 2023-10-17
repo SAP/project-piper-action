@@ -6,6 +6,7 @@ import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
 import { downloadFileFromGitHub, getHost } from './github'
 import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl, getEnterpriseStageConfigUrl } from './enterprise'
+import { internalActionVariables } from './piper'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
@@ -54,7 +55,7 @@ export async function downloadDefaultConfig (server: string, token: string, owne
   defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
 
-  const piperPath = process.env.piperPath
+  const piperPath = internalActionVariables.piperBinPath
   if (piperPath === undefined) {
     throw new Error('Can\'t download default config: piperPath not defined!')
   }
@@ -122,10 +123,6 @@ export async function checkIfStepActive (stepName: string, stageName: string, ou
   flags.push('--stage', stageName)
   flags.push('--step', stepName)
 
-  if (process.env.piperPath === undefined) {
-    throw new Error('could not find Piper path')
-  }
-
   const result = await executePiper('checkIfStepActive', flags)
   return result.exitCode
 }
@@ -179,7 +176,7 @@ export async function readContextConfig (stepName: string): Promise<any> {
   }
 
   const stageName = process.env.GITHUB_JOB
-  const piperPath = process.env.piperPath
+  const piperPath = internalActionVariables.piperBinPath
 
   if (piperPath === undefined) {
     throw new Error('Can\'t get context config: piperPath not defined!')

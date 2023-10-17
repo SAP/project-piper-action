@@ -1,5 +1,6 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
+import { internalActionVariables } from './piper'
 
 export interface piperExecResult {
   output: string
@@ -8,13 +9,8 @@ export interface piperExecResult {
 }
 
 export async function executePiper (
-  stepName: string, flags?: string[], containerID?: string, ignoreDefaults?: boolean, execOptions?: ExecOptions
+  stepName: string, flags?: string[], ignoreDefaults?: boolean, execOptions?: ExecOptions
 ): Promise<piperExecResult> {
-  const piperPath = process.env.piperPath
-  if (piperPath === undefined) {
-    throw new Error('Can\'t execute Piper: piperPath not defined!')
-  }
-
   let piperOutput = ''
   let piperError = ''
   let options = {
@@ -41,7 +37,9 @@ export async function executePiper (
     flags = flags.concat(JSON.parse(defaultsFlags))
   }
 
-  if (containerID === undefined) {
+  const piperPath = internalActionVariables.piperBinPath
+  const containerID = internalActionVariables.dockerContainerID
+  if (containerID === '') {
     return await exec(piperPath, [
       stepName,
       ...flags

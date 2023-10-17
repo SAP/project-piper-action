@@ -1,43 +1,39 @@
-import { debug, exportVariable, getInput, setFailed, type InputOptions } from '@actions/core'
+import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
 import { GITHUB_COM_API_URL, GITHUB_COM_SERVER_URL, buildPiperFromSource, downloadPiperBinary } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import { getDefaultConfig, readContextConfig, createCheckIfStepActiveMaps } from './config'
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
-import { startContainer } from './docker'
+import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
+
+// Global runtime variables that is accessible within a single action execution
+export const internalActionVariables = {
+  piperBinPath: '',
+  dockerContainerID: '',
+  sidecarNetworkID: '',
+  sidecarContainerID: ''
+}
 
 export async function run (): Promise<void> {
   try {
-    const actCfg = await getActionConfig({ required: false })
-    let piperPath
-
-    if (isEnterpriseStep(actCfg.stepName)) {
-      piperPath = await downloadPiperBinary(actCfg.stepName, actCfg.sapPiperVersion, actCfg.gitHubEnterpriseApi, actCfg.gitHubEnterpriseToken, actCfg.sapPiperOwner, actCfg.sapPiperRepo)
-    } else {
-      if (/^devel:/.test(actCfg.piperVersion)) {
-        piperPath = await buildPiperFromSource(actCfg.piperVersion)
-      } else {
-        piperPath = await downloadPiperBinary(actCfg.stepName, actCfg.piperVersion, actCfg.gitHubApi, actCfg.gitHubToken, actCfg.piperOwner, actCfg.piperRepo)
-      }
-    }
-    chmodSync(piperPath, 0o775)
-    exportVariable('piperPath', piperPath)
+    const actionCfg = await getActionConfig({ required: false })
+    await preparePiperBinary(actionCfg)
 
     await loadPipelineEnv()
     await executePiper('version')
     if (onGitHubEnterprise()) {
-      await getDefaultConfig(actCfg.gitHubEnterpriseServer, actCfg.gitHubEnterpriseToken, actCfg.sapPiperOwner, actCfg.sapPiperRepo, actCfg.customDefaultsPaths)
+      await getDefaultConfig(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths)
     }
-    if (actCfg.createCheckIfStepActiveMaps) {
-      await createCheckIfStepActiveMaps(actCfg.gitHubEnterpriseToken, actCfg.sapPiperOwner, actCfg.sapPiperRepo)
+    if (actionCfg.createCheckIfStepActiveMaps) {
+      await createCheckIfStepActiveMaps(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
     }
-    if (actCfg.stepName !== '') {
-      const contextConfig = await readContextConfig(actCfg.stepName)
-      const containerID = await startContainer(actCfg.dockerImage, actCfg.dockerOptions, contextConfig)
-      await executePiper(actCfg.stepName, actCfg.flags.split(' '), containerID)
+    if (actionCfg.stepName !== '') {
+      const contextConfig = await readContextConfig(actionCfg.stepName)
+      await runContainers(actionCfg, contextConfig)
+      await executePiper(actionCfg.stepName, actionCfg.flags.split(' '))
     }
-    await exportPipelineEnv(actCfg.exportPipelineEnvironment)
+    await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {
     setFailed((() => {
       if (error instanceof Error) {
@@ -45,7 +41,27 @@ export async function run (): Promise<void> {
       }
       return String(error)
     })())
+  } finally {
+    await cleanupContainers()
   }
+}
+
+async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
+  let piperPath
+  if (isEnterpriseStep(actionCfg.stepName)) {
+    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  } else if (actionCfg.piperVersion.startsWith('devel:')) {
+    piperPath = await buildPiperFromSource(actionCfg.piperVersion)
+  } else {
+    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  }
+  if (piperPath === undefined || piperPath === '') {
+    throw new Error('Piper binary path is empty. Please check your action inputs.')
+  }
+
+  internalActionVariables.piperBinPath = piperPath
+  debug('obtained piper binary at '.concat(piperPath))
+  chmodSync(piperPath, 0o775)
 }
 
 export interface ActionConfiguration {
@@ -65,6 +81,10 @@ export interface ActionConfiguration {
   gitHubEnterpriseToken: string
   dockerImage: string
   dockerOptions: string
+  dockerEnvVars: string
+  sidecarImage: string
+  sidecarOptions: string
+  sidecarEnvVars: string
   retrieveDefaultConfig: boolean
   customDefaultsPaths: string
   createCheckIfStepActiveMaps: boolean
@@ -122,6 +142,10 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     gitHubEnterpriseToken: getValue('github-enterprise-token'),
     dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
+    dockerEnvVars: getValue('docker-env-vars'),
+    sidecarImage: getValue('sidecar-image'),
+    sidecarOptions: getValue('sidecar-options'),
+    sidecarEnvVars: getValue('sidecar-env-vars'),
     retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
     customDefaultsPaths: getValue('custom-defaults-paths'),
     createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
