@@ -160,14 +160,14 @@ async function getPiperBinaryNameFromInputs (stepName: string, version?: string)
   return piper
 }
 
-async function getTag (forAPI: boolean, version?: string): Promise<string> {
+async function getTag (forAPICall: boolean, version?: string): Promise<string> {
   let tag
   if (version !== undefined) {
     version = version.toLowerCase()
   }
   if (version === undefined || version === '' || version === 'master' || version === 'latest') {
     tag = 'latest'
-  } else if (forAPI) {
+  } else if (forAPICall) {
     tag = `tags/${version}`
   } else {
     tag = `tag/${version}`

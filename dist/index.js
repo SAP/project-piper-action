@@ -20040,7 +20040,7 @@ function getPiperBinaryNameFromInputs(stepName, version) {
         return piper;
     });
 }
-function getTag(forAPI, version) {
+function getTag(forAPICall, version) {
     return __awaiter(this, void 0, void 0, function* () {
         let tag;
         if (version !== undefined) {
@@ -20049,7 +20049,7 @@ function getTag(forAPI, version) {
         if (version === undefined || version === '' || version === 'master' || version === 'latest') {
             tag = 'latest';
         }
-        else if (forAPI) {
+        else if (forAPICall) {
             tag = `tags/${version}`;
         }
         else {
