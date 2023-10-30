@@ -20004,7 +20004,7 @@ function getPiperReleases(isSAPStep, version, api, token, owner, repository) {
         if (isSAPStep && token === '') {
             throw new Error('token is not provided');
         }
-        const tag = yield getTag(version);
+        const tag = yield getTag(true, version);
         const options = {};
         options.baseUrl = api;
         if (token !== '') {
@@ -20021,7 +20021,7 @@ function getPiperReleases(isSAPStep, version, api, token, owner, repository) {
 }
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield (0, node_fetch_1.default)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${yield getTag(version)}`);
+        const response = yield (0, node_fetch_1.default)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${yield getTag(false, version)}`);
         if (response.status !== 200) {
             throw new Error(`can't get the tag: ${response.status}`);
         }
@@ -20040,7 +20040,7 @@ function getPiperBinaryNameFromInputs(stepName, version) {
         return piper;
     });
 }
-function getTag(version) {
+function getTag(forAPICall, version) {
     return __awaiter(this, void 0, void 0, function* () {
         let tag;
         if (version !== undefined) {
@@ -20048,6 +20048,9 @@ function getTag(version) {
         }
         if (version === undefined || version === '' || version === 'master' || version === 'latest') {
             tag = 'latest';
+        }
+        else if (forAPICall) {
+            tag = `tags/${version}`;
         }
         else {
             tag = `tag/${version}`;

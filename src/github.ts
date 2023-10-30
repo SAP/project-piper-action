@@ -124,7 +124,7 @@ async function getPiperReleases (isSAPStep: boolean, version: string, api: strin
   if (isSAPStep && token === '') {
     throw new Error('token is not provided')
   }
-  const tag = await getTag(version)
+  const tag = await getTag(true, version)
   const options: OctokitOptions = {}
   options.baseUrl = api
   if (token !== '') {
@@ -142,7 +142,7 @@ async function getPiperReleases (isSAPStep: boolean, version: string, api: strin
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${await getTag(version)}`)
+  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${await getTag(false, version)}`)
   if (response.status !== 200) {
     throw new Error(`can't get the tag: ${response.status}`)
   }
@@ -160,13 +160,15 @@ async function getPiperBinaryNameFromInputs (stepName: string, version?: string)
   return piper
 }
 
-async function getTag (version?: string): Promise<string> {
+async function getTag (forAPICall: boolean, version?: string): Promise<string> {
   let tag
   if (version !== undefined) {
     version = version.toLowerCase()
   }
   if (version === undefined || version === '' || version === 'master' || version === 'latest') {
     tag = 'latest'
+  } else if (forAPICall) {
+    tag = `tags/${version}`
   } else {
     tag = `tag/${version}`
   }
