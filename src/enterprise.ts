@@ -19,7 +19,7 @@ export function onGitHubEnterprise (): boolean {
 
 export function getEnterpriseDefaultsUrl (owner: string, repository: string): string {
   if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-    return `${process.env.GITHUB_API_URL}/repos/C5347299/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
+    return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
   }
   return ''
 }

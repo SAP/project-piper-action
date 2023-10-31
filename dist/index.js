@@ -19747,7 +19747,7 @@ function onGitHubEnterprise() {
 exports.onGitHubEnterprise = onGitHubEnterprise;
 function getEnterpriseDefaultsUrl(owner, repository) {
     if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-        return `${process.env.GITHUB_API_URL}/repos/C5347299/${repository}/contents/resources/${exports.ENTERPRISE_DEFAULTS_FILENAME}`;
+        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_DEFAULTS_FILENAME}`;
     }
     return '';
 }
