@@ -19518,10 +19518,10 @@ function generateDefaultConfigFlags(paths) {
     return paths.map((path) => ['--defaultConfig', path]).flat();
 }
 exports.generateDefaultConfigFlags = generateDefaultConfigFlags;
-function readContextConfig(stepName) {
+function readContextConfig(stepName, flags) {
     return __awaiter(this, void 0, void 0, function* () {
         if (['version', 'help', 'getConfig'].includes(stepName)) {
-            return yield Promise.resolve({});
+            return {};
         }
         const stageName = process.env.GITHUB_JOB;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
@@ -19531,8 +19531,13 @@ function readContextConfig(stepName) {
         if (stageName === undefined) {
             throw new Error('Can\'t get context config: stageName not defined!');
         }
-        const flags = ['--contextConfig', '--stageName', `${stageName}`, '--stepName', `${stepName}`];
-        const piperExec = yield (0, execute_1.executePiper)('getConfig', flags);
+        const getConfigFlags = ['--contextConfig', '--stageName', `${stageName}`, '--stepName', `${stepName}`];
+        if (flags.includes('--customConfig')) {
+            const flagIdx = flags.indexOf('--customConfig');
+            const customConfigFlagValue = flags[flagIdx + 1];
+            getConfigFlags.push('--customConfig', customConfigFlagValue);
+        }
+        const piperExec = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
         return JSON.parse(piperExec.output);
     });
 }
@@ -20206,9 +20211,10 @@ function run() {
                 yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
             }
             if (actionCfg.stepName !== '') {
-                const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName);
+                const flags = actionCfg.flags.split(' ');
+                const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                yield (0, execute_1.executePiper)(actionCfg.stepName, actionCfg.flags.split(' '));
+                yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }

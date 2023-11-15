@@ -29,9 +29,10 @@ export async function run (): Promise<void> {
       await createCheckIfStepActiveMaps(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
     }
     if (actionCfg.stepName !== '') {
-      const contextConfig = await readContextConfig(actionCfg.stepName)
+      const flags = actionCfg.flags.split(' ')
+      const contextConfig = await readContextConfig(actionCfg.stepName, flags)
       await runContainers(actionCfg, contextConfig)
-      await executePiper(actionCfg.stepName, actionCfg.flags.split(' '))
+      await executePiper(actionCfg.stepName, flags)
     }
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {

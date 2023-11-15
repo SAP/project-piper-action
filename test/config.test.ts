@@ -160,7 +160,21 @@ describe('Config', () => {
     piperExecResultMock.output = '{}'
 
     const expectedPiperFlags = ['--contextConfig', '--stageName', process.env.GITHUB_JOB, '--stepName', stepName]
-    await config.readContextConfig(stepName)
+    await config.readContextConfig(stepName, [])
+
+    expect(execute.executePiper).toHaveBeenCalledWith('getConfig', expectedPiperFlags)
+
+    delete process.env.GITHUB_JOB
+  })
+  test('Read context config with --customConfig flag', async () => {
+    process.env.GITHUB_JOB = 'Build'
+    const stepName = 'mavenBuild'
+
+    // 'piper getConfig --contextConfig' needs to return a JSON string
+    piperExecResultMock.output = '{}'
+
+    await config.readContextConfig(stepName, ['some', 'other', 'flags', '--customConfig', '.pipeline/custom.yml'])
+    const expectedPiperFlags = ['--contextConfig', '--stageName', process.env.GITHUB_JOB, '--stepName', stepName, '--customConfig', '.pipeline/custom.yml']
 
     expect(execute.executePiper).toHaveBeenCalledWith('getConfig', expectedPiperFlags)
 
