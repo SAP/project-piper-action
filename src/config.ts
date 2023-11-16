@@ -170,9 +170,9 @@ export function generateDefaultConfigFlags (paths: string[]): string[] {
   return paths.map((path) => ['--defaultConfig', path]).flat()
 }
 
-export async function readContextConfig (stepName: string): Promise<any> {
+export async function readContextConfig (stepName: string, flags: string[]): Promise<any> {
   if (['version', 'help', 'getConfig'].includes(stepName)) {
-    return await Promise.resolve({})
+    return {}
   }
 
   const stageName = process.env.GITHUB_JOB
@@ -185,8 +185,13 @@ export async function readContextConfig (stepName: string): Promise<any> {
     throw new Error('Can\'t get context config: stageName not defined!')
   }
 
-  const flags = ['--contextConfig', '--stageName', `${stageName}`, '--stepName', `${stepName}`]
+  const getConfigFlags = ['--contextConfig', '--stageName', `${stageName}`, '--stepName', `${stepName}`]
+  if (flags.includes('--customConfig')) {
+    const flagIdx = flags.indexOf('--customConfig')
+    const customConfigFlagValue = flags[flagIdx + 1]
+    getConfigFlags.push('--customConfig', customConfigFlagValue)
+  }
 
-  const piperExec = await executePiper('getConfig', flags)
+  const piperExec = await executePiper('getConfig', getConfigFlags)
   return JSON.parse(piperExec.output)
 }
