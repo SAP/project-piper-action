@@ -19667,6 +19667,8 @@ function getOrchestratorEnvVars() {
         'GITHUB_REPOSITORY',
         '--env',
         'GITHUB_SHA',
+        '--env',
+        'GITHUB_WORKFLOW_REF',
         // Pull Request Info (needed for sonarExecuteScan)
         '--env',
         'GITHUB_HEAD_REF',
