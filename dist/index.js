@@ -19523,7 +19523,7 @@ function readContextConfig(stepName, flags) {
         if (['version', 'help', 'getConfig'].includes(stepName)) {
             return {};
         }
-        const stageName = process.env.GITHUB_JOB;
+        const stageName = process.env.GITHUB_ACTION;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t get context config: piperPath not defined!');
@@ -19808,7 +19808,7 @@ function executePiper(stepName, flags, ignoreDefaults, execOptions) {
         };
         options = Object.assign({}, options, execOptions);
         flags = flags !== null && flags !== void 0 ? flags : [];
-        const stageName = process.env.GITHUB_JOB;
+        const stageName = process.env.GITHUB_ACTION;
         if (stageName !== undefined) {
             flags.push('--stageName', stageName);
         }

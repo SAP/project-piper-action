@@ -175,7 +175,7 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
     return {}
   }
 
-  const stageName = process.env.GITHUB_JOB
+  const stageName = process.env.GITHUB_ACTION
   const piperPath = internalActionVariables.piperBinPath
 
   if (piperPath === undefined) {

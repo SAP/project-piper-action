@@ -27,7 +27,7 @@ export async function executePiper (
 
   flags = flags ?? []
 
-  const stageName = process.env.GITHUB_JOB
+  const stageName = process.env.GITHUB_ACTION
   if (stageName !== undefined) {
     flags.push('--stageName', stageName)
   }
