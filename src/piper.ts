@@ -19,10 +19,10 @@ export async function run (): Promise<void> {
   try {
     // styling output: https://www.npmjs.com/package/@actions/core
     warning(`
-      \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
-      \u001b[38;2;255;255;0mand will be deleted from Piper stages workflows by the end of February, 2024.
-      \u001b[38;2;255;255;0mMake sure you are adjusted your workflow accordingly to avoid pipelines failures.
-      \u001b[38;2;255;255;0mPlease see additional information: https://github.tools.sap/info
+      \u001b[38;2;255;255;0mThe is-optimized-and-scheduled, pipeline-optimization, and manual-confirmation
+      \u001b[38;2;255;255;0minputs are deprecated and will be removed from Piper stages/workflows by the end of February, 2024.
+      \u001b[38;2;255;255;0mEnsure that you have adjusted your workflow accordingly to prevent pipeline failures.
+      \u001b[38;2;255;255;0mPlease see additional information at: https://github.tools.sap/info
     `)
 
   //   warning(`
@@ -32,7 +32,7 @@ export async function run (): Promise<void> {
   //   \u001b[0m Please see additional information: https://github.tools.sap/info
   // `)
 
-    warning('\u001b[38;2;255;255;0m test warning\u001b[5;48;2;210;210;210;38;2;0;0;0m another test warning\u001b[0m and not another warning')
+    warning('\u001b[38;2;255;255;0m test warning\u001b[5;48;2;210;210;210;38;2;0;0;0m another test warning\u001b[0m and not another warning message')
 
     const actionCfg = await getActionConfig({ required: false })
     await preparePiperBinary(actionCfg)
