@@ -20203,12 +20203,18 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // styling output: https://www.npmjs.com/package/@actions/core
-            (0, core_1.warning)('\u001b[38;2;255;255;0mThis action will be deprecated soon, please use the open-source Piper action: \u001b[5;48;2;210;210;210;38;2;0;0;0muses: SAP/piper-github-action@main\u001b[0m (https://github.com/SAP/project-piper-action/tree/main)');
             (0, core_1.warning)(`
       \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
-       and will be deleted from Piper stages workflows by the end of February, 2024.
-      \u001b[5;48;2;210;210;210;38;2;0;0;0mMake sure you are adjusted your workflow accordingly to avoid pipelines failures.
-      \u001b[0m Please see additional information: https://github.tools.sap/info`);
+      and will be deleted from Piper stages workflows by the end of February, 2024.
+      Make sure you are adjusted your workflow accordingly to avoid pipelines failures.
+      Please see additional information: https://github.tools.sap/info
+    `);
+            //   warning(`
+            //   \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
+            //    and will be deleted from Piper stages workflows by the end of February, 2024.
+            //   \u001b[5;48;2;210;210;210;38;2;0;0;0mMake sure you are adjusted your workflow accordingly to avoid pipelines failures.
+            //   \u001b[0m Please see additional information: https://github.tools.sap/info
+            // `)
             (0, core_1.warning)('\u001b[38;2;255;255;0m test warning\u001b[5;48;2;210;210;210;38;2;0;0;0m another test warning\u001b[0m and not another warning');
             const actionCfg = yield getActionConfig({ required: false });
             yield preparePiperBinary(actionCfg);
