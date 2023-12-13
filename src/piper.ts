@@ -1,4 +1,4 @@
-import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
+import {warning, debug, getInput, setFailed, type InputOptions } from '@actions/core'
 import { GITHUB_COM_API_URL, GITHUB_COM_SERVER_URL, buildPiperFromSource, downloadPiperBinary } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -17,6 +17,17 @@ export const internalActionVariables = {
 
 export async function run (): Promise<void> {
   try {
+    // styling output: https://www.npmjs.com/package/@actions/core
+    warning('\u001b[38;2;255;255;0mThis action will be deprecated soon, please use the open-source Piper action: \u001b[5;48;2;210;210;210;38;2;0;0;0muses: SAP/piper-github-action@main\u001b[0m (https://github.com/SAP/project-piper-action/tree/main)')
+
+    warning(`
+      \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
+       and will be deleted from Piper stages workflows by the end of February, 2024.
+      \u001b[5;48;2;210;210;210;38;2;0;0;0mMake sure you are adjusted your workflow accordingly to avoid pipelines failures.
+      \u001b[0m Please see additional information: https://github.tools.sap/info`)
+
+    warning('\u001b[38;2;255;255;0m test warning\u001b[5;48;2;210;210;210;38;2;0;0;0m another test warning\u001b[0m and not another warning')
+
     const actionCfg = await getActionConfig({ required: false })
     await preparePiperBinary(actionCfg)
 
