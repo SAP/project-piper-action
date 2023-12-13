@@ -20205,9 +20205,9 @@ function run() {
             // styling output: https://www.npmjs.com/package/@actions/core
             (0, core_1.warning)(`
       \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
-      and will be deleted from Piper stages workflows by the end of February, 2024.
-      Make sure you are adjusted your workflow accordingly to avoid pipelines failures.
-      Please see additional information: https://github.tools.sap/info
+      \u001b[38;2;255;255;0mand will be deleted from Piper stages workflows by the end of February, 2024.
+      \u001b[38;2;255;255;0mMake sure you are adjusted your workflow accordingly to avoid pipelines failures.
+      \u001b[38;2;255;255;0mPlease see additional information: https://github.tools.sap/info
     `);
             //   warning(`
             //   \u001b[38;2;255;255;0mPlease be aware that the is-optimized-and-scheduled, pipeline-optimization and manual-confirmation inputs are deprecated
