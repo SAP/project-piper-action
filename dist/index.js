@@ -20206,7 +20206,7 @@ function run() {
             (0, core_1.warning)(`
       \u001b[38;2;255;255;0mThe is-optimized-and-scheduled, pipeline-optimization, and manual-confirmation
       \u001b[38;2;255;255;0minputs are deprecated and will be removed from Piper stages/workflows by the end of February, 2024.
-      \u001b[38;2;255;255;0mEnsure that you have adjusted your workflow accordingly to prevent pipeline failures.
+      \u001b[38;2;255;255;0mIf you are using custom workflow, ensure that you have adjusted your workflow accordingly to prevent pipeline failures.
       \u001b[38;2;255;255;0mPlease see additional information at: https://github.tools.sap/info
     `);
             //   warning(`
