@@ -32,7 +32,7 @@
   },
   "homepage": "https://sap.github.io/jenkins-library/",
   "dependencies": {
-    "@actions/core": "^1.2.6",
+    "@actions/core": "^1.10.1",
     "@actions/exec": "^1.0.4",
     "@sap/project-piper-action-utils": "^1.0.2"
   },
