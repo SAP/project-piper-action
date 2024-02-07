@@ -115,7 +115,6 @@ export async function createCheckIfStepActiveMaps (token: string, owner: string,
 export async function checkIfStepActive (stepName: string, stageName: string, outputMaps: boolean): Promise<number> {
   const flags: string[] = []
   flags.push('--stageConfig', path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME))
-  flags.push('--useV1')
   if (outputMaps) {
     flags.push('--stageOutputFile', '.pipeline/stage_out.json')
     flags.push('--stepOutputFile', '.pipeline/step_out.json')
