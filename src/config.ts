@@ -22,26 +22,26 @@ export async function getDefaultConfig (server: string, token: string, owner: st
     }
 
     return await Promise.resolve(0)
-  } else {
-    try {
-      info('Restoring default config')
-      // throws an error with message containing 'Unable to find' if artifact does not exist
-      await restoreDefaultConfig()
-      info('Defaults restored from artifact')
+  }
 
-      return await Promise.resolve(0)
-    } catch (err: unknown) {
-      if (err instanceof Error && !err.message.includes('Unable to find')) {
-        throw err
-      }
+  try {
+    info('Restoring default config')
+    // throws an error with message containing 'Unable to find' if artifact does not exist
+    await restoreDefaultConfig()
+    info('Defaults restored from artifact')
 
-      // continue with downloading defaults and upload as artifact
-      info('Defaults artifact does not exist yet')
-      info('Downloading defaults')
-      await downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths)
-
-      return await Promise.resolve(0)
+    return await Promise.resolve(0)
+  } catch (err: unknown) {
+    if (err instanceof Error && !err.message.includes('Unable to find')) {
+      throw err
     }
+
+    // continue with downloading defaults and upload as artifact
+    info('Defaults artifact does not exist yet')
+    info('Downloading defaults')
+    await downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths)
+
+    return await Promise.resolve(0)
   }
 }
 

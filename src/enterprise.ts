@@ -18,10 +18,11 @@ export function onGitHubEnterprise (): boolean {
 }
 
 export function getEnterpriseDefaultsUrl (owner: string, repository: string): string {
-  if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-    return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
+  if (!onGitHubEnterprise() || owner == '' || repository == '') {
+    return ''
   }
-  return ''
+
+  return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
 }
 
 export function getEnterpriseStageConfigUrl (owner: string, repository: string): string {

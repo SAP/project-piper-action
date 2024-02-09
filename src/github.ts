@@ -200,25 +200,4 @@ export async function downloadFileFromGitHub (url: string, token: string): Promi
   return response
 }
 
-// function getKey (path: string): string {
-//   return path.split('/').slice(-2).reverse().join('_').replace(/\./g, '_')
-// }
 
-// async function savePiper (path: string): Promise<number> {
-//   const key = getKey(path)
-//   debug(`Caching with key: ${key}`)
-//   return await saveCache([path], key)
-// }
-
-// async function restorePiper (path: string): Promise<string> {
-//   const key = getKey(path)
-//   debug(`Restoring cache with key: ${key}`)
-//   path = path.split('/').slice(0, -1).join('/')
-//   debug(`Path: ${path}`)
-//   const path2 = await restoreCache([path], key)
-//   debug(`Path is: ${path2}`)
-//   if (typeof path2 === 'undefined') {
-//     return ''
-//   }
-//   return path
-// }
