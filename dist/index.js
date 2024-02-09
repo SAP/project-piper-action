@@ -19922,7 +19922,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('repository is not provided');
         }
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
-        const [assetUrl, tag] = yield getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo);
+        const [binaryAssetURL, tag] = yield getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo);
         const headers = {};
         headers.Accept = 'application/octet-stream';
         if (token !== '') {
@@ -19933,7 +19933,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             return piperBinaryDestPath;
         }
         (0, core_2.info)(`Downloading binary '${piperBinaryName}' into ${piperBinaryDestPath}`);
-        yield (0, tool_cache_1.downloadTool)(assetUrl, piperBinaryDestPath, undefined, headers);
+        yield (0, tool_cache_1.downloadTool)(binaryAssetURL, piperBinaryDestPath, undefined, headers);
         return piperBinaryDestPath;
     });
 }
@@ -20060,7 +20060,9 @@ function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
         const url = getReleaseResponse.data.assets.find((asset) => {
             return asset.name === assetName;
         }).url;
-        return [url, getReleaseResponse.data.tag_name];
+        const tag = getReleaseResponse.data.tag_name; // version of release
+        (0, core_2.debug)(`Found asset URL: ${url} and tag: ${tag}`);
+        return [url, tag];
     });
 }
 exports.getReleaseAssetUrl = getReleaseAssetUrl;

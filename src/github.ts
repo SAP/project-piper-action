@@ -5,7 +5,7 @@ import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { info } from '@actions/core'
+import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
 
@@ -31,7 +31,7 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
   }
 
   const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
-  const [assetUrl, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
+  const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
   const headers: any = {}
   headers.Accept = 'application/octet-stream'
   if (token !== '') {
@@ -45,7 +45,7 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
 
   info(`Downloading binary '${piperBinaryName}' into ${piperBinaryDestPath}`)
   await downloadTool(
-    assetUrl,
+    binaryAssetURL,
     piperBinaryDestPath,
     undefined,
     headers
@@ -187,5 +187,7 @@ export async function getReleaseAssetUrl (
     return asset.name === assetName
   }).url
 
-  return [url, getReleaseResponse.data.tag_name]
+  const tag = getReleaseResponse.data.tag_name // version of release
+  debug(`Found asset URL: ${url} and tag: ${tag}`)
+  return [url, tag]
 }
