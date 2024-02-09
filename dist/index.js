@@ -19930,7 +19930,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         if (fs.existsSync(piperBinaryDestPath)) {
             return piperBinaryDestPath;
         }
-        (0, core_2.info)(`Downloading ${piperBinaryName}`);
+        (0, core_2.info)(`Downloading binary ${piperBinaryName} into ${piperBinaryDestPath}`);
         yield (0, tool_cache_1.downloadTool)(assetUrl, piperBinaryDestPath, undefined, headers);
         return piperBinaryDestPath;
     });

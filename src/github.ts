@@ -43,7 +43,7 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
     return piperBinaryDestPath
   }
 
-  info(`Downloading ${piperBinaryName}`)
+  info(`Downloading binary ${piperBinaryName} into ${piperBinaryDestPath}`)
   await downloadTool(
     assetUrl,
     piperBinaryDestPath,
