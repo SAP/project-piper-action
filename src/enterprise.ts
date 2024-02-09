@@ -18,7 +18,7 @@ export function onGitHubEnterprise (): boolean {
 }
 
 export function getEnterpriseDefaultsUrl (owner: string, repository: string): string {
-  if (!onGitHubEnterprise() || owner == '' || repository == '') {
+  if (!onGitHubEnterprise() || owner === '' || repository === '') {
     return ''
   }
 
