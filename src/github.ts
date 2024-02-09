@@ -43,7 +43,7 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
     return piperBinaryDestPath
   }
 
-  info(`Downloading binary ${piperBinaryName} into ${piperBinaryDestPath}`)
+  info(`Downloading binary '${piperBinaryName}' into ${piperBinaryDestPath}`)
   await downloadTool(
     assetUrl,
     piperBinaryDestPath,
@@ -110,7 +110,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 
 // by default for inner source Piper
 async function getPiperReleases (version: string, api: string, token: string, owner: string, repository: string): Promise<OctokitResponse<any>> {
-  const tag = await getTag(true, version)
+  const tag = getTag(version)
 
   const options: OctokitOptions = {}
   options.baseUrl = api
@@ -139,18 +139,16 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?
   return piper
 }
 
-async function getTag (forAPICall: boolean, version?: string): Promise<string> {
-  if (version !== undefined) {
+function getTag (version: string): string {
+  if (version !== '') {
     version = version.toLowerCase()
   }
 
   let tag
   if (version === undefined || version === '' || version === 'master' || version === 'latest') {
     tag = 'latest'
-  } else if (forAPICall) {
-    tag = `tags/${version}`
   } else {
-    tag = `tag/${version}`
+    tag = `tags/${version}`
   }
 
   return tag

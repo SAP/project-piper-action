@@ -4,14 +4,20 @@ import { debug, exportVariable, info } from '@actions/core'
 import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
-import { downloadFileFromGitHub, getHost } from './github'
-import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl, getEnterpriseStageConfigUrl } from './enterprise'
+import { downloadFileFromGitHub, getHost, getReleaseAssetUrl } from './github'
+import {
+  ENTERPRISE_DEFAULTS_FILENAME,
+  ENTERPRISE_STAGE_CONFIG_FILENAME,
+  getEnterpriseStageConfigUrl
+} from './enterprise'
 import { internalActionVariables } from './piper'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
-export async function getDefaultConfig (server: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
+export async function getDefaultConfig (
+  server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
+): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
 
@@ -39,18 +45,21 @@ export async function getDefaultConfig (server: string, token: string, owner: st
     // continue with downloading defaults and upload as artifact
     info('Defaults artifact does not exist yet')
     info('Downloading defaults')
-    await downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths)
+    await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
 
     return await Promise.resolve(0)
   }
 }
 
-export async function downloadDefaultConfig (server: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
+export async function downloadDefaultConfig (
+  server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
+): Promise<UploadResponse> {
   const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-  const enterpriseDefaultsPath = getEnterpriseDefaultsUrl(owner, repository)
+
+  const [defaultsAssetURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME, version, apiURL, token, owner, repository)
   let defaultsPaths: string[] = []
-  if (enterpriseDefaultsPath !== '') {
-    defaultsPaths = defaultsPaths.concat([enterpriseDefaultsPath])
+  if (defaultsAssetURL !== '') {
+    defaultsPaths = defaultsPaths.concat([defaultsAssetURL])
   }
   defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
@@ -65,7 +74,9 @@ export async function downloadDefaultConfig (server: string, token: string, owne
   const piperExec = await executePiper('getDefaults', flags)
 
   let defaultConfigs = JSON.parse(piperExec.output)
-  if (customDefaultsPathsArray.length === 0) { defaultConfigs = [defaultConfigs] }
+  if (customDefaultsPathsArray.length === 0) {
+    defaultConfigs = [defaultConfigs]
+  }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
@@ -109,7 +120,9 @@ export async function createCheckIfStepActiveMaps (token: string, owner: string,
 
   await downloadStageConfig(token, owner, repository)
     .then(async () => await checkIfStepActive('_', '_', true))
-    .catch(err => { info(`checkIfStepActive failed: ${err as string}`) })
+    .catch(err => {
+      info(`checkIfStepActive failed: ${err as string}`)
+    })
 }
 
 export async function checkIfStepActive (stepName: string, stageName: string, outputMaps: boolean): Promise<number> {

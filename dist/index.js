@@ -19355,7 +19355,7 @@ const enterprise_1 = __nccwpck_require__(4340);
 const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
-function getDefaultConfig(server, token, owner, repository, customDefaultsPaths) {
+function getDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         if (fs.existsSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_DEFAULTS_FILENAME))) {
             (0, core_1.info)('Defaults are present');
@@ -19381,19 +19381,19 @@ function getDefaultConfig(server, token, owner, repository, customDefaultsPaths)
             // continue with downloading defaults and upload as artifact
             (0, core_1.info)('Defaults artifact does not exist yet');
             (0, core_1.info)('Downloading defaults');
-            yield downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths);
+            yield downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths);
             return yield Promise.resolve(0);
         }
     });
 }
 exports.getDefaultConfig = getDefaultConfig;
-function downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths) {
+function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : [];
-        const enterpriseDefaultsPath = (0, enterprise_1.getEnterpriseDefaultsUrl)(owner, repository);
+        const [defaultsAssetURL] = yield (0, github_1.getReleaseAssetUrl)(enterprise_1.ENTERPRISE_DEFAULTS_FILENAME, version, apiURL, token, owner, repository);
         let defaultsPaths = [];
-        if (enterpriseDefaultsPath !== '') {
-            defaultsPaths = defaultsPaths.concat([enterpriseDefaultsPath]);
+        if (defaultsAssetURL !== '') {
+            defaultsPaths = defaultsPaths.concat([defaultsAssetURL]);
         }
         defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray);
         const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat();
@@ -19453,7 +19453,9 @@ function createCheckIfStepActiveMaps(token, owner, repository) {
         (0, core_1.info)('creating maps with active stages and steps with checkIfStepActive');
         yield downloadStageConfig(token, owner, repository)
             .then(() => __awaiter(this, void 0, void 0, function* () { return yield checkIfStepActive('_', '_', true); }))
-            .catch(err => { (0, core_1.info)(`checkIfStepActive failed: ${err}`); });
+            .catch(err => {
+            (0, core_1.info)(`checkIfStepActive failed: ${err}`);
+        });
     });
 }
 exports.createCheckIfStepActiveMaps = createCheckIfStepActiveMaps;
@@ -19930,7 +19932,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         if (fs.existsSync(piperBinaryDestPath)) {
             return piperBinaryDestPath;
         }
-        (0, core_2.info)(`Downloading binary ${piperBinaryName} into ${piperBinaryDestPath}`);
+        (0, core_2.info)(`Downloading binary '${piperBinaryName}' into ${piperBinaryDestPath}`);
         yield (0, tool_cache_1.downloadTool)(assetUrl, piperBinaryDestPath, undefined, headers);
         return piperBinaryDestPath;
     });
@@ -19989,7 +19991,7 @@ exports.buildPiperFromSource = buildPiperFromSource;
 // by default for inner source Piper
 function getPiperReleases(version, api, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
-        const tag = yield getTag(true, version);
+        const tag = getTag(version);
         const options = {};
         options.baseUrl = api;
         if (token !== '') {
@@ -20016,23 +20018,18 @@ function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
         return piper;
     });
 }
-function getTag(forAPICall, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (version !== undefined) {
-            version = version.toLowerCase();
-        }
-        let tag;
-        if (version === undefined || version === '' || version === 'master' || version === 'latest') {
-            tag = 'latest';
-        }
-        else if (forAPICall) {
-            tag = `tags/${version}`;
-        }
-        else {
-            tag = `tag/${version}`;
-        }
-        return tag;
-    });
+function getTag(version) {
+    if (version !== '') {
+        version = version.toLowerCase();
+    }
+    let tag;
+    if (version === undefined || version === '' || version === 'master' || version === 'latest') {
+        tag = 'latest';
+    }
+    else {
+        tag = `tags/${version}`;
+    }
+    return tag;
 }
 // Expects a URL in API form:
 // https://<host>/api/v3/repos/<org>/<repo>/contents/<folder>/<filename>
@@ -20166,7 +20163,7 @@ function run() {
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             yield (0, execute_1.executePiper)('version');
             if ((0, enterprise_1.onGitHubEnterprise)()) {
-                yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
+                yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
             }
             if (actionCfg.createCheckIfStepActiveMaps) {
                 yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);

@@ -30,7 +30,15 @@ export async function run (): Promise<void> {
     await loadPipelineEnv()
     await executePiper('version')
     if (onGitHubEnterprise()) {
-      await getDefaultConfig(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths)
+      await getDefaultConfig(
+        actionCfg.gitHubEnterpriseServer,
+        actionCfg.gitHubEnterpriseApi,
+        actionCfg.sapPiperVersion,
+        actionCfg.gitHubEnterpriseToken,
+        actionCfg.sapPiperOwner,
+        actionCfg.sapPiperRepo,
+        actionCfg.customDefaultsPaths
+      )
     }
     if (actionCfg.createCheckIfStepActiveMaps) {
       await createCheckIfStepActiveMaps(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
