@@ -17,14 +17,6 @@ export function onGitHubEnterprise (): boolean {
   return process.env.GITHUB_SERVER_URL !== GITHUB_COM_SERVER_URL
 }
 
-export function getEnterpriseDefaultsUrl (owner: string, repository: string): string {
-  if (!onGitHubEnterprise() || owner === '' || repository === '') {
-    return ''
-  }
-
-  return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
-}
-
 export function getEnterpriseStageConfigUrl (owner: string, repository: string): string {
   if (onGitHubEnterprise() && owner !== '' && repository !== '') {
     return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`

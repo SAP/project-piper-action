@@ -19735,7 +19735,7 @@ exports.dockerExecReadOutput = dockerExecReadOutput;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
+exports.getEnterpriseStageConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
@@ -19752,13 +19752,6 @@ function onGitHubEnterprise() {
     return process.env.GITHUB_SERVER_URL !== github_1.GITHUB_COM_SERVER_URL;
 }
 exports.onGitHubEnterprise = onGitHubEnterprise;
-function getEnterpriseDefaultsUrl(owner, repository) {
-    if (!onGitHubEnterprise() || owner === '' || repository === '') {
-        return '';
-    }
-    return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_DEFAULTS_FILENAME}`;
-}
-exports.getEnterpriseDefaultsUrl = getEnterpriseDefaultsUrl;
 function getEnterpriseStageConfigUrl(owner, repository) {
     if (onGitHubEnterprise() && owner !== '' && repository !== '') {
         return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_STAGE_CONFIG_FILENAME}`;
