@@ -19892,7 +19892,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getReleaseAssetUrl = exports.downloadFileFromGitHub = exports.buildPiperFromSource = exports.downloadPiperBinary = exports.getHost = exports.OS_PIPER_REPO = exports.OS_PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.downloadFileFromGitHub = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.OS_PIPER_REPO = exports.OS_PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -19938,6 +19938,36 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
     });
 }
 exports.downloadPiperBinary = downloadPiperBinary;
+function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
+        const url = getReleaseResponse.data.assets.find((asset) => {
+            return asset.name === assetName;
+        }).url;
+        const tag = getReleaseResponse.data.tag_name; // version of release
+        (0, core_2.debug)(`Found asset URL: ${url} and tag: ${tag}`);
+        return [url, tag];
+    });
+}
+exports.getReleaseAssetUrl = getReleaseAssetUrl;
+// by default for inner source Piper
+function getPiperReleases(version, api, token, owner, repository) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const tag = getTag(version);
+        const options = {};
+        options.baseUrl = api;
+        if (token !== '') {
+            options.auth = token;
+        }
+        const octokit = new core_1.Octokit(options);
+        (0, core_2.info)(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`);
+        const response = yield octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`);
+        if (response.status !== 200) {
+            throw new Error(`can't get release by tag ${tag}: ${response.status}`);
+        }
+        return response;
+    });
+}
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 function buildPiperFromSource(version) {
     var _a;
@@ -19988,24 +20018,6 @@ function buildPiperFromSource(version) {
     });
 }
 exports.buildPiperFromSource = buildPiperFromSource;
-// by default for inner source Piper
-function getPiperReleases(version, api, token, owner, repository) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const tag = getTag(version);
-        const options = {};
-        options.baseUrl = api;
-        if (token !== '') {
-            options.auth = token;
-        }
-        const octokit = new core_1.Octokit(options);
-        (0, core_2.info)(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`);
-        const response = yield octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`);
-        if (response.status !== 200) {
-            throw new Error(`can't get release by tag ${tag}: ${response.status}`);
-        }
-        return response;
-    });
-}
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
     return __awaiter(this, void 0, void 0, function* () {
         let piper = 'piper';
@@ -20033,6 +20045,7 @@ function getTag(version) {
 }
 // Expects a URL in API form:
 // https://<host>/api/v3/repos/<org>/<repo>/contents/<folder>/<filename>
+// TODO: remove this function after stage-config file is migrated to release assets
 function downloadFileFromGitHub(url, token) {
     return __awaiter(this, void 0, void 0, function* () {
         const host = url.substring(0, url.indexOf('/repos'));
@@ -20054,18 +20067,6 @@ function downloadFileFromGitHub(url, token) {
     });
 }
 exports.downloadFileFromGitHub = downloadFileFromGitHub;
-function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
-        const url = getReleaseResponse.data.assets.find((asset) => {
-            return asset.name === assetName;
-        }).url;
-        const tag = getReleaseResponse.data.tag_name; // version of release
-        (0, core_2.debug)(`Found asset URL: ${url} and tag: ${tag}`);
-        return [url, tag];
-    });
-}
-exports.getReleaseAssetUrl = getReleaseAssetUrl;
 
 
 /***/ }),

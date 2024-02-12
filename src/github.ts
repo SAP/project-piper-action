@@ -54,6 +54,39 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
   return piperBinaryDestPath
 }
 
+export async function getReleaseAssetUrl (
+  assetName: string, version: string, apiURL: string, token: string, owner: string, repo: string
+): Promise<[string, string]> {
+  const getReleaseResponse = await getPiperReleases(version, apiURL, token, owner, repo)
+  const url = getReleaseResponse.data.assets.find((asset: { name: string }) => {
+    return asset.name === assetName
+  }).url
+
+  const tag = getReleaseResponse.data.tag_name // version of release
+  debug(`Found asset URL: ${url} and tag: ${tag}`)
+  return [url, tag]
+}
+
+// by default for inner source Piper
+async function getPiperReleases (version: string, api: string, token: string, owner: string, repository: string): Promise<OctokitResponse<any>> {
+  const tag = getTag(version)
+
+  const options: OctokitOptions = {}
+  options.baseUrl = api
+  if (token !== '') {
+    options.auth = token
+  }
+
+  const octokit = new Octokit(options)
+  info(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`)
+  const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
+  if (response.status !== 200) {
+    throw new Error(`can't get release by tag ${tag}: ${response.status}`)
+  }
+
+  return response
+}
+
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperFromSource (version: string): Promise<string> {
   const versionComponents = version.split(':')
@@ -108,26 +141,6 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   return piperPath
 }
 
-// by default for inner source Piper
-async function getPiperReleases (version: string, api: string, token: string, owner: string, repository: string): Promise<OctokitResponse<any>> {
-  const tag = getTag(version)
-
-  const options: OctokitOptions = {}
-  options.baseUrl = api
-  if (token !== '') {
-    options.auth = token
-  }
-
-  const octokit = new Octokit(options)
-  info(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`)
-  const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
-  if (response.status !== 200) {
-    throw new Error(`can't get release by tag ${tag}: ${response.status}`)
-  }
-
-  return response
-}
-
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
   let piper = 'piper'
   if (isEnterpriseStep) {
@@ -156,6 +169,7 @@ function getTag (version: string): string {
 
 // Expects a URL in API form:
 // https://<host>/api/v3/repos/<org>/<repo>/contents/<folder>/<filename>
+// TODO: remove this function after stage-config file is migrated to release assets
 export async function downloadFileFromGitHub (url: string, token: string): Promise<OctokitResponse<any>> {
   const host = url.substring(0, url.indexOf('/repos'))
   const apiRequest = url.substring(url.indexOf('/repos'))
@@ -177,17 +191,4 @@ export async function downloadFileFromGitHub (url: string, token: string): Promi
   }
 
   return response
-}
-
-export async function getReleaseAssetUrl (
-  assetName: string, version: string, apiURL: string, token: string, owner: string, repo: string
-): Promise<[string, string]> {
-  const getReleaseResponse = await getPiperReleases(version, apiURL, token, owner, repo)
-  const url = getReleaseResponse.data.assets.find((asset: { name: string }) => {
-    return asset.name === assetName
-  }).url
-
-  const tag = getReleaseResponse.data.tag_name // version of release
-  debug(`Found asset URL: ${url} and tag: ${tag}`)
-  return [url, tag]
 }
