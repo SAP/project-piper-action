@@ -1,6 +1,6 @@
 import { GITHUB_COM_SERVER_URL } from './github'
 
-export const ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml'
+export const ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults-github.yml'
 export const ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml'
 
 const ENTERPRISE_STEPNAME_PREFIX = 'sap'
