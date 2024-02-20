@@ -42,13 +42,6 @@ describe('test enterprise.ts', () => {
     })
   })
 
-  describe('', () => {
-    const envClone = Object.assign({}, process.env)
-
-    afterEach(() => {
-      process.env = Object.assign({}, envClone)
-    })
-  })
   describe('getEnterpriseStageConfigUrl', () => {
     test('with env var set', async () => {
       // init
