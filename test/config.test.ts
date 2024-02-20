@@ -8,7 +8,7 @@ import { type OctokitResponse } from '@octokit/types'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
-import { ENTERPRISE_DEFAULTS_FILENAME } from '../src/enterprise'
+import { ENTERPRISE_DEFAULTS_FILENAME, getEnterpriseDefaultsUrl } from '../src/enterprise'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -73,7 +73,6 @@ describe('Config', () => {
 
     jest.spyOn(core, 'exportVariable')
     jest.spyOn(config, 'restoreDefaultConfig')
-    jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`, 'v1.0.0'])
 
     jest.spyOn(fs, 'writeFileSync').mockReturnValue()
   })
@@ -91,12 +90,12 @@ describe('Config', () => {
 
     const server = 'https://github.anything.com'
     const host = 'github.anything.com'
-    const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+    const sapDefaultsUrl = getEnterpriseDefaultsUrl('something', 'nothing')
     const expectedPiperFlags = ['--defaultsFile', `${sapDefaultsUrl}`, '--gitHubTokens', `${host}:blah-blah`]
     const expectedWrittenFilepath = path.join(config.CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME)
     piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl])
 
-    const errorCode = await config.downloadDefaultConfig(server, 'https://dummy-api.test/', 'v1.0.0', 'blah-blah', 'something', 'nothing', '')
+    const errorCode = await config.downloadDefaultConfig(server, 'blah-blah', 'something', 'nothing', '')
 
     expect(errorCode).toBe(0)
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
@@ -110,7 +109,7 @@ describe('Config', () => {
 
     const server = 'https://github.anything.com'
     const host = 'github.anything.com'
-    const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+    const sapDefaultsUrl = getEnterpriseDefaultsUrl('something', 'nothing')
     const customDefaultsPath = 'custom_defaults.yml'
     const allDefaultsPaths = [sapDefaultsUrl, customDefaultsPath]
     piperExecResultMock = generatePiperGetDefaultsOutput(allDefaultsPaths)
@@ -120,7 +119,7 @@ describe('Config', () => {
     const expectedWrittenFilepaths = allDefaultsPaths.map(defaultsPath => path.join(config.CONFIG_DIR, path.basename(defaultsPath)))
     const expectedExportedFilepaths = expectedWrittenFilepaths.map(defaultsPath => ['--defaultConfig', defaultsPath]).flat()
 
-    const errorCode = await config.downloadDefaultConfig(server, 'https://dummy-api.test/', 'v1.0.0', 'blah-blah', 'something', 'nothing', customDefaultsPath)
+    const errorCode = await config.downloadDefaultConfig(server, 'blah-blah', 'something', 'nothing', customDefaultsPath)
 
     expect(errorCode).toBe(0)
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
@@ -134,7 +133,7 @@ describe('Config', () => {
 
     const server = 'https://github.anything.com'
     const host = 'github.anything.com'
-    const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+    const sapDefaultsUrl = getEnterpriseDefaultsUrl('something', 'nothing')
     const customDefaultsPaths = ['custom_defaults.yml', 'custom_defaults2.yml']
     const allDefaultsPaths = [sapDefaultsUrl, ...customDefaultsPaths]
     piperExecResultMock = generatePiperGetDefaultsOutput(allDefaultsPaths)
@@ -145,7 +144,7 @@ describe('Config', () => {
     const expectedWrittenFilepaths = allDefaultsPaths.map(defaultsPath => path.join(config.CONFIG_DIR, path.basename(defaultsPath)))
     const expectedExportedFilepaths = expectedWrittenFilepaths.map(defaultsPath => ['--defaultConfig', defaultsPath]).flat()
 
-    const errorCode = await config.downloadDefaultConfig(server, 'https://dummy-api.test/', 'v1.0.0', 'blah-blah', 'something', 'nothing', customDefaultsPaths.join(','))
+    const errorCode = await config.downloadDefaultConfig(server, 'blah-blah', 'something', 'nothing', customDefaultsPaths.join(','))
 
     expect(errorCode).toBe(0)
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
