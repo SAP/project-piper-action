@@ -1,9 +1,4 @@
-import {
-  ENTERPRISE_STAGE_CONFIG_FILENAME,
-  getEnterpriseStageConfigUrl,
-  isEnterpriseStep,
-  onGitHubEnterprise
-} from '../src/enterprise'
+import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl, getEnterpriseStageConfigUrl, isEnterpriseStep, onGitHubEnterprise } from '../src/enterprise'
 import { GITHUB_COM_SERVER_URL } from '../src/github'
 
 describe('test enterprise.ts', () => {
@@ -17,7 +12,6 @@ describe('test enterprise.ts', () => {
       expect(isEnterpriseStep(stepName)).toBe(state)
     })
   })
-
   describe('onGitHubEnterprise', () => {
     const envClone = Object.assign({}, process.env)
 
@@ -41,35 +35,72 @@ describe('test enterprise.ts', () => {
       expect(onGitHubEnterprise()).toBeTruthy()
     })
   })
+  describe('', () => {
+    const envClone = Object.assign({}, process.env)
 
-  describe('getEnterpriseStageConfigUrl', () => {
-    test('with env var set', async () => {
-      // init
-      process.env.GITHUB_SERVER_URL = GITHUB_COM_SERVER_URL
-      // test
-      // assert
-      expect(getEnterpriseStageConfigUrl('anything', 'something')).toBe('')
+    afterEach(() => {
+      process.env = Object.assign({}, envClone)
     })
-
-    describe('with enterprise github', () => {
-      process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
-      process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
-      test.skip('with owner & repository', async () => {
+    describe('getEnterpriseDefaultsUrl', () => {
+      test('with env var set', async () => {
         // init
-        const owner = 'anything'
-        const repository = 'something'
+        process.env.GITHUB_SERVER_URL = GITHUB_COM_SERVER_URL
         // test
         // assert
-        expect(getEnterpriseStageConfigUrl(owner, repository)).toBe(`${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`)
+        expect(getEnterpriseDefaultsUrl('anything', 'something')).toBe('')
       })
 
-      test('with no repository', async () => {
+      describe('with enterprise github', () => {
+        process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
+        process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
+        test.skip('with owner & repository', async () => {
+          // init
+          const owner = 'anything'
+          const repository = 'something'
+          // test
+          // assert
+          expect(getEnterpriseDefaultsUrl(owner, repository)).toBe(`${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`)
+        })
+
+        test('with no repository', async () => {
+          // init
+          const owner = 'anything'
+          const repository = ''
+          // test
+          // assert
+          expect(getEnterpriseDefaultsUrl(owner, repository)).toBe('')
+        })
+      })
+    })
+    describe('getEnterpriseStageConfigUrl', () => {
+      test('with env var set', async () => {
         // init
-        const owner = 'anything'
-        const repository = ''
+        process.env.GITHUB_SERVER_URL = GITHUB_COM_SERVER_URL
         // test
         // assert
-        expect(getEnterpriseStageConfigUrl(owner, repository)).toBe('')
+        expect(getEnterpriseStageConfigUrl('anything', 'something')).toBe('')
+      })
+
+      describe('with enterprise github', () => {
+        process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
+        process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
+        test.skip('with owner & repository', async () => {
+          // init
+          const owner = 'anything'
+          const repository = 'something'
+          // test
+          // assert
+          expect(getEnterpriseStageConfigUrl(owner, repository)).toBe(`${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`)
+        })
+
+        test('with no repository', async () => {
+          // init
+          const owner = 'anything'
+          const repository = ''
+          // test
+          // assert
+          expect(getEnterpriseStageConfigUrl(owner, repository)).toBe('')
+        })
       })
     })
   })

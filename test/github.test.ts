@@ -2,141 +2,60 @@ import fs from 'fs'
 
 import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
-import * as core from '@actions/core'
 
 import { downloadPiperBinary, buildPiperFromSource, downloadFileFromGitHub } from '../src/github'
 
-jest.mock('@actions/core')
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
 jest.mock('@octokit/core')
 jest.mock('node-fetch')
 
 describe('GitHub package tests', () => {
-  const version = 'v1.1.1'
-  const osStep = 'version'
-  const sapStep = 'sapSomeStep'
-  const githubApiURL = 'https://github.acme.com/api/v3'
-  const token = 'someToken'
-  const owner = 'someOwner'
-  const repo = 'SomeRepo'
   afterEach(() => {
     jest.resetAllMocks()
     jest.clearAllMocks()
   })
-
-  test('downloadPiperBinary - inner source piper, no token', async () => {
-    try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, '', owner, repo)
-    } catch (e) {
-      expect(e).toStrictEqual(Error(`Token is not provided for enterprise step: ${sapStep}`))
-    }
+  // TODO fetch mockery issue
+  test.skip('Get latest o-s Piper without authorization', async () => {
+    const piper = './v1_255_0/piper'
+    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(piper))
+    jest.spyOn(global, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.255.0',
+        status: 200
+      })))
+    expect(
+      await downloadPiperBinary('help', 'latest', 'https://github.acme.com/api/v3', 'someToken', 'SAP', 'jenkins-library')
+    ).toBe(piper)
   })
-
-  test('downloadPiperBinary - no owner', async () => {
-    try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, '', repo)
-    } catch (e) {
-      expect(e).toStrictEqual(Error('owner is not provided'))
-    }
-  })
-
-  test('downloadPiperBinary - no repo', async () => {
-    try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, owner, '')
-    } catch (e) {
-      expect(e).toStrictEqual(Error('repository is not provided'))
-    }
-  })
-
-  test('downloadPiperBinary - OS step latest, no token', async () => {
-    const assetUrl = `${githubApiURL}/release/assets/123456`
+  test('Get master SAP Piper', async () => {
+    const piper = `${process.cwd()}/1_255_0/sap-piper_master`
+    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(piper))
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
       return {
         request: async () => {
-          return {
-            data: {
-              tag_name: version,
-              assets: [{ name: 'piper', url: assetUrl }]
-            },
-            status: 200
-          }
+          return await Promise.resolve(
+            {
+              data: {
+                tag_name: '1.255.0',
+                assets: [
+                  {
+                    name: 'sap-piper_master',
+                    url: '',
+                    browser_download_url: ''
+                  }
+                ]
+              },
+              status: 200
+            }
+          )
         }
       } as unknown as octokit.Octokit
     })
-
-    await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from /repos/${owner}/${repo}/releases/latest`)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining('Downloading binary \'piper\''))
+    expect(
+      await downloadPiperBinary('sapAnything', 'master', 'https://github.acme.com/api/v3', 'blah-blah', 'SAP', 'jenkins-library')
+    ).toBe(piper)
   })
-
-  test('downloadPiperBinary - SAP step latest', async () => {
-    const assetUrl = `${githubApiURL}/release/assets/123456`
-    jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-      return {
-        request: async () => {
-          return {
-            data: {
-              tag_name: version,
-              assets: [{ name: 'sap-piper', url: assetUrl }]
-            },
-            status: 200
-          }
-        }
-      } as unknown as octokit.Octokit
-    })
-
-    await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, owner, repo)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from /repos/${owner}/${repo}/releases/latest`)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining('Downloading binary \'sap-piper\''))
-  })
-
-  test('downloadPiperBinary - OS step, master', async () => {
-    const assetUrl = `${githubApiURL}/release/assets/123456`
-    jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-      return {
-        request: async () => {
-          return {
-            data: {
-              tag_name: version,
-              assets: [{ name: 'piper_master', url: assetUrl }]
-            },
-            status: 200
-          }
-        }
-      } as unknown as octokit.Octokit
-    })
-
-    await downloadPiperBinary(osStep, 'master', githubApiURL, token, owner, repo)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from /repos/${owner}/${repo}/releases/latest`)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining('Downloading binary \'piper_master\''))
-  })
-
-  test('downloadPiperBinary - OS step, exact version', async () => {
-    const assetUrl = `${githubApiURL}/release/assets/123456`
-    jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-      return {
-        request: async () => {
-          return {
-            data: {
-              tag_name: version,
-              assets: [{ name: 'piper', url: assetUrl }]
-            },
-            status: 200
-          }
-        }
-      } as unknown as octokit.Octokit
-    })
-
-    await downloadPiperBinary(osStep, version, githubApiURL, token, owner, repo)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from /repos/${owner}/${repo}/releases/tags/${version}`)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining('Downloading binary \'piper\''))
-  })
-
   test('Get dev Piper', async () => {
     const owner = 'SAP'
     const repository = 'jenkins-library'
@@ -152,7 +71,6 @@ describe('GitHub package tests', () => {
       await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
     ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
   })
-
   test('Download file from GitHub', async () => {
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
       return {
