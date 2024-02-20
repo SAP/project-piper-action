@@ -19463,7 +19463,6 @@ function checkIfStepActive(stepName, stageName, outputMaps) {
     return __awaiter(this, void 0, void 0, function* () {
         const flags = [];
         flags.push('--stageConfig', path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME));
-        flags.push('--useV1');
         if (outputMaps) {
             flags.push('--stageOutputFile', '.pipeline/stage_out.json');
             flags.push('--stepOutputFile', '.pipeline/step_out.json');
