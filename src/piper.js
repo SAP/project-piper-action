@@ -8,15 +8,18 @@ async function run () {
     const command = core.getInput('command')
     const flags = core.getInput('flags')
     const version = core.getInput('piper-version')
-
+    const auth = core.getInput('github-token')
     // Download Piper
     const piperBin = 'piper'
-    await new utils.GithubDownloaderBuilder('sap',
+    const downloader = new utils.GithubDownloaderBuilder('sap',
       'jenkins-library',
       piperBin,
       version)
       .githubEndpoint('https://github.com')
-      .download()
+    if (auth) {
+      downloader._auth = `Bearer ${auth}`
+    }
+    await downloader.download()
 
     const directoryRestore = new utils.DirectoryRestore('.pipeline/commonPipelineEnvironment')
     if (enableBetaFeatures) {

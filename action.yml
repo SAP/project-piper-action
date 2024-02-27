@@ -13,9 +13,13 @@ inputs:
     description: 'specify a version of the piper binary to use, may be "master", "latest" or a released tag'
     required: false
     default: 'latest'
+  github-token:
+    description: 'specify a token for access to github.com. This may be required when running on GitHub Enterprise to avoid rate-limits'
+    required: false
+    default: ''
 runs:
   using: 'node16'
   main: 'dist/index.js'
 branding:
-  icon: 'play'  
+  icon: 'play'
   color: 'green'
