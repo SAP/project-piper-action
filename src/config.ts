@@ -59,16 +59,6 @@ export async function getDefaultConfig (
   }
 }
 
-async function getEnterpriseDefaultsURL (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  // TODO: handle old versions
-  // legacy behavior
-  // if (version > threshold) {
-  //   return getEnterpriseDefaultsUrl(owner, repository)
-  // }
-  const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository)
-  return enterpriseDefaultsURL
-}
-
 export async function downloadDefaultConfig (
   server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
 ): Promise<UploadResponse> {
@@ -225,4 +215,14 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
 
   const piperExec = await executePiper('getConfig', getConfigFlags)
   return JSON.parse(piperExec.output)
+}
+
+async function getEnterpriseDefaultsURL (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+  // TODO: handle old versions
+  // legacy behavior
+  // if (version > threshold) {
+  //   return getEnterpriseDefaultsUrl(owner, repository)
+  // }
+  const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository)
+  return enterpriseDefaultsURL
 }
