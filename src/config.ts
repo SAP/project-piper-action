@@ -7,7 +7,9 @@ import { executePiper } from './execute'
 import { downloadFileFromGitHub, getHost, getReleaseAssetUrl } from './github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
+  ENTERPRISE_DEFAULTS_FILENAME_NEW,
   ENTERPRISE_STAGE_CONFIG_FILENAME,
+  getEnterpriseDefaultsUrl,
   getEnterpriseStageConfigUrl
 } from './enterprise'
 import { internalActionVariables } from './piper'
@@ -16,7 +18,13 @@ export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
 export async function getDefaultConfig (
-  server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
+  server: string,
+  apiURL: string,
+  version: string,
+  token: string,
+  owner: string,
+  repository: string,
+  customDefaultsPaths: string
 ): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
@@ -51,16 +59,27 @@ export async function getDefaultConfig (
   }
 }
 
+async function getEnterpriseDefaultsURL (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+  // TODO: handle old versions
+  // legacy behavior
+  // if (version > threshold) {
+  //   return getEnterpriseDefaultsUrl(owner, repository)
+  // }
+  const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository)
+  return enterpriseDefaultsURL
+}
+
 export async function downloadDefaultConfig (
   server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
 ): Promise<UploadResponse> {
-  const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-
-  const [defaultsAssetURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME, version, apiURL, token, owner, repository)
   let defaultsPaths: string[] = []
-  if (defaultsAssetURL !== '') {
-    defaultsPaths = defaultsPaths.concat([defaultsAssetURL])
+
+  const [enterpriseDefaultsURL] = await getEnterpriseDefaultsURL(version, apiURL, token, owner, repository)
+  if (enterpriseDefaultsURL !== '') {
+    defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
+
+  const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
   defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
 
