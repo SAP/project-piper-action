@@ -18,10 +18,12 @@ export function getHost (url: string): string {
   return url === '' ? '' : new URL(url).host
 }
 
-export async function downloadPiperBinary (stepName: string, version: string, apiURL: string, token: string, owner: string, repo: string): Promise<string> {
+export async function downloadPiperBinary (
+  stepName: string, version: string, apiURL: string, token: string, owner: string, repo: string
+): Promise<string> {
   const isEnterprise = isEnterpriseStep(stepName)
   if (isEnterprise && token === '') {
-    throw new Error(`Token is not provided for enterprise step: ${stepName}`)
+    throw new Error('Token is not provided for enterprise step')
   }
   if (owner === '') {
     throw new Error('owner is not provided')
@@ -30,28 +32,35 @@ export async function downloadPiperBinary (stepName: string, version: string, ap
     throw new Error('repository is not provided')
   }
 
-  const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
-  const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
+  let binaryURL
   const headers: any = {}
-  headers.Accept = 'application/octet-stream'
+  const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
   if (token !== '') {
+    headers.Accept = 'application/octet-stream'
     headers.Authorization = `token ${token}`
+
+    const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
+    binaryURL = binaryAssetURL
+    version = tag
+  } else {
+    binaryURL = await getPiperDownloadURL(piperBinaryName, version)
+    version = binaryURL.split('/').slice(-2)[0]
+  }
+  version = version.replace(/\./g, '_')
+  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
+  if (fs.existsSync(piperPath)) {
+    return piperPath
   }
 
-  const piperBinaryDestPath = `${process.cwd()}/${tag.replace(/\./g, '_')}/${piperBinaryName}`
-  if (fs.existsSync(piperBinaryDestPath)) {
-    return piperBinaryDestPath
-  }
-
-  info(`Downloading binary '${piperBinaryName}' into ${piperBinaryDestPath}`)
+  info(`Downloading binary '${piperBinaryName}' into ${piperPath}`)
   await downloadTool(
-    binaryAssetURL,
-    piperBinaryDestPath,
+    binaryURL,
+    piperPath,
     undefined,
     headers
   )
 
-  return piperBinaryDestPath
+  return piperPath
 }
 
 export async function getReleaseAssetUrl (
@@ -69,8 +78,7 @@ export async function getReleaseAssetUrl (
 
 // by default for inner source Piper
 async function getPiperReleases (version: string, api: string, token: string, owner: string, repository: string): Promise<OctokitResponse<any>> {
-  const tag = getTag(version)
-
+  const tag = getTag(true, version)
   const options: OctokitOptions = {}
   options.baseUrl = api
   if (token !== '') {
@@ -141,6 +149,14 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   return piperPath
 }
 
+async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
+  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
+  if (response.status !== 200) {
+    throw new Error(`can't get the tag: ${response.status}`)
+  }
+  return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
+}
+
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
   let piper = 'piper'
   if (isEnterpriseStep) {
@@ -152,19 +168,12 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?
   return piper
 }
 
-function getTag (version: string): string {
-  if (version !== '') {
-    version = version.toLowerCase()
-  }
+function getTag (forAPICall: boolean, version: string | undefined): string {
+  if (version === undefined) return 'latest'
 
-  let tag
-  if (version === undefined || version === '' || version === 'master' || version === 'latest') {
-    tag = 'latest'
-  } else {
-    tag = `tags/${version}`
-  }
-
-  return tag
+  version = version.toLowerCase()
+  if (version === '' || version === 'master' || version === 'latest') return 'latest'
+  return `${forAPICall ? 'tags' : 'tag'}/${version}`
 }
 
 // Expects a URL in API form:

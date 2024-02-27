@@ -60,11 +60,17 @@ export async function getDefaultConfig (
 }
 
 export async function downloadDefaultConfig (
-  server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string
+  server: string,
+  apiURL: string,
+  version: string,
+  token: string,
+  owner: string,
+  repository: string,
+  customDefaultsPaths: string
 ): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  const [enterpriseDefaultsURL] = await getEnterpriseDefaultsURL(version, apiURL, token, owner, repository)
+  const enterpriseDefaultsURL = await getEnterpriseDefaultsURL(version, apiURL, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
