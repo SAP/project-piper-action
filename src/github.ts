@@ -44,7 +44,9 @@ export async function downloadPiperBinary (
     version = tag
   } else {
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
+    info(`URL ${binaryURL}`)
     version = binaryURL.split('/').slice(-2)[0]
+    info(`Version ${version}`)
   }
   version = version.replace(/\./g, '_')
   const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`

@@ -19945,7 +19945,9 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         }
         else {
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
+            (0, core_2.info)(`URL ${binaryURL}`);
             version = binaryURL.split('/').slice(-2)[0];
+            (0, core_2.info)(`Version ${version}`);
         }
         version = version.replace(/\./g, '_');
         const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
