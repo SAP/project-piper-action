@@ -19368,18 +19368,15 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
             return yield Promise.resolve(0);
         }
         try {
-            (0, core_1.info)('Restoring default config');
-            // throws an error with message containing 'Unable to find' if artifact does not exist
             yield restoreDefaultConfig();
             (0, core_1.info)('Defaults restored from artifact');
             return yield Promise.resolve(0);
         }
         catch (err) {
-            if (err instanceof Error && !err.message.includes('Unable to find')) {
+            // throws an error with message containing 'Unable to find' if artifact does not exist
+            if (err instanceof Error && !err.message.includes('Unable to find'))
                 throw err;
-            }
             // continue with downloading defaults and upload as artifact
-            (0, core_1.info)('Defaults artifact does not exist yet');
             (0, core_1.info)('Downloading defaults');
             yield downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths);
             return yield Promise.resolve(0);
@@ -19963,6 +19960,8 @@ exports.downloadPiperBinary = downloadPiperBinary;
 function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
+        (0, core_2.debug)(`Found assets: ${getReleaseResponse.data.assets}`);
+        (0, core_2.debug)(`Found tag: ${getReleaseResponse.data.tag_name}`);
         const url = getReleaseResponse.data.assets.find((asset) => {
             return asset.name === assetName;
         }).url;

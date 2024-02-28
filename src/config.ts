@@ -39,19 +39,14 @@ export async function getDefaultConfig (
   }
 
   try {
-    info('Restoring default config')
-    // throws an error with message containing 'Unable to find' if artifact does not exist
     await restoreDefaultConfig()
     info('Defaults restored from artifact')
-
     return await Promise.resolve(0)
   } catch (err: unknown) {
-    if (err instanceof Error && !err.message.includes('Unable to find')) {
-      throw err
-    }
+    // throws an error with message containing 'Unable to find' if artifact does not exist
+    if (err instanceof Error && !err.message.includes('Unable to find')) throw err
 
     // continue with downloading defaults and upload as artifact
-    info('Defaults artifact does not exist yet')
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
 
@@ -59,15 +54,7 @@ export async function getDefaultConfig (
   }
 }
 
-export async function downloadDefaultConfig (
-  server: string,
-  apiURL: string,
-  version: string,
-  token: string,
-  owner: string,
-  repository: string,
-  customDefaultsPaths: string
-): Promise<UploadResponse> {
+export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
   const enterpriseDefaultsURL = await getEnterpriseDefaultsURL(apiURL, version, token, owner, repository)
@@ -229,6 +216,7 @@ async function getEnterpriseDefaultsURL (apiURL: string, version: string, token:
   // if (version > threshold) {
   //   return getEnterpriseDefaultsUrl(owner, repository)
   // }
+
   const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository)
   return enterpriseDefaultsURL
 }
