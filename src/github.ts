@@ -72,13 +72,17 @@ export async function getReleaseAssetUrl (
   debug(`Found assets: ${getReleaseResponse.data.assets}`)
   debug(`Found tag: ${getReleaseResponse.data.tag_name}`)
 
-  const url = getReleaseResponse.data.assets.find((asset: { name: string }) => {
-    return asset.name === assetName
-  }).url
-
   const tag = getReleaseResponse.data.tag_name // version of release
-  debug(`Found asset URL: ${url} and tag: ${tag}`)
-  return [url, tag]
+  const asset = getReleaseResponse.data.assets.find((asset: { name: string }) => {
+    return asset.name === assetName
+  })
+  if (asset === undefined) {
+    debug(`Asset not found: ${assetName}`)
+    return ['', tag]
+  }
+
+  debug(`Found asset URL: ${asset.url} and tag: ${tag}`)
+  return [asset.url, tag]
 }
 
 // by default for inner source Piper

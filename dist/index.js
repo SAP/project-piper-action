@@ -19387,7 +19387,7 @@ exports.getDefaultConfig = getDefaultConfig;
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
-        const enterpriseDefaultsURL = yield getEnterpriseDefaultsURL(apiURL, version, token, owner, repository);
+        const enterpriseDefaultsURL = yield (0, enterprise_1.getEnterpriseDefaultsUrl)(apiURL, version, token, owner, repository);
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
@@ -19538,17 +19538,6 @@ function readContextConfig(stepName, flags) {
     });
 }
 exports.readContextConfig = readContextConfig;
-function getEnterpriseDefaultsURL(apiURL, version, token, owner, repository) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // TODO: handle old versions
-        // legacy behavior
-        // if (version > threshold) {
-        //   return getEnterpriseDefaultsUrl(owner, repository)
-        // }
-        const [enterpriseDefaultsURL] = yield (0, github_1.getReleaseAssetUrl)(enterprise_1.ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository);
-        return enterpriseDefaultsURL;
-    });
-}
 
 
 /***/ }),
@@ -19737,15 +19726,24 @@ exports.dockerExecReadOutput = dockerExecReadOutput;
 /***/ }),
 
 /***/ 4340:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_NEW = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
+exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
-exports.ENTERPRISE_DEFAULTS_FILENAME_NEW = 'piper-defaults-github.yml';
+exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
 function isEnterpriseStep(stepName) {
@@ -19761,11 +19759,15 @@ function onGitHubEnterprise() {
 }
 exports.onGitHubEnterprise = onGitHubEnterprise;
 // deprecated, keep for backwards compatibility
-function getEnterpriseDefaultsUrl(owner, repository) {
-    if (onGitHubEnterprise() && owner !== '' && repository !== '') {
+function getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // get URL of defaults from the release (gh api, authenticated)
+        const [enterpriseDefaultsURL] = yield (0, github_1.getReleaseAssetUrl)(exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE, version, apiURL, token, owner, repository);
+        if (enterpriseDefaultsURL !== '')
+            return enterpriseDefaultsURL;
+        // fallback to get URL of defaults in the repository (unauthenticated)
         return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_DEFAULTS_FILENAME}`;
-    }
-    return '';
+    });
 }
 exports.getEnterpriseDefaultsUrl = getEnterpriseDefaultsUrl;
 function getEnterpriseStageConfigUrl(owner, repository) {
@@ -19962,12 +19964,16 @@ function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
         const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
         (0, core_2.debug)(`Found assets: ${getReleaseResponse.data.assets}`);
         (0, core_2.debug)(`Found tag: ${getReleaseResponse.data.tag_name}`);
-        const url = getReleaseResponse.data.assets.find((asset) => {
-            return asset.name === assetName;
-        }).url;
         const tag = getReleaseResponse.data.tag_name; // version of release
-        (0, core_2.debug)(`Found asset URL: ${url} and tag: ${tag}`);
-        return [url, tag];
+        const asset = getReleaseResponse.data.assets.find((asset) => {
+            return asset.name === assetName;
+        });
+        if (asset === undefined) {
+            (0, core_2.debug)(`Asset not found: ${assetName}`);
+            return ['', tag];
+        }
+        (0, core_2.debug)(`Found asset URL: ${asset.url} and tag: ${tag}`);
+        return [asset.url, tag];
     });
 }
 exports.getReleaseAssetUrl = getReleaseAssetUrl;

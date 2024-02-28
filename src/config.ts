@@ -4,12 +4,11 @@ import { debug, exportVariable, info } from '@actions/core'
 import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
-import { downloadFileFromGitHub, getHost, getReleaseAssetUrl } from './github'
+import { downloadFileFromGitHub, getHost } from './github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
-  ENTERPRISE_DEFAULTS_FILENAME_NEW,
   ENTERPRISE_STAGE_CONFIG_FILENAME,
-  // getEnterpriseDefaultsUrl,
+  getEnterpriseDefaultsUrl,
   getEnterpriseStageConfigUrl
 } from './enterprise'
 import { internalActionVariables } from './piper'
@@ -28,13 +27,11 @@ export async function getDefaultConfig (
 ): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
-
     if (process.env.defaultsFlags !== undefined) {
       debug(`Defaults flags: ${process.env.defaultsFlags}`)
     } else {
       debug('But no defaults flags available in the environment!')
     }
-
     return await Promise.resolve(0)
   }
 
@@ -45,11 +42,9 @@ export async function getDefaultConfig (
   } catch (err: unknown) {
     // throws an error with message containing 'Unable to find' if artifact does not exist
     if (err instanceof Error && !err.message.includes('Unable to find')) throw err
-
     // continue with downloading defaults and upload as artifact
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
-
     return await Promise.resolve(0)
   }
 }
@@ -57,7 +52,7 @@ export async function getDefaultConfig (
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  const enterpriseDefaultsURL = await getEnterpriseDefaultsURL(apiURL, version, token, owner, repository)
+  const enterpriseDefaultsURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
@@ -208,15 +203,4 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
 
   const piperExec = await executePiper('getConfig', getConfigFlags)
   return JSON.parse(piperExec.output)
-}
-
-async function getEnterpriseDefaultsURL (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  // TODO: handle old versions
-  // legacy behavior
-  // if (version > threshold) {
-  //   return getEnterpriseDefaultsUrl(owner, repository)
-  // }
-
-  const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_NEW, version, apiURL, token, owner, repository)
-  return enterpriseDefaultsURL
 }
