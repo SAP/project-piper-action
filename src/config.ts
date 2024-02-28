@@ -70,7 +70,7 @@ export async function downloadDefaultConfig (
 ): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  const enterpriseDefaultsURL = await getEnterpriseDefaultsURL(version, apiURL, token, owner, repository)
+  const enterpriseDefaultsURL = await getEnterpriseDefaultsURL(apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }

@@ -19390,7 +19390,7 @@ exports.getDefaultConfig = getDefaultConfig;
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
-        const enterpriseDefaultsURL = yield getEnterpriseDefaultsURL(version, apiURL, token, owner, repository);
+        const enterpriseDefaultsURL = yield getEnterpriseDefaultsURL(apiURL, version, token, owner, repository);
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
