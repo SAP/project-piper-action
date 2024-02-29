@@ -65,21 +65,21 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
   chmodSync(piperPath, 0o775)
 }
 
-export interface ActionConfiguration {
-  stepName: string
-  flags: string
-  piperVersion: string
-  piperOwner: string
-  piperRepo: string
-  sapPiperVersion: string
-  sapPiperOwner: string
-  sapPiperRepo: string
+export interface PiperBinary {
+  binaryName: string
+  version: string
+  owner: string
+  repository: string
   gitHubServer: string
   gitHubApi: string
   gitHubToken: string
-  gitHubEnterpriseServer: string
-  gitHubEnterpriseApi: string
-  gitHubEnterpriseToken: string
+}
+
+export interface ActionConfiguration {
+  piper: PiperBinary
+  sapPiper: PiperBinary
+  stepName: string
+  flags: string
   dockerImage: string
   dockerOptions: string
   dockerEnvVars: string
@@ -127,20 +127,26 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
   }
 
   return {
+    piper: {
+      binaryName: 'piper',
+      version: getValue('piper-version'),
+      owner: getValue('piper-owner', PIPER_OWNER),
+      repository: getValue('piper-repository', PIPER_REPOSITORY),
+      gitHubServer: GITHUB_COM_SERVER_URL,
+      gitHubApi: GITHUB_COM_API_URL,
+      gitHubToken: getValue('github-token')
+    },
+    sapPiper: {
+      binaryName: 'sapPiper',
+      version: getValue('sap-piper-version'),
+      owner: getValue('sap-piper-owner'),
+      repository: getValue('sap-piper-repository'),
+      gitHubServer: enterpriseHost,
+      gitHubApi: enterpriseApi,
+      gitHubToken: getValue('github-enterprise-token')
+    },
     stepName: stepNameValue,
     flags: getValue('flags'),
-    piperVersion: getValue('piper-version'),
-    piperOwner: getValue('piper-owner', 'SAP'),
-    piperRepo: getValue('piper-repository', 'jenkins-library'),
-    sapPiperVersion: getValue('sap-piper-version'),
-    sapPiperOwner: getValue('sap-piper-owner'),
-    sapPiperRepo: getValue('sap-piper-repository'),
-    gitHubToken: getValue('github-token'),
-    gitHubServer: GITHUB_COM_SERVER_URL,
-    gitHubApi: GITHUB_COM_API_URL,
-    gitHubEnterpriseServer: enterpriseHost,
-    gitHubEnterpriseApi: enterpriseApi,
-    gitHubEnterpriseToken: getValue('github-enterprise-token'),
     dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
