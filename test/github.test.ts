@@ -49,52 +49,19 @@ describe('GitHub package tests', () => {
     }
   })
 
-  // test('downloadPiperBinary - OS step latest, no token', async () => {
-  //   const assetUrl = `${githubApiURL}/release/assets/123456`
-  //   jest.spyOn(fs, 'existsSync').mockReturnValue(false)
-  //   // jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}--/source-code.zip`))
-  //   jest.spyOn(global, 'fetch').mockResolvedValue(
-  //     new Response(JSON.stringify({
-  //       url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.255.0',
-  //       status: 200
-  //     }))
-  //   )
-  //   jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-  //     return {
-  //       request: async () => {
-  //         return {
-  //           data: {
-  //             tag_name: version,
-  //             assets: [{ name: 'piper', url: assetUrl }]
-  //           },
-  //           status: 200
-  //         }
-  //       }
-  //     } as unknown as octokit.Octokit
-  //   })
+  test('downloadPiperBinary - OS step latest, no token', async () => {
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false)
+    // @ts-ignore
+    jest.spyOn(global, 'fetch').mockImplementation(() => {
+      return Promise.resolve({
+        status: 200,
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1',
+      })
+    })
 
-  //   await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
-  //   // expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-  //   expect(core.info).toHaveBeenNthCalledWith(1, `Downloading https://github.acme.com/api/v3/release/assets/123456 as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
-  //   expect(core.info).toHaveBeenNthCalledWith(2, `Getting releases from /repos/${owner}/${repo}/releases/latest`)
-  //   expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining('Downloading binary \'piper\''))
-  //   expect(core.info).toHaveBeenCalledTimes(2)
-  // })
-
-
-  // // TODO fetch mockery issue
-  // test('Get latest osPiper without authorization', async () => {
-  //   const piper = './v1_255_0/piper'
-  //   jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(piper))
-  //   jest.spyOn(global, 'fetch').mockResolvedValue(
-  //     new Response(JSON.stringify({
-  //       url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.255.0',
-  //       status: 200
-  //     })))
-  //   expect(
-  //     await downloadPiperBinary('help', 'latest', '', '', 'SAP', 'jenkins-library')
-  //   ).toBe(piper)
-  // })
+    await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
+    expect(core.info).toHaveBeenCalledWith(`Downloading 'https://github.com/SAP/jenkins-library/releases/download/v1.1.1/piper' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
+  })
 
   test('downloadPiperBinary - SAP step latest', async () => {
     const assetUrl = `${githubApiURL}/release/assets/123456`
