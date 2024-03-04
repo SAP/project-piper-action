@@ -11,8 +11,8 @@ import { isEnterpriseStep } from './enterprise'
 
 export const GITHUB_COM_SERVER_URL = 'https://github.com'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
-export const OS_PIPER_OWNER = 'SAP'
-export const OS_PIPER_REPO = 'jenkins-library'
+export const PIPER_OWNER = 'SAP'
+export const PIPER_REPOSITORY = 'jenkins-library'
 
 export function getHost (url: string): string {
   return url === '' ? '' : new URL(url).host
@@ -22,15 +22,9 @@ export async function downloadPiperBinary (
   stepName: string, version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<string> {
   const isEnterprise = isEnterpriseStep(stepName)
-  if (isEnterprise && token === '') {
-    throw new Error('Token is not provided for enterprise step')
-  }
-  if (owner === '') {
-    throw new Error('owner is not provided')
-  }
-  if (repo === '') {
-    throw new Error('repository is not provided')
-  }
+  if (isEnterprise && token === '') throw new Error('Token is not provided for enterprise step')
+  if (owner === '') throw new Error('owner is not provided')
+  if (repo === '') throw new Error('repository is not provided')
 
   let binaryURL
   const headers: any = {}
@@ -44,9 +38,7 @@ export async function downloadPiperBinary (
     version = tag
   } else {
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
-    info(`URL ${binaryURL}`)
     version = binaryURL.split('/').slice(-2)[0]
-    info(`Version ${version}`)
   }
   version = version.replace(/\./g, '_')
   const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
@@ -54,7 +46,7 @@ export async function downloadPiperBinary (
     return piperPath
   }
 
-  info(`Downloading binary '${piperBinaryName}' into ${piperPath}`)
+  info(`Downloading '${binaryURL}' as '${piperPath}'`)
   await downloadTool(
     binaryURL,
     piperPath,
@@ -95,7 +87,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   }
 
   const octokit = new Octokit(options)
-  info(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`)
+  info(`Getting releases from ${api}/repos/${owner}/${repository}/releases/${tag}`)
   const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
   if (response.status !== 200) {
     throw new Error(`can't get release by tag ${tag}: ${response.status}`)

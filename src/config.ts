@@ -16,15 +16,7 @@ import { internalActionVariables } from './piper'
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
-export async function getDefaultConfig (
-  server: string,
-  apiURL: string,
-  version: string,
-  token: string,
-  owner: string,
-  repository: string,
-  customDefaultsPaths: string
-): Promise<number> {
+export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
     if (process.env.defaultsFlags !== undefined) {

@@ -2,8 +2,8 @@ import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
 import {
   GITHUB_COM_API_URL,
   GITHUB_COM_SERVER_URL,
-  OS_PIPER_OWNER,
-  OS_PIPER_REPO,
+  PIPER_OWNER,
+  PIPER_REPOSITORY,
   buildPiperFromSource,
   downloadPiperBinary
 } from './github'
@@ -145,8 +145,8 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     stepName: stepNameValue,
     flags: getValue('flags'),
     piperVersion: getValue('piper-version'),
-    piperOwner: getValue('piper-owner', OS_PIPER_OWNER),
-    piperRepo: getValue('piper-repository', OS_PIPER_REPO),
+    piperOwner: getValue('piper-owner', PIPER_OWNER),
+    piperRepo: getValue('piper-repository', PIPER_REPOSITORY),
     sapPiperVersion: getValue('sap-piper-version'),
     sapPiperOwner: getValue('sap-piper-owner'),
     sapPiperRepo: getValue('sap-piper-repository'),
