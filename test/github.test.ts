@@ -51,12 +51,11 @@ describe('GitHub package tests', () => {
 
   test('downloadPiperBinary - OS step latest, no token', async () => {
     jest.spyOn(fs, 'existsSync').mockReturnValue(false)
-    // @ts-ignore
-    jest.spyOn(global, 'fetch').mockImplementation(() => {
-      return Promise.resolve({
+    jest.spyOn(global, 'fetch').mockImplementation(async () => {
+      return await Promise.resolve({
         status: 200,
-        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1',
-      })
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+      } as unknown as Response)
     })
 
     await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
