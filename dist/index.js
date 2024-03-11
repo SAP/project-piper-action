@@ -19903,7 +19903,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.downloadFileFromGitHub = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.OS_PIPER_REPO = exports.OS_PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.downloadFileFromGitHub = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -19914,8 +19914,8 @@ const exec_1 = __nccwpck_require__(1514);
 const enterprise_1 = __nccwpck_require__(4340);
 exports.GITHUB_COM_SERVER_URL = 'https://github.com';
 exports.GITHUB_COM_API_URL = 'https://api.github.com';
-exports.OS_PIPER_OWNER = 'SAP';
-exports.OS_PIPER_REPO = 'jenkins-library';
+exports.PIPER_OWNER = 'SAP';
+exports.PIPER_REPOSITORY = 'jenkins-library';
 function getHost(url) {
     return url === '' ? '' : new URL(url).host;
 }
@@ -19923,15 +19923,12 @@ exports.getHost = getHost;
 function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName);
-        if (isEnterprise && token === '') {
+        if (isEnterprise && token === '')
             throw new Error('Token is not provided for enterprise step');
-        }
-        if (owner === '') {
+        if (owner === '')
             throw new Error('owner is not provided');
-        }
-        if (repo === '') {
+        if (repo === '')
             throw new Error('repository is not provided');
-        }
         let binaryURL;
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
@@ -19944,16 +19941,14 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         }
         else {
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            (0, core_2.info)(`URL ${binaryURL}`);
             version = binaryURL.split('/').slice(-2)[0];
-            (0, core_2.info)(`Version ${version}`);
         }
         version = version.replace(/\./g, '_');
         const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
         if (fs.existsSync(piperPath)) {
             return piperPath;
         }
-        (0, core_2.info)(`Downloading binary '${piperBinaryName}' into ${piperPath}`);
+        (0, core_2.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
         yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
         return piperPath;
     });
@@ -19987,7 +19982,7 @@ function getPiperReleases(version, api, token, owner, repository) {
             options.auth = token;
         }
         const octokit = new core_1.Octokit(options);
-        (0, core_2.info)(`Getting releases from /repos/${owner}/${repository}/releases/${tag}`);
+        (0, core_2.info)(`Getting releases from ${api}/repos/${owner}/${repository}/releases/${tag}`);
         const response = yield octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`);
         if (response.status !== 200) {
             throw new Error(`can't get release by tag ${tag}: ${response.status}`);
@@ -20282,8 +20277,8 @@ function getActionConfig(options) {
             stepName: stepNameValue,
             flags: getValue('flags'),
             piperVersion: getValue('piper-version'),
-            piperOwner: getValue('piper-owner', github_1.OS_PIPER_OWNER),
-            piperRepo: getValue('piper-repository', github_1.OS_PIPER_REPO),
+            piperOwner: getValue('piper-owner', github_1.PIPER_OWNER),
+            piperRepo: getValue('piper-repository', github_1.PIPER_REPOSITORY),
             sapPiperVersion: getValue('sap-piper-version'),
             sapPiperOwner: getValue('sap-piper-owner'),
             sapPiperRepo: getValue('sap-piper-repository'),
