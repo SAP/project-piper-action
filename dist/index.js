@@ -19933,6 +19933,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
         if (token !== '') {
+            (0, core_2.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
             headers.Authorization = `token ${token}`;
             const [binaryAssetURL, tag] = yield getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo);
@@ -19940,6 +19941,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             version = tag;
         }
         else {
+            (0, core_2.debug)('Fetching binary from URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
             version = binaryURL.split('/').slice(-2)[0];
         }
@@ -19982,7 +19984,7 @@ function getPiperReleases(version, api, token, owner, repository) {
             options.auth = token;
         }
         const octokit = new core_1.Octokit(options);
-        (0, core_2.info)(`Getting releases from ${api}/repos/${owner}/${repository}/releases/${tag}`);
+        (0, core_2.debug)(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`);
         const response = yield octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`);
         if (response.status !== 200) {
             throw new Error(`can't get release by tag ${tag}: ${response.status}`);
