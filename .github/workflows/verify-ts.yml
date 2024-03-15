@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  NODE_VERSION: 18
+
 jobs:
   lint:
     name: Lint
@@ -16,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
       - run: npm clean-install
       - run: npm run lint:ci
       - uses: actions/upload-artifact@v3
@@ -32,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
       - run: npm clean-install
       - run: npm run test:ci
       - uses: actions/upload-artifact@v3
@@ -98,7 +101,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
       - run: npm install --ignore-scripts
       - run: git diff --name-only --exit-code
 
@@ -108,7 +111,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: ${{ env.NODE_VERSION }}
       - run: npm clean-install
       - run: npm run dist:build
       - run: git diff --name-only --exit-code

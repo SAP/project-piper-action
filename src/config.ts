@@ -5,53 +5,51 @@ import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
 import { downloadFileFromGitHub, getHost } from './github'
-import { ENTERPRISE_DEFAULTS_FILENAME, ENTERPRISE_STAGE_CONFIG_FILENAME, getEnterpriseDefaultsUrl, getEnterpriseStageConfigUrl } from './enterprise'
+import {
+  ENTERPRISE_DEFAULTS_FILENAME,
+  ENTERPRISE_STAGE_CONFIG_FILENAME,
+  getEnterpriseDefaultsUrl,
+  getEnterpriseStageConfigUrl
+} from './enterprise'
 import { internalActionVariables } from './piper'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
-export async function getDefaultConfig (server: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
+export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
-
     if (process.env.defaultsFlags !== undefined) {
       debug(`Defaults flags: ${process.env.defaultsFlags}`)
     } else {
       debug('But no defaults flags available in the environment!')
     }
-
     return await Promise.resolve(0)
-  } else {
-    try {
-      info('Restoring default config')
-      // throws an error with message containing 'Unable to find' if artifact does not exist
-      await restoreDefaultConfig()
-      info('Defaults restored from artifact')
+  }
 
-      return await Promise.resolve(0)
-    } catch (err: unknown) {
-      if (err instanceof Error && !err.message.includes('Unable to find')) {
-        throw err
-      }
-
-      // continue with downloading defaults and upload as artifact
-      info('Defaults artifact does not exist yet')
-      info('Downloading defaults')
-      await downloadDefaultConfig(server, token, owner, repository, customDefaultsPaths)
-
-      return await Promise.resolve(0)
-    }
+  try {
+    await restoreDefaultConfig()
+    info('Defaults restored from artifact')
+    return await Promise.resolve(0)
+  } catch (err: unknown) {
+    // throws an error with message containing 'Unable to find' if artifact does not exist
+    if (err instanceof Error && !err.message.includes('Unable to find')) throw err
+    // continue with downloading defaults and upload as artifact
+    info('Downloading defaults')
+    await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
+    return await Promise.resolve(0)
   }
 }
 
-export async function downloadDefaultConfig (server: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
-  const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-  const enterpriseDefaultsPath = getEnterpriseDefaultsUrl(owner, repository)
+export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
-  if (enterpriseDefaultsPath !== '') {
-    defaultsPaths = defaultsPaths.concat([enterpriseDefaultsPath])
+
+  const enterpriseDefaultsURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
+  if (enterpriseDefaultsURL !== '') {
+    defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
+
+  const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
   defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
 
@@ -65,7 +63,9 @@ export async function downloadDefaultConfig (server: string, token: string, owne
   const piperExec = await executePiper('getDefaults', flags)
 
   let defaultConfigs = JSON.parse(piperExec.output)
-  if (customDefaultsPathsArray.length === 0) { defaultConfigs = [defaultConfigs] }
+  if (customDefaultsPathsArray.length === 0) {
+    defaultConfigs = [defaultConfigs]
+  }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
@@ -109,7 +109,9 @@ export async function createCheckIfStepActiveMaps (token: string, owner: string,
 
   await downloadStageConfig(token, owner, repository)
     .then(async () => await checkIfStepActive('_', '_', true))
-    .catch(err => { info(`checkIfStepActive failed: ${err as string}`) })
+    .catch(err => {
+      info(`checkIfStepActive failed: ${err as string}`)
+    })
 }
 
 export async function checkIfStepActive (stepName: string, stageName: string, outputMaps: boolean): Promise<number> {

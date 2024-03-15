@@ -1,5 +1,12 @@
 import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
-import { GITHUB_COM_API_URL, GITHUB_COM_SERVER_URL, buildPiperFromSource, downloadPiperBinary } from './github'
+import {
+  GITHUB_COM_API_URL,
+  GITHUB_COM_SERVER_URL,
+  PIPER_OWNER,
+  PIPER_REPOSITORY,
+  buildPiperFromSource,
+  downloadPiperBinary
+} from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import { getDefaultConfig, readContextConfig, createCheckIfStepActiveMaps } from './config'
@@ -23,7 +30,15 @@ export async function run (): Promise<void> {
     await loadPipelineEnv()
     await executePiper('version')
     if (onGitHubEnterprise()) {
-      await getDefaultConfig(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths)
+      await getDefaultConfig(
+        actionCfg.gitHubEnterpriseServer,
+        actionCfg.gitHubEnterpriseApi,
+        actionCfg.sapPiperVersion,
+        actionCfg.gitHubEnterpriseToken,
+        actionCfg.sapPiperOwner,
+        actionCfg.sapPiperRepo,
+        actionCfg.customDefaultsPaths
+      )
     }
     if (actionCfg.createCheckIfStepActiveMaps) {
       await createCheckIfStepActiveMaps(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
@@ -130,8 +145,8 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     stepName: stepNameValue,
     flags: getValue('flags'),
     piperVersion: getValue('piper-version'),
-    piperOwner: getValue('piper-owner', 'SAP'),
-    piperRepo: getValue('piper-repository', 'jenkins-library'),
+    piperOwner: getValue('piper-owner', PIPER_OWNER),
+    piperRepo: getValue('piper-repository', PIPER_REPOSITORY),
     sapPiperVersion: getValue('sap-piper-version'),
     sapPiperOwner: getValue('sap-piper-owner'),
     sapPiperRepo: getValue('sap-piper-repository'),
