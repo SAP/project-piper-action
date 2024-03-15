@@ -1,0 +1,5 @@
+// override exclude from base tsconfig.json
+{
+    "extends": "./tsconfig.json",
+    "exclude": []
+  }

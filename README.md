@@ -1,105 +1,47 @@
-# Project "Piper" GitHub Action
+# Piper GitHub Action
 
-[![REUSE status](https://api.reuse.software/badge/github.com/SAP/project-piper-action)](https://api.reuse.software/info/github.com/SAP/project-piper-action)
+[![CI](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml)
+[![REUSE Compliance Check](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml)
+[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
+[![Log4brains ADRs](https://pages.github.com/SAP/project-piper-action/badge.svg)](https://pages.github.com/SAP/project-piper-action)
 
-:construction: The master branch is soon to be deprecated. The main branch will become the default branch.
+:construction: Not available for productive usage yet!
 
-Continuous delivery is a method to develop software with short feedback cycles.
-It is applicable to projects both for SAP Cloud Platform and SAP on-premise platforms.
-SAP implements tooling for continuous delivery in [project "Piper"](https://sap.github.io/jenkins-library/).
-
-This repository contains a GitHub Action to integrate with project "Piper".
-It allows you to use project "Piper" in a convinient way with GitHub Actions.
-You might also manually download the [cli](https://sap.github.io/jenkins-library/cli/) and use it in a shell script, if the action does not what you need.
+This GitHub action allows running [Piper](https://www.project-piper.io/) on GitHub Actions.
 
 ## Usage
 
-Please refer to the [GitHub Actions](https://help.github.com/en/actions) documentation for general information on how to use actions.
-
-As an example, if your projects uses [Maven](https://maven.apache.org/index.html) you can run it like this:
+This action can be used in a GitHub Actions workflow file as follows:
 
 ```yaml
-name: CI
-on:
-  push:
-jobs:
-  build:
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v1
-      - name: mavenBuild
-        uses: SAP/project-piper-action@master
-        with:
-          command: mavenBuild
-      - name: mavenExecuteStaticCodeChecks
-        uses: SAP/project-piper-action@master
-        with:
-          command: mavenExecuteStaticCodeChecks
+- uses: project-piper/piper-github-action@main
+  with:
+    step-name: mavenBuild
+    flags: '--publish --createBOM --logSuccessfulMavenTransfers'
 ```
 
-The key `command` needs to be replaced with the command you want to use.
-The `help` command shows which commands are available.
+Please refer to the [GitHub Actions documentation](https://help.github.com/en/actions) for more information.
 
-Optionally you may use `flags` to provide command line arguments.
+### Parameters
 
-## Configuration
+The `step-name` parameter can be one of [Piper's internal or open source steps](https://www.project-piper.io/lib/). The respective Piper binary is selected automatically.
 
-Configuration is done in `.pipeline/config.yml` in your project's repository.
-See [here](https://sap.github.io/jenkins-library/configuration/) for information on configuration.
+Other inputs are listed in the [action.yml](./action.yml) file.
 
-For example, if you use [Karma](https://karma-runner.github.io/latest/index.html), you might need to configure it differently based on how your project is set up.
-An example might be:
+### Step Configuration
+
+Piper step configuration is either done via Piper's configuration file in your project's repository or via step parameters passed to the step via the action's `flags` parameter.
+
+See [Piper's docs section about configuration](https://www.project-piper.io/configuration/) for more information.
+
+### Secrets
+
+Piper can load secrets directly from Vault if Vault approle roleID and secretID are provided via environment variables.
 
 ```yaml
-steps:
-  karmaExecuteTests:
-    installCommand: npm install --quiet --no-audit
-    runCommand: npm test
+env:
+  PIPER_vaultAppRoleID: ${{ secrets.PIPER_VAULTAPPROLEID }}
+  PIPER_vaultAppRoleSecretID: ${{ secrets.PIPER_VAULTAPPROLESECRETID }}
 ```
 
-## Development Setup
-
-First, add the Github npm repository for the @sap scope by making sure that your `~/.npmrc` contains the following line
-
-```
-@sap:registry=https://npm.pkg.github.com
-```
-
-Then install the dependencies and build the distributable:
-
-```bash
-npm install
-npm run prepare
-```
-
-You'll get a distributable file in `dest`.
-Make sure the distributable is up-to-date before you push.
-
-To try it out locally, you may use Docker:
-
-```bash
-docker build . -f DevEnv.Dockerfile -t project-piper-action
-docker run -it --rm project-piper-action bash
-$ node index.js
-```
-
-For convinience those steps are wrapped into `startDevEnv.sh`.
-
-To provide _inputs_, you may set environment variables with the right names as in this example:
-
-```bash
-INPUT_COMMAND=version INPUT_FLAGS='-v' node index.js
-```
-
-## Limitations
-
-This software runs on [GitHub Actions](https://github.com/features/actions) with Linux hosts.
-
-## Known Issues
-
-No known issues as of now.
-
-## How to obtain support
-
-Feel free to open new issues for feature requests, bugs or general feedback on
-the [GitHub issues page of this project](https://github.com/sap/project-piper-action/issues).
+See also [Piper's Vault documentation](https://www.project-piper.io/infrastructure/vault/).

@@ -1,0 +1,5 @@
+project:
+  name: Piper GitHub Action
+  tz: Europe/Berlin
+  adrFolder: ./docs/adr
+  packages: []
