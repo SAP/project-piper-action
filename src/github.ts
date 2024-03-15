@@ -30,6 +30,7 @@ export async function downloadPiperBinary (
   const headers: any = {}
   const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
   if (token !== '') {
+    debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
     headers.Authorization = `token ${token}`
 
@@ -37,6 +38,7 @@ export async function downloadPiperBinary (
     binaryURL = binaryAssetURL
     version = tag
   } else {
+    debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
     version = binaryURL.split('/').slice(-2)[0]
   }
@@ -87,7 +89,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   }
 
   const octokit = new Octokit(options)
-  info(`Getting releases from ${api}/repos/${owner}/${repository}/releases/${tag}`)
+  debug(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`)
   const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
   if (response.status !== 200) {
     throw new Error(`can't get release by tag ${tag}: ${response.status}`)

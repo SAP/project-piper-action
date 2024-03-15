@@ -59,7 +59,10 @@ describe('GitHub package tests', () => {
     })
 
     await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
+    expect(core.debug).toHaveBeenNthCalledWith(1, 'Fetching binary from URL')
+    expect(core.debug).toHaveBeenCalledTimes(1)
     expect(core.info).toHaveBeenCalledWith(`Downloading 'https://github.com/SAP/jenkins-library/releases/download/v1.1.1/piper' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
+    expect(core.info).toHaveBeenCalledTimes(1)
   })
 
   test('downloadPiperBinary - SAP step latest', async () => {
@@ -79,10 +82,12 @@ describe('GitHub package tests', () => {
     })
 
     await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, owner, repo)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/sap-piper'`))
-    expect(core.info).toHaveBeenCalledTimes(2)
+    expect(core.debug).toHaveBeenNthCalledWith(1, 'Fetching binary from GitHub API')
+    expect(core.debug).toHaveBeenNthCalledWith(2, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
+    expect(core.debug).toHaveBeenNthCalledWith(5, `Found asset URL: ${assetUrl} and tag: ${version}`)
+    expect(core.debug).toHaveBeenCalledTimes(5)
+    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/sap-piper'`))
+    expect(core.info).toHaveBeenCalledTimes(1)
   })
 
   test('downloadPiperBinary - OS step, master', async () => {
@@ -102,10 +107,12 @@ describe('GitHub package tests', () => {
     })
 
     await downloadPiperBinary(osStep, 'master', githubApiURL, token, owner, repo)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper_master'`))
-    expect(core.info).toHaveBeenCalledTimes(2)
+    expect(core.debug).toHaveBeenNthCalledWith(1, 'Fetching binary from GitHub API')
+    expect(core.debug).toHaveBeenNthCalledWith(2, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
+    expect(core.debug).toHaveBeenNthCalledWith(5, `Found asset URL: ${assetUrl} and tag: ${version}`)
+    expect(core.debug).toHaveBeenCalledTimes(5)
+    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper_master'`))
+    expect(core.info).toHaveBeenCalledTimes(1)
   })
 
   test('downloadPiperBinary - OS step, exact version', async () => {
@@ -125,10 +132,12 @@ describe('GitHub package tests', () => {
     })
 
     await downloadPiperBinary(osStep, version, githubApiURL, token, owner, repo)
-    expect(core.debug).toHaveBeenCalledWith(`Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(1, `Getting releases from ${githubApiURL}/repos/${owner}/${repo}/releases/tags/${version}`)
-    expect(core.info).toHaveBeenNthCalledWith(2, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`))
-    expect(core.info).toHaveBeenCalledTimes(2)
+    expect(core.debug).toHaveBeenNthCalledWith(1, 'Fetching binary from GitHub API')
+    expect(core.debug).toHaveBeenNthCalledWith(2, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/tags/${version}`)
+    expect(core.debug).toHaveBeenNthCalledWith(5, `Found asset URL: ${assetUrl} and tag: ${version}`)
+    expect(core.debug).toHaveBeenCalledTimes(5)
+    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`))
+    expect(core.info).toHaveBeenCalledTimes(1)
   })
 
   test('Get dev Piper', async () => {
