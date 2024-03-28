@@ -105,21 +105,72 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
   }
 }
 
-export async function downloadStageConfig (token: string, owner: string, repository: string): Promise<void> {
-  await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
-    .then(response => {
-      const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
-      fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
-    })
-    .catch(err => {
-      throw new Error(`downloading stage configuration failed: ${err as string}`)
-    })
+export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
+  
+  // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
+    let defaultsPaths: string[] = []
+  
+    const enterpriseStageConfigURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
+    if (enterpriseStageConfigURL !== '') {
+      // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
+    }
+    info(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`)
+  
+    // const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
+    // defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
+    // const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
+    // info(`defaultsPathsArgs: ${defaultsPathsArgs}`)
+  
+    const piperPath = internalActionVariables.piperBinPath
+    if (piperPath === undefined) {
+      throw new Error('Can\'t download default config: piperPath not defined!')
+    }
+    const flags: string[] = ['--useV1', '--defaultsFile', enterpriseStageConfigURL]
+    // flags.push(...defaultsPathsArgs)
+    flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+    info(`flags: ${flags}`)
+    const piperExec = await executePiper('getDefaults', flags)
+  
+    let stageConfigs = JSON.parse(piperExec.output)
+    // if (customDefaultsPathsArray.length === 0) {
+      // defaultConfigs = [defaultConfigs]
+    // }
+    // info(`defaultConfigs: ${defaultConfigs[0]}`)
+  
+    for (let stageConfig of stageConfigs) {
+      // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
+      // fs.writeFileSync(configPath, defaultConfig.content)
+      // defaultsPaths.push(configPath)
+      info(`stageConfig filepath: ${stageConfig.filepath}`)
+      info(`stageConfig content: ${stageConfig.content}`)
+
+      fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content)
+
+    }
+
+    
+    // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
+    // const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
+    // exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
+    // return uploadResponse
+
+    return
+  
+  
+//   await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
+//     .then(response => {
+//       const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
+      // fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
+//     })
+//     .catch(err => {
+//       throw new Error(`downloading stage configuration failed: ${err as string}`)
+//     })
 }
 
-export async function createCheckIfStepActiveMaps (token: string, owner: string, repository: string): Promise<void> {
+export async function createCheckIfStepActiveMaps (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
   info('creating maps with active stages and steps with checkIfStepActive')
 
-  await downloadStageConfig(token, owner, repository)
+  await downloadStageConfig(server, apiURL, version, token, owner, repository)
     .then(async () => await checkIfStepActive('_', '_', true))
     .catch(err => {
       info(`checkIfStepActive failed: ${err as string}`)
@@ -169,11 +220,13 @@ export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Pro
 
   // order of (custom) defaults is important, so preserve it for when artifact is downloaded in another stage
   const orderedDefaultsPath = path.join(CONFIG_DIR, 'defaults_order.json')
+  info(`orderedDefaultsPath: ${orderedDefaultsPath}`)
   const defaultsFileNames = defaultsPaths.map((filePath) => path.basename(filePath))
+  info(`defaultsFileNames: ${defaultsFileNames}`)
   fs.writeFileSync(orderedDefaultsPath, JSON.stringify(defaultsFileNames))
 
   const artifactFiles = [...defaultsPaths, orderedDefaultsPath]
-  debug(`uploading files ${JSON.stringify(artifactFiles)} in base directory ${CONFIG_DIR} to artifact with name ${ARTIFACT_NAME}`)
+  info(`uploading files ${JSON.stringify(artifactFiles)} in base directory ${CONFIG_DIR} to artifact with name ${ARTIFACT_NAME}`)
 
   const artifactClient = artifact.create()
   return await artifactClient.uploadArtifact(ARTIFACT_NAME, artifactFiles, CONFIG_DIR)

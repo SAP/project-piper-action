@@ -41,7 +41,14 @@ export async function run (): Promise<void> {
       )
     }
     if (actionCfg.createCheckIfStepActiveMaps) {
-      await createCheckIfStepActiveMaps(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+      await createCheckIfStepActiveMaps(
+        actionCfg.gitHubEnterpriseServer,
+        actionCfg.gitHubEnterpriseApi,
+        actionCfg.sapPiperVersion,
+        actionCfg.gitHubEnterpriseToken, 
+        actionCfg.sapPiperOwner, 
+        actionCfg.sapPiperRepo
+      )
     }
     if (actionCfg.stepName !== '') {
       const flags = actionCfg.flags.split(' ')

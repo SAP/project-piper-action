@@ -19443,23 +19443,61 @@ function saveDefaultConfigs(defaultConfigs) {
     }
 }
 exports.saveDefaultConfigs = saveDefaultConfigs;
-function downloadStageConfig(token, owner, repository) {
+function downloadStageConfig(server, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, github_1.downloadFileFromGitHub)((0, enterprise_1.getEnterpriseStageConfigUrl)(owner, repository), token)
-            .then(response => {
-            const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary');
-            fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig);
-        })
-            .catch(err => {
-            throw new Error(`downloading stage configuration failed: ${err}`);
-        });
+        // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
+        let defaultsPaths = [];
+        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseDefaultsUrl)(apiURL, version, token, owner, repository);
+        if (enterpriseStageConfigURL !== '') {
+            // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
+        }
+        (0, core_1.info)(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`);
+        // const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
+        // defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
+        // const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
+        // info(`defaultsPathsArgs: ${defaultsPathsArgs}`)
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        if (piperPath === undefined) {
+            throw new Error('Can\'t download default config: piperPath not defined!');
+        }
+        const flags = ['--useV1', '--defaultsFile', enterpriseStageConfigURL];
+        // flags.push(...defaultsPathsArgs)
+        flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
+        (0, core_1.info)(`flags: ${flags}`);
+        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
+        let stageConfigs = JSON.parse(piperExec.output);
+        // if (customDefaultsPathsArray.length === 0) {
+        // defaultConfigs = [defaultConfigs]
+        // }
+        // info(`defaultConfigs: ${defaultConfigs[0]}`)
+        for (let stageConfig of stageConfigs) {
+            // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
+            // fs.writeFileSync(configPath, defaultConfig.content)
+            // defaultsPaths.push(configPath)
+            (0, core_1.info)(`stageConfig filepath: ${stageConfig.filepath}`);
+            (0, core_1.info)(`stageConfig content: ${stageConfig.content}`);
+            fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content);
+        }
+        // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
+        // const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
+        // exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
+        // return uploadResponse
+        return;
+        //   await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
+        //     .then(response => {
+        //       const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
+        // fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
+        //     })
+        //     .catch(err => {
+        //       throw new Error(`downloading stage configuration failed: ${err as string}`)
+        //     })
     });
 }
 exports.downloadStageConfig = downloadStageConfig;
-function createCheckIfStepActiveMaps(token, owner, repository) {
+function createCheckIfStepActiveMaps(server, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.info)('creating maps with active stages and steps with checkIfStepActive');
-        yield downloadStageConfig(token, owner, repository)
+        yield downloadStageConfig(server, apiURL, version, token, owner, repository)
             .then(() => __awaiter(this, void 0, void 0, function* () { return yield checkIfStepActive('_', '_', true); }))
             .catch(err => {
             (0, core_1.info)(`checkIfStepActive failed: ${err}`);
@@ -19512,10 +19550,12 @@ function uploadDefaultConfigArtifact(defaultsPaths) {
         (0, core_1.debug)('uploading defaults as artifact');
         // order of (custom) defaults is important, so preserve it for when artifact is downloaded in another stage
         const orderedDefaultsPath = path.join(exports.CONFIG_DIR, 'defaults_order.json');
+        (0, core_1.info)(`orderedDefaultsPath: ${orderedDefaultsPath}`);
         const defaultsFileNames = defaultsPaths.map((filePath) => path.basename(filePath));
+        (0, core_1.info)(`defaultsFileNames: ${defaultsFileNames}`);
         fs.writeFileSync(orderedDefaultsPath, JSON.stringify(defaultsFileNames));
         const artifactFiles = [...defaultsPaths, orderedDefaultsPath];
-        (0, core_1.debug)(`uploading files ${JSON.stringify(artifactFiles)} in base directory ${exports.CONFIG_DIR} to artifact with name ${exports.ARTIFACT_NAME}`);
+        (0, core_1.info)(`uploading files ${JSON.stringify(artifactFiles)} in base directory ${exports.CONFIG_DIR} to artifact with name ${exports.ARTIFACT_NAME}`);
         const artifactClient = artifact.create();
         return yield artifactClient.uploadArtifact(exports.ARTIFACT_NAME, artifactFiles, exports.CONFIG_DIR);
     });
@@ -19755,7 +19795,7 @@ exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
-exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'github-stage-config.yml';
+exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
 function isEnterpriseStep(stepName) {
     if (stepName === '') {
@@ -19781,11 +19821,16 @@ function getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository) {
     });
 }
 exports.getEnterpriseDefaultsUrl = getEnterpriseDefaultsUrl;
-function getEnterpriseStageConfigUrl(owner, repository) {
-    if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_STAGE_CONFIG_FILENAME}`;
-    }
-    return '';
+function getEnterpriseStageConfigUrl(apiURL, version, token, owner, repository) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const [stageConfigURL] = yield (0, github_1.getReleaseAssetUrl)(exports.ENTERPRISE_STAGE_CONFIG_FILENAME, version, apiURL, token, owner, repository);
+        if (stageConfigURL !== '')
+            return stageConfigURL;
+        // if (onGitHubEnterprise() && owner !== '' && repository !== '') {
+        //   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
+        // }
+        return '';
+    });
 }
 exports.getEnterpriseStageConfigUrl = getEnterpriseStageConfigUrl;
 
@@ -20208,7 +20253,7 @@ function run() {
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
             }
             if (actionCfg.createCheckIfStepActiveMaps) {
-                yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+                yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
             }
             if (actionCfg.stepName !== '') {
                 const flags = actionCfg.flags.split(' ');
