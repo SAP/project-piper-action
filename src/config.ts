@@ -66,7 +66,7 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   const piperExec = await executePiper('getDefaults', flags)
 
   let defaultConfigs = JSON.parse(piperExec.output)
-  info(`defaultConfigs: ${defaultConfigs}`)
+  info(`defaultConfigs: ${defaultConfigs[0]}`)
   if (customDefaultsPathsArray.length === 0) {
     defaultConfigs = [defaultConfigs]
   }
