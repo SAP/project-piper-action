@@ -131,13 +131,12 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
     info(`flags: ${flags}`)
     const piperExec = await executePiper('getDefaults', flags)
   
-    let stageConfigs = JSON.parse(piperExec.output)
+    let stageConfig = JSON.parse(piperExec.output)
     // if (customDefaultsPathsArray.length === 0) {
       // defaultConfigs = [defaultConfigs]
     // }
     // info(`defaultConfigs: ${defaultConfigs[0]}`)
   
-    for (let stageConfig of stageConfigs) {
       // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
       // fs.writeFileSync(configPath, defaultConfig.content)
       // defaultsPaths.push(configPath)
@@ -146,7 +145,6 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
 
       fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content)
 
-    }
 
     
     // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)

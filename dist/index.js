@@ -19465,19 +19465,17 @@ function downloadStageConfig(server, apiURL, version, token, owner, repository) 
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
         (0, core_1.info)(`flags: ${flags}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        let stageConfigs = JSON.parse(piperExec.output);
+        let stageConfig = JSON.parse(piperExec.output);
         // if (customDefaultsPathsArray.length === 0) {
         // defaultConfigs = [defaultConfigs]
         // }
         // info(`defaultConfigs: ${defaultConfigs[0]}`)
-        for (let stageConfig of stageConfigs) {
-            // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
-            // fs.writeFileSync(configPath, defaultConfig.content)
-            // defaultsPaths.push(configPath)
-            (0, core_1.info)(`stageConfig filepath: ${stageConfig.filepath}`);
-            (0, core_1.info)(`stageConfig content: ${stageConfig.content}`);
-            fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content);
-        }
+        // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
+        // fs.writeFileSync(configPath, defaultConfig.content)
+        // defaultsPaths.push(configPath)
+        (0, core_1.info)(`stageConfig filepath: ${stageConfig.filepath}`);
+        (0, core_1.info)(`stageConfig content: ${stageConfig.content}`);
+        fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content);
         // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
         // const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
         // exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
