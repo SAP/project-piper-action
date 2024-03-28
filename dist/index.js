@@ -19414,7 +19414,8 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
             // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
             // fs.writeFileSync(configPath, defaultConfig.content)
             // defaultsPaths.push(configPath)
-            (0, core_1.info)(`defaultConfig: ${defaultConfig}`);
+            (0, core_1.info)(`defaultConfig filepath: ${defaultConfig.filepath}`);
+            (0, core_1.info)(`defaultConfig content: ${defaultConfig.content}`);
         }
         const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);

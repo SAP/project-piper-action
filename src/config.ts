@@ -75,7 +75,8 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
     // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
     // fs.writeFileSync(configPath, defaultConfig.content)
     // defaultsPaths.push(configPath)
-    info(`defaultConfig: ${defaultConfig}`)
+    info(`defaultConfig filepath: ${defaultConfig.filepath}`)
+    info(`defaultConfig content: ${defaultConfig.content}`)
   }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
