@@ -110,7 +110,7 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
   // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
     let defaultsPaths: string[] = []
   
-    const enterpriseStageConfigURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
+    const enterpriseStageConfigURL = await getEnterpriseStageConfigUrl(apiURL, version, token, owner, repository)
     if (enterpriseStageConfigURL !== '') {
       // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
     }

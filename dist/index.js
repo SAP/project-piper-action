@@ -19447,7 +19447,7 @@ function downloadStageConfig(server, apiURL, version, token, owner, repository) 
     return __awaiter(this, void 0, void 0, function* () {
         // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
         let defaultsPaths = [];
-        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseDefaultsUrl)(apiURL, version, token, owner, repository);
+        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseStageConfigUrl)(apiURL, version, token, owner, repository);
         if (enterpriseStageConfigURL !== '') {
             // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
         }
