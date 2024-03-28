@@ -19406,10 +19406,11 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         (0, core_1.info)(`flags: ${flags}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
         let defaultConfigs = JSON.parse(piperExec.output);
+        (0, core_1.info)(`defaultConfigs: ${defaultConfigs}`);
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
-        (0, core_1.info)(`defaultConfigs: ${defaultConfigs}`);
+        (0, core_1.info)(`defaultConfigs 2: ${defaultConfigs[0]}`);
         const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);
         (0, core_1.exportVariable)('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths));
