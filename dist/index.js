@@ -19391,9 +19391,11 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
+        (0, core_1.info)(`enterpriseDefaultsURL: ${enterpriseDefaultsURL}`);
         const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : [];
         defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray);
         const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat();
+        (0, core_1.info)(`defaultsPathsArgs: ${defaultsPathsArgs}`);
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t download default config: piperPath not defined!');
@@ -19401,11 +19403,13 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         const flags = [];
         flags.push(...defaultsPathsArgs);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
+        (0, core_1.info)(`flags: ${flags}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
         let defaultConfigs = JSON.parse(piperExec.output);
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
+        (0, core_1.info)(`defaultConfigs: ${defaultConfigs}`);
         const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);
         (0, core_1.exportVariable)('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths));
@@ -19959,17 +19963,17 @@ exports.downloadPiperBinary = downloadPiperBinary;
 function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
-        (0, core_2.debug)(`Found assets: ${getReleaseResponse.data.assets}`);
-        (0, core_2.debug)(`Found tag: ${getReleaseResponse.data.tag_name}`);
+        (0, core_2.info)(`Found assets: ${getReleaseResponse.data.assets}`);
+        (0, core_2.info)(`Found tag: ${getReleaseResponse.data.tag_name}`);
         const tag = getReleaseResponse.data.tag_name; // version of release
         const asset = getReleaseResponse.data.assets.find((asset) => {
             return asset.name === assetName;
         });
         if (asset === undefined) {
-            (0, core_2.debug)(`Asset not found: ${assetName}`);
+            (0, core_2.info)(`Asset not found: ${assetName}`);
             return ['', tag];
         }
-        (0, core_2.debug)(`Found asset URL: ${asset.url} and tag: ${tag}`);
+        (0, core_2.info)(`Found asset URL: ${asset.url} and tag: ${tag}`);
         return [asset.url, tag];
     });
 }
@@ -19984,7 +19988,7 @@ function getPiperReleases(version, api, token, owner, repository) {
             options.auth = token;
         }
         const octokit = new core_1.Octokit(options);
-        (0, core_2.debug)(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`);
+        (0, core_2.info)(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`);
         const response = yield octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`);
         if (response.status !== 200) {
             throw new Error(`can't get release by tag ${tag}: ${response.status}`);
