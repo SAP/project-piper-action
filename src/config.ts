@@ -48,10 +48,12 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
+  info(`enterpriseDefaultsURL: ${enterpriseDefaultsURL}`)
 
   const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
   defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
+  info(`defaultsPathsArgs: ${defaultsPathsArgs}`)
 
   const piperPath = internalActionVariables.piperBinPath
   if (piperPath === undefined) {
@@ -60,12 +62,14 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   const flags: string[] = []
   flags.push(...defaultsPathsArgs)
   flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+  info(`flags: ${flags}`)
   const piperExec = await executePiper('getDefaults', flags)
 
   let defaultConfigs = JSON.parse(piperExec.output)
   if (customDefaultsPathsArray.length === 0) {
     defaultConfigs = [defaultConfigs]
   }
+  info(`defaultConfigs: ${defaultConfigs}`)
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)

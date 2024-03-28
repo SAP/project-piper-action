@@ -63,19 +63,19 @@ export async function getReleaseAssetUrl (
   assetName: string, version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<[string, string]> {
   const getReleaseResponse = await getPiperReleases(version, apiURL, token, owner, repo)
-  debug(`Found assets: ${getReleaseResponse.data.assets}`)
-  debug(`Found tag: ${getReleaseResponse.data.tag_name}`)
+  info(`Found assets: ${getReleaseResponse.data.assets}`)
+  info(`Found tag: ${getReleaseResponse.data.tag_name}`)
 
   const tag = getReleaseResponse.data.tag_name // version of release
   const asset = getReleaseResponse.data.assets.find((asset: { name: string }) => {
     return asset.name === assetName
   })
   if (asset === undefined) {
-    debug(`Asset not found: ${assetName}`)
+    info(`Asset not found: ${assetName}`)
     return ['', tag]
   }
 
-  debug(`Found asset URL: ${asset.url} and tag: ${tag}`)
+  info(`Found asset URL: ${asset.url} and tag: ${tag}`)
   return [asset.url, tag]
 }
 
@@ -89,7 +89,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   }
 
   const octokit = new Octokit(options)
-  debug(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`)
+  info(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`)
   const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
   if (response.status !== 200) {
     throw new Error(`can't get release by tag ${tag}: ${response.status}`)
