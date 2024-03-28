@@ -66,11 +66,17 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   const piperExec = await executePiper('getDefaults', flags)
 
   let defaultConfigs = JSON.parse(piperExec.output)
-  info(`defaultConfigs: ${defaultConfigs}`)
   if (customDefaultsPathsArray.length === 0) {
     defaultConfigs = [defaultConfigs]
   }
-  info(`defaultConfigs 2: ${defaultConfigs[0]}`)
+  info(`defaultConfigs: ${defaultConfigs[0]}`)
+
+  for (const defaultConfig of defaultConfigs) {
+    // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
+    // fs.writeFileSync(configPath, defaultConfig.content)
+    // defaultsPaths.push(configPath)
+    info(`defaultConfig: ${defaultConfig}`)
+  }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
