@@ -109,10 +109,13 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
 export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
     const enterpriseStageConfigURL = await getEnterpriseConfigUrl('StageConfig', apiURL, version, token, owner, repository)
     info(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`)
+    if (enterpriseStageConfigURL === '') {
+      throw new Error('Can\'t download stage config: failed to get URL!')
+    }
   
     const piperPath = internalActionVariables.piperBinPath
     if (piperPath === undefined) {
-      throw new Error('Can\'t download default config: piperPath not defined!')
+      throw new Error('Can\'t download stage config: piperPath not defined!')
     }
     const flags: string[] = ['--useV1', '--defaultsFile', enterpriseStageConfigURL]
     flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
