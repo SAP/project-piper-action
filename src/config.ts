@@ -8,8 +8,9 @@ import { downloadFileFromGitHub, getHost } from './github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
   ENTERPRISE_STAGE_CONFIG_FILENAME,
-  getEnterpriseDefaultsUrl,
-  getEnterpriseStageConfigUrl
+  // getEnterpriseDefaultsUrl,
+  // getEnterpriseStageConfigUrl,
+  getEnterpriseConfigUrl
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -44,7 +45,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  const enterpriseDefaultsURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
+  const enterpriseDefaultsURL = await getEnterpriseConfigUrl('DefaultConfig', apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
@@ -106,63 +107,23 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
 }
 
 export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
-  
-  // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
-    let defaultsPaths: string[] = []
-  
-    const enterpriseStageConfigURL = await getEnterpriseStageConfigUrl(apiURL, version, token, owner, repository)
-    if (enterpriseStageConfigURL !== '') {
-      // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
-    }
+    const enterpriseStageConfigURL = await getEnterpriseConfigUrl('StageConfig', apiURL, version, token, owner, repository)
     info(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`)
-  
-    // const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-    // defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
-    // const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
-    // info(`defaultsPathsArgs: ${defaultsPathsArgs}`)
   
     const piperPath = internalActionVariables.piperBinPath
     if (piperPath === undefined) {
       throw new Error('Can\'t download default config: piperPath not defined!')
     }
     const flags: string[] = ['--useV1', '--defaultsFile', enterpriseStageConfigURL]
-    // flags.push(...defaultsPathsArgs)
     flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
     info(`flags: ${flags}`)
     const piperExec = await executePiper('getDefaults', flags)
   
     let stageConfig = JSON.parse(piperExec.output)
-    // if (customDefaultsPathsArray.length === 0) {
-      // defaultConfigs = [defaultConfigs]
-    // }
-    // info(`defaultConfigs: ${defaultConfigs[0]}`)
-  
-      // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
-      // fs.writeFileSync(configPath, defaultConfig.content)
-      // defaultsPaths.push(configPath)
       info(`stageConfig filepath: ${stageConfig.filepath}`)
       info(`stageConfig content: ${stageConfig.content}`)
 
       fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content)
-
-
-    
-    // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
-    // const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
-    // exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
-    // return uploadResponse
-
-    return
-  
-  
-//   await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
-//     .then(response => {
-//       const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
-      // fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
-//     })
-//     .catch(err => {
-//       throw new Error(`downloading stage configuration failed: ${err as string}`)
-//     })
 }
 
 export async function createCheckIfStepActiveMaps (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {

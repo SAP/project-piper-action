@@ -4,8 +4,9 @@ import { info } from '@actions/core'
 export const ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml'
 export const ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml'
 export const ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml'
-
 const ENTERPRISE_STEPNAME_PREFIX = 'sap'
+// const DefaultConfig = 'DefaultConfig'
+// const StageConditions = 'StageConfig'
 
 export function isEnterpriseStep (stepName: string): boolean {
   if (stepName === '') {
@@ -20,19 +21,41 @@ export function onGitHubEnterprise (): boolean {
 }
 
 // deprecated, keep for backwards compatibility
-export async function getEnterpriseDefaultsUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  // get URL of defaults from the release (gh api, authenticated)
-  const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE, version, apiURL, token, owner, repository)
-  if (enterpriseDefaultsURL !== '') return enterpriseDefaultsURL
-  // fallback to get URL of defaults in the repository (unauthenticated)
-  return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
-}
+// export async function getEnterpriseDefaultsUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+//   // get URL of defaults from the release (gh api, authenticated)
+//   const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE, version, apiURL, token, owner, repository)
+//   if (enterpriseDefaultsURL !== '') return enterpriseDefaultsURL
+//   // fallback to get URL of defaults in the repository (unauthenticated)
+//   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
+// }
 
-export async function getEnterpriseStageConfigUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  const [stageConfigURL] = await getReleaseAssetUrl(ENTERPRISE_STAGE_CONFIG_FILENAME, version, apiURL, token, owner, repository)
-  if (stageConfigURL !== '') return stageConfigURL
-  // if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-  //   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
-  // }
-  return ''
+// export async function getEnterpriseStageConfigUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+//   const [stageConfigURL] = await getReleaseAssetUrl(ENTERPRISE_STAGE_CONFIG_FILENAME, version, apiURL, token, owner, repository)
+//   if (stageConfigURL !== '') return stageConfigURL
+//   // if (onGitHubEnterprise() && owner !== '' && repository !== '') {
+//   //   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
+//   // }
+//   return ''
+// }
+
+// deprecated, keep for backwards compatibility
+export async function getEnterpriseConfigUrl (configType: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+  let assetname :string = ''
+  let filename :string = ''
+
+  if (configType === 'DefaultConfig') {
+    assetname = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
+    filename = ENTERPRISE_DEFAULTS_FILENAME
+  } else if (configType === 'StageConfig') {
+    assetname = ENTERPRISE_STAGE_CONFIG_FILENAME
+    filename = ENTERPRISE_STAGE_CONFIG_FILENAME
+  } else {
+    return ''
+  }
+  
+  // get URL of defaults from the release (gh api, authenticated)
+  const [url] = await getReleaseAssetUrl(assetname, version, apiURL, token, owner, repository)
+  if (url !== '') return url
+  // fallback to get URL of defaults in the repository (unauthenticated)
+  return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`
 }
