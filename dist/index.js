@@ -19418,6 +19418,8 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
             (0, core_1.info)(`defaultConfig content: ${defaultConfig.content}`);
         }
         const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
+        (0, core_1.info)(`savedDefaultsPaths: ${savedDefaultsPaths}`);
+        (0, core_1.info)(`defaultsFlags: ${generateDefaultConfigFlags(savedDefaultsPaths)}`);
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);
         (0, core_1.exportVariable)('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths));
         return uploadResponse;
@@ -19447,9 +19449,12 @@ function downloadStageConfig(server, apiURL, version, token, owner, repository) 
     return __awaiter(this, void 0, void 0, function* () {
         const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseConfigUrl)('StageConfig', apiURL, version, token, owner, repository);
         (0, core_1.info)(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`);
+        if (enterpriseStageConfigURL === '') {
+            throw new Error('Can\'t download stage config: failed to get URL!');
+        }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
-            throw new Error('Can\'t download default config: piperPath not defined!');
+            throw new Error('Can\'t download stage config: piperPath not defined!');
         }
         const flags = ['--useV1', '--defaultsFile', enterpriseStageConfigURL];
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
