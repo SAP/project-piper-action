@@ -81,6 +81,8 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
+  info(`savedDefaultsPaths: ${savedDefaultsPaths}`)
+  info(`defaultsFlags: ${generateDefaultConfigFlags(savedDefaultsPaths)}`)
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
   exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
   return uploadResponse
