@@ -19387,7 +19387,7 @@ exports.getDefaultConfig = getDefaultConfig;
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
-        const enterpriseDefaultsURL = yield (0, enterprise_1.getEnterpriseDefaultsUrl)(apiURL, version, token, owner, repository);
+        const enterpriseDefaultsURL = yield (0, enterprise_1.getEnterpriseConfigUrl)('DefaultConfig', apiURL, version, token, owner, repository);
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
@@ -19445,50 +19445,20 @@ function saveDefaultConfigs(defaultConfigs) {
 exports.saveDefaultConfigs = saveDefaultConfigs;
 function downloadStageConfig(server, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
-        // export async function downloadDefaultConfig ( token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
-        let defaultsPaths = [];
-        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseStageConfigUrl)(apiURL, version, token, owner, repository);
-        if (enterpriseStageConfigURL !== '') {
-            // defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
-        }
+        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseConfigUrl)('StageConfig', apiURL, version, token, owner, repository);
         (0, core_1.info)(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`);
-        // const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-        // defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
-        // const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
-        // info(`defaultsPathsArgs: ${defaultsPathsArgs}`)
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t download default config: piperPath not defined!');
         }
         const flags = ['--useV1', '--defaultsFile', enterpriseStageConfigURL];
-        // flags.push(...defaultsPathsArgs)
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
         (0, core_1.info)(`flags: ${flags}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
         let stageConfig = JSON.parse(piperExec.output);
-        // if (customDefaultsPathsArray.length === 0) {
-        // defaultConfigs = [defaultConfigs]
-        // }
-        // info(`defaultConfigs: ${defaultConfigs[0]}`)
-        // const configPath = path.join(CONFIG_DIR, path.basename(defaultConfig.filepath))
-        // fs.writeFileSync(configPath, defaultConfig.content)
-        // defaultsPaths.push(configPath)
         (0, core_1.info)(`stageConfig filepath: ${stageConfig.filepath}`);
         (0, core_1.info)(`stageConfig content: ${stageConfig.content}`);
         fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content);
-        // const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
-        // const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
-        // exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
-        // return uploadResponse
-        return;
-        //   await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
-        //     .then(response => {
-        //       const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
-        // fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
-        //     })
-        //     .catch(err => {
-        //       throw new Error(`downloading stage configuration failed: ${err as string}`)
-        //     })
     });
 }
 exports.downloadStageConfig = downloadStageConfig;
@@ -19789,12 +19759,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseStageConfigUrl = exports.getEnterpriseDefaultsUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
+exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = void 0;
 const github_1 = __nccwpck_require__(978);
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
+// const DefaultConfig = 'DefaultConfig'
+// const StageConditions = 'StageConfig'
 function isEnterpriseStep(stepName) {
     if (stepName === '') {
         // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
@@ -19808,29 +19780,46 @@ function onGitHubEnterprise() {
 }
 exports.onGitHubEnterprise = onGitHubEnterprise;
 // deprecated, keep for backwards compatibility
-function getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository) {
+// export async function getEnterpriseDefaultsUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+//   // get URL of defaults from the release (gh api, authenticated)
+//   const [enterpriseDefaultsURL] = await getReleaseAssetUrl(ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE, version, apiURL, token, owner, repository)
+//   if (enterpriseDefaultsURL !== '') return enterpriseDefaultsURL
+//   // fallback to get URL of defaults in the repository (unauthenticated)
+//   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_DEFAULTS_FILENAME}`
+// }
+// export async function getEnterpriseStageConfigUrl (apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
+//   const [stageConfigURL] = await getReleaseAssetUrl(ENTERPRISE_STAGE_CONFIG_FILENAME, version, apiURL, token, owner, repository)
+//   if (stageConfigURL !== '') return stageConfigURL
+//   // if (onGitHubEnterprise() && owner !== '' && repository !== '') {
+//   //   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
+//   // }
+//   return ''
+// }
+// deprecated, keep for backwards compatibility
+function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
+        let assetname = '';
+        let filename = '';
+        if (configType === 'DefaultConfig') {
+            assetname = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE;
+            filename = exports.ENTERPRISE_DEFAULTS_FILENAME;
+        }
+        else if (configType === 'StageConfig') {
+            assetname = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
+            filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
+        }
+        else {
+            return '';
+        }
         // get URL of defaults from the release (gh api, authenticated)
-        const [enterpriseDefaultsURL] = yield (0, github_1.getReleaseAssetUrl)(exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE, version, apiURL, token, owner, repository);
-        if (enterpriseDefaultsURL !== '')
-            return enterpriseDefaultsURL;
+        const [url] = yield (0, github_1.getReleaseAssetUrl)(assetname, version, apiURL, token, owner, repository);
+        if (url !== '')
+            return url;
         // fallback to get URL of defaults in the repository (unauthenticated)
-        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${exports.ENTERPRISE_DEFAULTS_FILENAME}`;
+        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`;
     });
 }
-exports.getEnterpriseDefaultsUrl = getEnterpriseDefaultsUrl;
-function getEnterpriseStageConfigUrl(apiURL, version, token, owner, repository) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const [stageConfigURL] = yield (0, github_1.getReleaseAssetUrl)(exports.ENTERPRISE_STAGE_CONFIG_FILENAME, version, apiURL, token, owner, repository);
-        if (stageConfigURL !== '')
-            return stageConfigURL;
-        // if (onGitHubEnterprise() && owner !== '' && repository !== '') {
-        //   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
-        // }
-        return '';
-    });
-}
-exports.getEnterpriseStageConfigUrl = getEnterpriseStageConfigUrl;
+exports.getEnterpriseConfigUrl = getEnterpriseConfigUrl;
 
 
 /***/ }),
