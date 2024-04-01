@@ -32,7 +32,7 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   } else {
     return ''
   }
-  
+
   // get URL of defaults from the release (gh api, authenticated)
   const [url] = await getReleaseAssetUrl(assetname, version, apiURL, token, owner, repository)
   if (url !== '') return url

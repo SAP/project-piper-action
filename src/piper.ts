@@ -45,8 +45,8 @@ export async function run (): Promise<void> {
         actionCfg.gitHubEnterpriseServer,
         actionCfg.gitHubEnterpriseApi,
         actionCfg.sapPiperVersion,
-        actionCfg.gitHubEnterpriseToken, 
-        actionCfg.sapPiperOwner, 
+        actionCfg.gitHubEnterpriseToken,
+        actionCfg.sapPiperOwner,
         actionCfg.sapPiperRepo
       )
     }

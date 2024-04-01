@@ -19446,7 +19446,7 @@ function downloadStageConfig(server, apiURL, version, token, owner, repository) 
         flags.push('--defaultsFile', stageConfigURL);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        let config = JSON.parse(piperExec.output);
+        const config = JSON.parse(piperExec.output);
         fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), config.content);
     });
 }
