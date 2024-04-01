@@ -178,29 +178,3 @@ function getTag (forAPICall: boolean, version: string | undefined): string {
   if (version === '' || version === 'master' || version === 'latest') return 'latest'
   return `${forAPICall ? 'tags' : 'tag'}/${version}`
 }
-
-// Expects a URL in API form:
-// https://<host>/api/v3/repos/<org>/<repo>/contents/<folder>/<filename>
-// TODO: remove this function after stage-config file is migrated to release assets
-export async function downloadFileFromGitHub (url: string, token: string): Promise<OctokitResponse<any>> {
-  const host = url.substring(0, url.indexOf('/repos'))
-  const apiRequest = url.substring(url.indexOf('/repos'))
-
-  const options: OctokitOptions = {}
-  options.baseUrl = host
-  if (token !== '') {
-    options.auth = token
-  } else {
-    throw new Error('token is not provided')
-  }
-  const octokit = new Octokit(options)
-
-  const response = await octokit.request(
-    `GET ${apiRequest}`
-  )
-  if (response.status !== 200) {
-    throw new Error(`can't get file: ${response.status}`)
-  }
-
-  return response
-}
