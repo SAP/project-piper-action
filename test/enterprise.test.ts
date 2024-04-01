@@ -50,7 +50,7 @@ describe('test enterprise.ts', () => {
       process.env.GITHUB_SERVER_URL = GITHUB_COM_SERVER_URL
       // test
       // assert
-      expect(getEnterpriseConfigUrl('configType','apiURL','version', 'token','anything', 'something')).toBe('')
+      expect(getEnterpriseConfigUrl('configType', 'apiURL', 'version', 'token', 'anything', 'something')).toBe('')
     })
 
     describe('with enterprise github', () => {
@@ -62,7 +62,7 @@ describe('test enterprise.ts', () => {
         const repository = 'something'
         // test
         // assert
-        expect(getEnterpriseConfigUrl(DEFAULT_CONFIG,'apiURL','version','token', owner, repository)).toBe(`${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`)
+        expect(getEnterpriseConfigUrl(DEFAULT_CONFIG, 'apiURL', 'version', 'token', owner, repository)).toBe(`${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${ENTERPRISE_STAGE_CONFIG_FILENAME}`)
       })
 
       test('with no repository', async () => {
@@ -71,7 +71,7 @@ describe('test enterprise.ts', () => {
         const repository = ''
         // test
         // assert
-        expect(getEnterpriseConfigUrl(STAGE_CONFIG,'apiURL','version','token', owner, repository)).toBe('')
+        expect(getEnterpriseConfigUrl(STAGE_CONFIG, 'apiURL', 'version', 'token', owner, repository)).toBe('')
       })
     })
   })

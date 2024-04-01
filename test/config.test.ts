@@ -3,12 +3,12 @@ import path from 'path'
 
 import * as core from '@actions/core'
 import * as artifact from '@actions/artifact'
-import { type OctokitResponse } from '@octokit/types'
+// import { type OctokitResponse } from '@octokit/types'
 
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
-import { 
+import {
   ENTERPRISE_DEFAULTS_FILENAME,
   ENTERPRISE_STAGE_CONFIG_FILENAME
 } from '../src/enterprise'
@@ -186,9 +186,9 @@ describe('Config', () => {
   })
   test('Download stage config', async () => {
     // Mock implementation for 'Download stage config' test case
-    const mockGetReleaseAssetUrl = jest.spyOn(github, 'getReleaseAssetUrl');
-    mockGetReleaseAssetUrl.mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0']);
-    
+    const mockGetReleaseAssetUrl = jest.spyOn(github, 'getReleaseAssetUrl')
+    mockGetReleaseAssetUrl.mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0'])
+
     process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
     process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
 
@@ -223,7 +223,7 @@ describe('Config', () => {
 
     process.env.GITHUB_JOB = 'Init'
 
-    await config.createCheckIfStepActiveMaps('server','apiURL','version','testToken', 'something', 'nothing')
+    await config.createCheckIfStepActiveMaps('server', 'apiURL', 'version', 'testToken', 'something', 'nothing')
 
     expect(config.downloadStageConfig).toHaveBeenCalled()
     expect(config.checkIfStepActive).toHaveBeenCalled()
