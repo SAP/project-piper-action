@@ -107,7 +107,7 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
   const flags: string[] = ['--useV1']
   flags.push('--defaultsFile', stageConfigURL)
   flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
-  const piperExec = await executePiper('getDefaults', flags) 
+  const piperExec = await executePiper('getDefaults', flags)
   const config = JSON.parse(piperExec.output)
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
 }
