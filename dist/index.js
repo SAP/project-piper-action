@@ -19447,16 +19447,17 @@ function saveDefaultConfigs(defaultConfigs) {
 exports.saveDefaultConfigs = saveDefaultConfigs;
 function downloadStageConfig(server, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
-        const enterpriseStageConfigURL = yield (0, enterprise_1.getEnterpriseConfigUrl)('StageConfig', apiURL, version, token, owner, repository);
-        (0, core_1.info)(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`);
-        if (enterpriseStageConfigURL === '') {
+        const stageConfigURL = yield (0, enterprise_1.getEnterpriseConfigUrl)('StageConfig', apiURL, version, token, owner, repository);
+        (0, core_1.info)(`stageConfigURL: ${stageConfigURL}`);
+        if (stageConfigURL === '') {
             throw new Error('Can\'t download stage config: failed to get URL!');
         }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
             throw new Error('Can\'t download stage config: piperPath not defined!');
         }
-        const flags = ['--useV1', '--defaultsFile', enterpriseStageConfigURL];
+        const flags = ['--useV1'];
+        flags.push('--defaultsFile', stageConfigURL);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
         (0, core_1.info)(`flags: ${flags}`);
         const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);

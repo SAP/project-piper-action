@@ -109,9 +109,9 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
 }
 
 export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
-    const enterpriseStageConfigURL = await getEnterpriseConfigUrl('StageConfig', apiURL, version, token, owner, repository)
-    info(`enterpriseStageConfigURL: ${enterpriseStageConfigURL}`)
-    if (enterpriseStageConfigURL === '') {
+    const stageConfigURL = await getEnterpriseConfigUrl('StageConfig', apiURL, version, token, owner, repository)
+    info(`stageConfigURL: ${stageConfigURL}`)
+    if (stageConfigURL === '') {
       throw new Error('Can\'t download stage config: failed to get URL!')
     }
   
@@ -119,16 +119,17 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
     if (piperPath === undefined) {
       throw new Error('Can\'t download stage config: piperPath not defined!')
     }
-    const flags: string[] = ['--useV1', '--defaultsFile', enterpriseStageConfigURL]
+    const flags: string[] = ['--useV1']
+    flags.push('--defaultsFile', stageConfigURL)
     flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
     info(`flags: ${flags}`)
     const piperExec = await executePiper('getDefaults', flags)
   
     let stageConfig = JSON.parse(piperExec.output)
-      info(`stageConfig filepath: ${stageConfig.filepath}`)
-      info(`stageConfig content: ${stageConfig.content}`)
+    info(`stageConfig filepath: ${stageConfig.filepath}`)
+    info(`stageConfig content: ${stageConfig.content}`)
 
-      fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content)
+    fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig.content)
 }
 
 export async function createCheckIfStepActiveMaps (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
