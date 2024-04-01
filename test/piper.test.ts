@@ -94,7 +94,13 @@ describe('Piper', () => {
       inputs['sap-piper-repository']
     )
     expect(config.createCheckIfStepActiveMaps).toHaveBeenCalledWith(
-      inputs['github-enterprise-token'], inputs['sap-piper-owner'], inputs['sap-piper-repository'])
+      'https://githubenterprise.test.com/',
+      'https://api.githubenterprise.test.com/',
+      inputs['sap-piper-version'] = '1.2.3',
+      inputs['github-enterprise-token'],
+      inputs['sap-piper-owner'],
+      inputs['sap-piper-repository']
+    )
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 

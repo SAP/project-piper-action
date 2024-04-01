@@ -8,7 +8,10 @@ import { type OctokitResponse } from '@octokit/types'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
-import { ENTERPRISE_DEFAULTS_FILENAME } from '../src/enterprise'
+import { 
+  ENTERPRISE_DEFAULTS_FILENAME,
+  ENTERPRISE_STAGE_CONFIG_FILENAME
+} from '../src/enterprise'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -182,15 +185,24 @@ describe('Config', () => {
     delete process.env.GITHUB_JOB
   })
   test('Download stage config', async () => {
-    const mockContent = 'testbase64string'
-    jest.spyOn(github, 'downloadFileFromGitHub').mockImplementationOnce(async () => {
-      const response = { data: { content: Buffer.from(mockContent).toString('base64') } }
-      return await Promise.resolve(response as unknown as OctokitResponse<any, number>)
-    })
+    // Mock implementation for 'Download stage config' test case
+    const mockGetReleaseAssetUrl = jest.spyOn(github, 'getReleaseAssetUrl');
+    mockGetReleaseAssetUrl.mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0']);
+    
+    process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
+    process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
 
-    await config.downloadStageConfig('testToken', 'something', 'nothing')
+    const server = 'https://github.anything.com'
+    const host = 'github.anything.com'
+    const sapStageConfigUrl = `http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
+    const expectedPiperFlags = ['--useV1', '--defaultsFile', `${sapStageConfigUrl}`, '--gitHubTokens', `${host}:blah-blah`]
+    const expectedWrittenFilepath = path.join(config.CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME)
+    piperExecResultMock = generatePiperGetDefaultsOutput([sapStageConfigUrl])
 
-    expect(fs.writeFileSync).toHaveBeenCalledWith(expect.stringContaining('.yml'), mockContent)
+    await config.downloadStageConfig(server, 'https://dummy-api.test/', 'v1.0.0', 'blah-blah', 'something', 'nothing')
+
+    expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
+    expect(fs.writeFileSync).toHaveBeenCalledWith(expectedWrittenFilepath, expect.anything())
   })
 
   test('Check if step active', async () => {
@@ -211,7 +223,7 @@ describe('Config', () => {
 
     process.env.GITHUB_JOB = 'Init'
 
-    await config.createCheckIfStepActiveMaps('testToken', 'something', 'nothing')
+    await config.createCheckIfStepActiveMaps('server','apiURL','version','testToken', 'something', 'nothing')
 
     expect(config.downloadStageConfig).toHaveBeenCalled()
     expect(config.checkIfStepActive).toHaveBeenCalled()
