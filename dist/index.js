@@ -20184,9 +20184,9 @@ function run() {
             yield (0, execute_1.executePiper)('version');
             if ((0, enterprise_1.onGitHubEnterprise)()) {
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
-            }
-            if (actionCfg.createCheckIfStepActiveMaps) {
-                yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+                if (actionCfg.createCheckIfStepActiveMaps) {
+                    yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+                }
             }
             if (actionCfg.stepName !== '') {
                 const flags = actionCfg.flags.split(' ');

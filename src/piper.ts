@@ -39,16 +39,16 @@ export async function run (): Promise<void> {
         actionCfg.sapPiperRepo,
         actionCfg.customDefaultsPaths
       )
-    }
-    if (actionCfg.createCheckIfStepActiveMaps) {
-      await createCheckIfStepActiveMaps(
-        actionCfg.gitHubEnterpriseServer,
-        actionCfg.gitHubEnterpriseApi,
-        actionCfg.sapPiperVersion,
-        actionCfg.gitHubEnterpriseToken,
-        actionCfg.sapPiperOwner,
-        actionCfg.sapPiperRepo
-      )
+      if (actionCfg.createCheckIfStepActiveMaps) {
+        await createCheckIfStepActiveMaps(
+          actionCfg.gitHubEnterpriseServer,
+          actionCfg.gitHubEnterpriseApi,
+          actionCfg.sapPiperVersion,
+          actionCfg.gitHubEnterpriseToken,
+          actionCfg.sapPiperOwner,
+          actionCfg.sapPiperRepo
+        )
+      }
     }
     if (actionCfg.stepName !== '') {
       const flags = actionCfg.flags.split(' ')

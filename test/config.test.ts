@@ -186,8 +186,7 @@ describe('Config', () => {
   })
   test('Download stage config', async () => {
     // Mock implementation for 'Download stage config' test case
-    const mockGetReleaseAssetUrl = jest.spyOn(github, 'getReleaseAssetUrl')
-    mockGetReleaseAssetUrl.mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0'])
+    jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0'])
 
     process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
     process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
