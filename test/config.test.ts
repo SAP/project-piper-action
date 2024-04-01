@@ -1,17 +1,15 @@
 import fs from 'fs'
 import path from 'path'
-
-import * as core from '@actions/core'
-import * as artifact from '@actions/artifact'
-// import { type OctokitResponse } from '@octokit/types'
-
-import * as config from '../src/config'
-import * as execute from '../src/execute'
-import * as github from '../src/github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
   ENTERPRISE_STAGE_CONFIG_FILENAME
 } from '../src/enterprise'
+
+import * as core from '@actions/core'
+import * as artifact from '@actions/artifact'
+import * as config from '../src/config'
+import * as execute from '../src/execute'
+import * as github from '../src/github'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -184,8 +182,9 @@ describe('Config', () => {
 
     delete process.env.GITHUB_JOB
   })
+
   test('Download stage config', async () => {
-    // Mock implementation for 'Download stage config' test case
+    // mock for stage config case
     jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([`http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`, 'v1.0.0'])
 
     process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
