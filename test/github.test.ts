@@ -4,7 +4,7 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { downloadPiperBinary, buildPiperFromSource, downloadFileFromGitHub } from '../src/github'
+import { downloadPiperBinary, buildPiperFromSource } from '../src/github'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -154,30 +154,5 @@ describe('GitHub package tests', () => {
     expect(
       await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
     ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
-  })
-
-  test('Download file from GitHub', async () => {
-    jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-      return {
-        request: async (request: string) => {
-          return await Promise.resolve(
-            {
-              url: request.split(' ')[1],
-              type: 'file',
-              content: 'testString',
-              status: 200
-            }
-          )
-        }
-      } as unknown as octokit.Octokit
-    })
-    const testURL = 'https://github.acme.com/api/v3/repos/SAP/jenkins-library/contents/resources/piper-stage-config.yml'
-    const testToken = 'testToken'
-
-    const response = await downloadFileFromGitHub(testURL, testToken)
-
-    expect(response.status).toBe(200)
-    expect(response.url).toBe('/repos/SAP/jenkins-library/contents/resources/piper-stage-config.yml')
-    expect(octokit.Octokit).toHaveBeenCalledWith({ auth: testToken, baseUrl: 'https://github.acme.com/api/v3' })
   })
 })

@@ -4,12 +4,13 @@ import { debug, exportVariable, info } from '@actions/core'
 import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
-import { downloadFileFromGitHub, getHost } from './github'
+import { getHost } from './github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
   ENTERPRISE_STAGE_CONFIG_FILENAME,
-  getEnterpriseDefaultsUrl,
-  getEnterpriseStageConfigUrl
+  DEFAULT_CONFIG,
+  STAGE_CONFIG,
+  getEnterpriseConfigUrl
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -44,7 +45,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  const enterpriseDefaultsURL = await getEnterpriseDefaultsUrl(apiURL, version, token, owner, repository)
+  const enterpriseDefaultsURL = await getEnterpriseConfigUrl(DEFAULT_CONFIG, apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
@@ -93,21 +94,28 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
   }
 }
 
-export async function downloadStageConfig (token: string, owner: string, repository: string): Promise<void> {
-  await downloadFileFromGitHub(getEnterpriseStageConfigUrl(owner, repository), token)
-    .then(response => {
-      const stageConfig = Buffer.from(response.data.content, 'base64').toString('binary')
-      fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), stageConfig)
-    })
-    .catch(err => {
-      throw new Error(`downloading stage configuration failed: ${err as string}`)
-    })
+export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
+  const stageConfigURL = await getEnterpriseConfigUrl(STAGE_CONFIG, apiURL, version, token, owner, repository)
+  if (stageConfigURL === '') {
+    throw new Error('Can\'t download stage config: failed to get URL!')
+  }
+
+  const piperPath = internalActionVariables.piperBinPath
+  if (piperPath === undefined) {
+    throw new Error('Can\'t download stage config: piperPath not defined!')
+  }
+  const flags: string[] = ['--useV1']
+  flags.push('--defaultsFile', stageConfigURL)
+  flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+  const piperExec = await executePiper('getDefaults', flags)
+  const config = JSON.parse(piperExec.output)
+  fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
 }
 
-export async function createCheckIfStepActiveMaps (token: string, owner: string, repository: string): Promise<void> {
+export async function createCheckIfStepActiveMaps (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
   info('creating maps with active stages and steps with checkIfStepActive')
 
-  await downloadStageConfig(token, owner, repository)
+  await downloadStageConfig(server, apiURL, version, token, owner, repository)
     .then(async () => await checkIfStepActive('_', '_', true))
     .catch(err => {
       info(`checkIfStepActive failed: ${err as string}`)
