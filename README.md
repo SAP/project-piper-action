@@ -14,7 +14,8 @@ This GitHub action allows running [Piper](https://www.project-piper.io/) on GitH
 This action can be used in a GitHub Actions workflow file as follows:
 
 ```yaml
-- uses: project-piper/piper-github-action@main
+- uses: SAP/project-piper-action@main
+# or if you want to pin specific version use @v1.0.0 instead of @main
   with:
     step-name: mavenBuild
     flags: '--publish --createBOM --logSuccessfulMavenTransfers'
