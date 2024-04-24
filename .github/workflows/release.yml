@@ -10,7 +10,7 @@ jobs:
     name: Check if should run
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.should_run.outputs.should_run }}
+      should_run: ${{ steps.should_run.outputs.should_run || steps.manual_trigger.outputs.should_run  }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +27,8 @@ jobs:
           fi
 
       # For manual release trigger
-      - if: ${{ github.event_name == 'workflow_dispatch' }}
+      - id: manual_trigger
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         run: echo "should_run=true" >> "$GITHUB_OUTPUT"
 
   release:
