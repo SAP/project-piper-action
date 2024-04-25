@@ -14,19 +14,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # For scheduled runs check if there has been a commit in the last week
+      - name: Get tags
+        run: git fetch --tags --prune --unshallow
+
+      - name: Get latest release tag
+        id: latest_tag
+        run: echo "latest_release_tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      # For scheduled runs check if there has been a commit since last release
       - id: should_run
         if: ${{ github.event_name == 'schedule' }}
         name: Check latest commits
         run: |
-          if [[ -n $(git rev-list --after="7 days" ${{ github.sha }}) ]]
+          if [[ -n $(git log ${{ steps.latest_tag.outputs.latest_release_tag }}..HEAD --format=%H --max-count=5) ]]
           then
             echo "should_run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No commits for the past 7 days"
+            echo "No commits since last release. Release will be skipped"
           fi
 
-      # For manual release trigger
+      # For manual release trigger. Release will be created even if there has been no commits since last release
       - id: manual_trigger
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: echo "should_run=true" >> "$GITHUB_OUTPUT"
