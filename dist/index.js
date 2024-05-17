@@ -20396,6 +20396,9 @@ function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
         }
     }
     (0, core_1.info)(`jsonStringEnvVars: ${jsonStringEnvVars}`);
+    (0, core_1.info)(`type of jsonStringEnvVars: ${jsonStringEnvVars}`);
+    (0, core_1.info)(`                         : ${jsonStringEnvVars.concurClientId}`);
+    (0, core_1.info)(`                         : ${jsonStringEnvVars.concurClientSecret}`);
     Object.entries(jsonStringEnvVars)
         .forEach(([key, value]) => {
         (0, core_1.info)(`key: ${key}, value: ${value}`);

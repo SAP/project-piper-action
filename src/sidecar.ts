@@ -98,6 +98,9 @@ export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: 
   }
 
   info(`jsonStringEnvVars: ${jsonStringEnvVars}`)
+  info(`type of jsonStringEnvVars: ${jsonStringEnvVars}`)
+  info(`                         : ${jsonStringEnvVars.concurClientId}`)
+  info(`                         : ${jsonStringEnvVars.concurClientSecret}`)
   Object.entries(jsonStringEnvVars)
     .forEach(([key, value]) => {
       info(`key: ${key}, value: ${value}`)
