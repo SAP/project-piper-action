@@ -19704,6 +19704,8 @@ function getProxyEnvVars() {
         'HTTPS_PROXY',
         '--env',
         'NO_PROXY'
+        // '--env',
+        // 'PIPER_mtaExtensionCredentials'
     ];
 }
 exports.getProxyEnvVars = getProxyEnvVars;
