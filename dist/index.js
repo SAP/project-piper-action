@@ -20378,22 +20378,27 @@ function removeNetwork(networkID) {
 }
 exports.removeNetwork = removeNetwork;
 function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
+    (0, core_1.info)(`actionCfgEnvVars: ${actionCfgEnvVars}`);
     let jsonStringEnvVars = actionCfgEnvVars !== '' ? actionCfgEnvVars : ctxConfigEnvVars;
     if (jsonStringEnvVars === undefined) {
         return [];
     }
     const result = [];
     if (typeof jsonStringEnvVars === 'string') {
+        (0, core_1.info)(`typeof jsonStringEnvVars: ${typeof jsonStringEnvVars}`);
         try {
             jsonStringEnvVars = JSON.parse(jsonStringEnvVars);
+            (0, core_1.info)(`jsonStringEnvVars: ${jsonStringEnvVars}`);
         }
         catch (err) {
             (0, core_1.warning)(`sidecarEnvVars value ${jsonStringEnvVars} is not a JSON-formatted string, therefore ignore it`);
             jsonStringEnvVars = {};
         }
     }
+    (0, core_1.info)(`jsonStringEnvVars: ${jsonStringEnvVars}`);
     Object.entries(jsonStringEnvVars)
         .forEach(([key, value]) => {
+        (0, core_1.info)(`key: ${key}, value: ${value}`);
         result.push('--env');
         // if (value === '') {
         // result.push(key)

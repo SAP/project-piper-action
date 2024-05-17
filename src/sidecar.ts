@@ -77,6 +77,9 @@ export async function removeNetwork (networkID: string): Promise<void> {
 }
 
 export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: any): string[] {
+  
+  info(`actionCfgEnvVars: ${actionCfgEnvVars}`)
+
   let jsonStringEnvVars = actionCfgEnvVars !== '' ? actionCfgEnvVars : ctxConfigEnvVars
   if (jsonStringEnvVars === undefined) {
     return []
@@ -84,16 +87,20 @@ export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: 
 
   const result: string[] = []
   if (typeof jsonStringEnvVars === 'string') {
+    info(`typeof jsonStringEnvVars: ${typeof jsonStringEnvVars}`)
     try {
       jsonStringEnvVars = JSON.parse(jsonStringEnvVars)
+      info(`jsonStringEnvVars: ${jsonStringEnvVars}`)
     } catch (err) {
       warning(`sidecarEnvVars value ${jsonStringEnvVars as string} is not a JSON-formatted string, therefore ignore it`)
       jsonStringEnvVars = {}
     }
   }
 
+  info(`jsonStringEnvVars: ${jsonStringEnvVars}`)
   Object.entries(jsonStringEnvVars)
     .forEach(([key, value]) => {
+      info(`key: ${key}, value: ${value}`)
       result.push('--env')
       // if (value === '') {
         // result.push(key)
