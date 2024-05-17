@@ -95,7 +95,7 @@ export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: 
   Object.entries(jsonStringEnvVars)
     .forEach(([key, value]) => {
       result.push('--env')
-      result.push(`${key}=${value as string}`)
+      result.push(`${key}=${value}`)
     })
 
   return result
