@@ -145,7 +145,9 @@ export function getProxyEnvVars (): string[] {
     '--env',
     'HTTPS_PROXY',
     '--env',
-    'NO_PROXY'
+    'NO_PROXY',
+    '--env',
+    'PIPER_mtaExtensionCredentials'
   ]
 }
 
