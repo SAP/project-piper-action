@@ -20395,10 +20395,8 @@ function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
             jsonStringEnvVars = {};
         }
     }
-    (0, core_1.info)(`jsonStringEnvVars: ${jsonStringEnvVars}`);
-    (0, core_1.info)(`type of jsonStringEnvVars: ${jsonStringEnvVars}`);
-    (0, core_1.info)(`                         : ${jsonStringEnvVars.concurClientId}`);
-    (0, core_1.info)(`                         : ${jsonStringEnvVars.concurClientSecret}`);
+    (0, core_1.info)(`roleID::: ${process.env.PIPER_vaultAppRoleID}`);
+    (0, core_1.info)(`secretID::: ${process.env.PIPER_vaultAppRoleSecretID}`);
     Object.entries(jsonStringEnvVars)
         .forEach(([key, value]) => {
         (0, core_1.info)(`key: ${key}, value: ${value}`);
