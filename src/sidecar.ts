@@ -79,6 +79,8 @@ export async function removeNetwork (networkID: string): Promise<void> {
 export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: any): string[] {
   
   info(`actionCfgEnvVars: ${actionCfgEnvVars}`)
+  info(`roleID::: ${process.env.PIPER_vaultAppRoleID}`)
+  info(`secretID::: ${process.env.PIPER_vaultAppRoleSecretID}`)
 
   let jsonStringEnvVars = actionCfgEnvVars !== '' ? actionCfgEnvVars : ctxConfigEnvVars
   if (jsonStringEnvVars === undefined) {
@@ -96,9 +98,6 @@ export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: 
       jsonStringEnvVars = {}
     }
   }
-
-  info(`roleID::: ${process.env.PIPER_vaultAppRoleID}`)
-  info(`secretID::: ${process.env.PIPER_vaultAppRoleSecretID}`)
 
   Object.entries(jsonStringEnvVars)
     .forEach(([key, value]) => {
