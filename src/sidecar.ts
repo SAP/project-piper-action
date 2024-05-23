@@ -81,7 +81,7 @@ export function parseDockerEnvVars (actionCfgEnvVars: string, ctxConfigEnvVars: 
   info(`actionCfgEnvVars: ${actionCfgEnvVars}`)
   info(`roleID::: ${process.env.PIPER_vaultAppRoleID}`)
   info(`secretID::: ${process.env.PIPER_vaultAppRoleSecretID}`)
-  info(`GITHUB_TOKEN::: ${process.env.GITHUB_TOKEN}`)
+  
 
   let jsonStringEnvVars = actionCfgEnvVars !== '' ? actionCfgEnvVars : ctxConfigEnvVars
   if (jsonStringEnvVars === undefined) {

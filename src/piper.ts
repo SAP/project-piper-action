@@ -1,4 +1,4 @@
-import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
+import { debug, info, getInput, setFailed, type InputOptions } from '@actions/core'
 import {
   GITHUB_COM_API_URL,
   GITHUB_COM_SERVER_URL,
@@ -50,6 +50,9 @@ export async function run (): Promise<void> {
         )
       }
     }
+
+    info(`GITHUB_TOKEN::: ${process.env.GITHUB_TOKEN}`)
+
     if (actionCfg.stepName !== '') {
       const flags = actionCfg.flags.split(' ')
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
