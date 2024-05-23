@@ -20381,6 +20381,7 @@ function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
     (0, core_1.info)(`actionCfgEnvVars: ${actionCfgEnvVars}`);
     (0, core_1.info)(`roleID::: ${process.env.PIPER_vaultAppRoleID}`);
     (0, core_1.info)(`secretID::: ${process.env.PIPER_vaultAppRoleSecretID}`);
+    (0, core_1.info)(`GITHUB_TOKEN::: ${process.env.GITHUB_TOKEN}`);
     let jsonStringEnvVars = actionCfgEnvVars !== '' ? actionCfgEnvVars : ctxConfigEnvVars;
     if (jsonStringEnvVars === undefined) {
         return [];
