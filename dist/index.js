@@ -19344,7 +19344,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.createCheckIfStepActiveMaps = exports.downloadStageConfig = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
+exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.downloadStageConfig = exports.createCheckIfStepActiveMaps = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(2186);
@@ -19432,29 +19432,10 @@ function saveDefaultConfigs(defaultConfigs) {
     }
 }
 exports.saveDefaultConfigs = saveDefaultConfigs;
-function downloadStageConfig(server, apiURL, version, token, owner, repository) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const stageConfigURL = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, apiURL, version, token, owner, repository);
-        if (stageConfigURL === '') {
-            throw new Error('Can\'t download stage config: failed to get URL!');
-        }
-        const piperPath = piper_1.internalActionVariables.piperBinPath;
-        if (piperPath === undefined) {
-            throw new Error('Can\'t download stage config: piperPath not defined!');
-        }
-        const flags = ['--useV1'];
-        flags.push('--defaultsFile', stageConfigURL);
-        flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
-        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        const config = JSON.parse(piperExec.output);
-        fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), config.content);
-    });
-}
-exports.downloadStageConfig = downloadStageConfig;
-function createCheckIfStepActiveMaps(server, apiURL, version, token, owner, repository) {
+function createCheckIfStepActiveMaps(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.info)('creating maps with active stages and steps with checkIfStepActive');
-        yield downloadStageConfig(server, apiURL, version, token, owner, repository)
+        yield downloadStageConfig(actionCfg)
             .then(() => __awaiter(this, void 0, void 0, function* () { return yield checkIfStepActive('_', '_', true); }))
             .catch(err => {
             (0, core_1.info)(`checkIfStepActive failed: ${err}`);
@@ -19462,6 +19443,33 @@ function createCheckIfStepActiveMaps(server, apiURL, version, token, owner, repo
     });
 }
 exports.createCheckIfStepActiveMaps = createCheckIfStepActiveMaps;
+function downloadStageConfig(actionCfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let stageConfigPath = '';
+        if (actionCfg.customStageConditionsPath !== '') {
+            (0, core_1.info)(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`);
+            stageConfigPath = actionCfg.customStageConditionsPath;
+        }
+        else {
+            (0, core_1.info)('using default stage conditions');
+            stageConfigPath = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+            if (stageConfigPath === '') {
+                throw new Error('Can\'t download stage config: failed to get URL!');
+            }
+        }
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        if (piperPath === undefined) {
+            throw new Error('Can\'t download stage config: piperPath not defined!');
+        }
+        const flags = ['--useV1'];
+        flags.push('--defaultsFile', stageConfigPath);
+        flags.push('--gitHubTokens', `${(0, github_1.getHost)(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`);
+        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
+        const config = JSON.parse(piperExec.output);
+        fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), config.content);
+    });
+}
+exports.downloadStageConfig = downloadStageConfig;
 function checkIfStepActive(stepName, stageName, outputMaps) {
     return __awaiter(this, void 0, void 0, function* () {
         const flags = [];
@@ -20185,7 +20193,7 @@ function run() {
             if ((0, enterprise_1.onGitHubEnterprise)()) {
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
                 if (actionCfg.createCheckIfStepActiveMaps) {
-                    yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+                    yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
             }
             if (actionCfg.stepName !== '') {
@@ -20287,6 +20295,7 @@ function getActionConfig(options) {
             sidecarEnvVars: getValue('sidecar-env-vars'),
             retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
             customDefaultsPaths: getValue('custom-defaults-paths'),
+            customStageConditionsPath: getValue('custom-stage-conditions-path'),
             createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
             exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
         };

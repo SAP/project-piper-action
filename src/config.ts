@@ -12,6 +12,7 @@ import {
   STAGE_CONFIG,
   getEnterpriseConfigUrl
 } from './enterprise'
+import type { ActionConfiguration } from './piper'
 import { internalActionVariables } from './piper'
 
 export const CONFIG_DIR = '.pipeline'
@@ -94,10 +95,33 @@ export function saveDefaultConfigs (defaultConfigs: any[]): string[] {
   }
 }
 
-export async function downloadStageConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
-  const stageConfigURL = await getEnterpriseConfigUrl(STAGE_CONFIG, apiURL, version, token, owner, repository)
-  if (stageConfigURL === '') {
-    throw new Error('Can\'t download stage config: failed to get URL!')
+export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguration): Promise<void> {
+  info('creating maps with active stages and steps with checkIfStepActive')
+
+  await downloadStageConfig(actionCfg)
+    .then(async () => await checkIfStepActive('_', '_', true))
+    .catch(err => {
+      info(`checkIfStepActive failed: ${err as string}`)
+    })
+}
+
+export async function downloadStageConfig (actionCfg: ActionConfiguration): Promise<void> {
+  let stageConfigPath = ''
+  if (actionCfg.customStageConditionsPath !== '') {
+    info(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`)
+    stageConfigPath = actionCfg.customStageConditionsPath
+  } else {
+    info('using default stage conditions')
+    stageConfigPath = await getEnterpriseConfigUrl(
+      STAGE_CONFIG,
+      actionCfg.gitHubEnterpriseApi,
+      actionCfg.sapPiperVersion,
+      actionCfg.gitHubEnterpriseToken,
+      actionCfg.sapPiperOwner,
+      actionCfg.sapPiperRepo)
+    if (stageConfigPath === '') {
+      throw new Error('Can\'t download stage config: failed to get URL!')
+    }
   }
 
   const piperPath = internalActionVariables.piperBinPath
@@ -105,21 +129,11 @@ export async function downloadStageConfig (server: string, apiURL: string, versi
     throw new Error('Can\'t download stage config: piperPath not defined!')
   }
   const flags: string[] = ['--useV1']
-  flags.push('--defaultsFile', stageConfigURL)
-  flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+  flags.push('--defaultsFile', stageConfigPath)
+  flags.push('--gitHubTokens', `${getHost(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`)
   const piperExec = await executePiper('getDefaults', flags)
   const config = JSON.parse(piperExec.output)
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
-}
-
-export async function createCheckIfStepActiveMaps (server: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<void> {
-  info('creating maps with active stages and steps with checkIfStepActive')
-
-  await downloadStageConfig(server, apiURL, version, token, owner, repository)
-    .then(async () => await checkIfStepActive('_', '_', true))
-    .catch(err => {
-      info(`checkIfStepActive failed: ${err as string}`)
-    })
 }
 
 export async function checkIfStepActive (stepName: string, stageName: string, outputMaps: boolean): Promise<number> {
