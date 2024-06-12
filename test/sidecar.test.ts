@@ -31,6 +31,7 @@ describe('Sidecar', () => {
     sidecarEnvVars: '',
     retrieveDefaultConfig: false,
     customDefaultsPaths: '',
+    customStageConditionsPath: '',
     createCheckIfStepActiveMaps: false,
     exportPipelineEnvironment: false
   }

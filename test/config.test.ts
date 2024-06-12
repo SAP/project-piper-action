@@ -10,6 +10,7 @@ import * as artifact from '@actions/artifact'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
+import type { ActionConfiguration } from '../src/piper'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -197,7 +198,17 @@ describe('Config', () => {
     const expectedWrittenFilepath = path.join(config.CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME)
     piperExecResultMock = generatePiperGetDefaultsOutput([sapStageConfigUrl])
 
-    await config.downloadStageConfig(server, 'https://dummy-api.test/', 'v1.0.0', 'blah-blah', 'something', 'nothing')
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const actionCfg = {
+      gitHubEnterpriseServer: server,
+      gitHubEnterpriseApi: 'https://dummy-api.test/',
+      sapPiperVersion: 'v1.0.0',
+      gitHubEnterpriseToken: 'blah-blah',
+      customStageConditionsPath: '',
+      sapPiperOwner: 'something',
+      sapPiperRepo: 'nothing'
+    } as ActionConfiguration
+    await config.downloadStageConfig(actionCfg)
 
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     expect(fs.writeFileSync).toHaveBeenCalledWith(expectedWrittenFilepath, expect.anything())
@@ -221,7 +232,16 @@ describe('Config', () => {
 
     process.env.GITHUB_JOB = 'Init'
 
-    await config.createCheckIfStepActiveMaps('server', 'apiURL', 'version', 'testToken', 'something', 'nothing')
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const actionCfg = {
+      gitHubEnterpriseServer: 'server',
+      gitHubEnterpriseApi: 'apiURL',
+      sapPiperVersion: 'version',
+      gitHubEnterpriseToken: 'testToken',
+      sapPiperOwner: 'something',
+      sapPiperRepo: 'nothing'
+    } as ActionConfiguration
+    await config.createCheckIfStepActiveMaps(actionCfg)
 
     expect(config.downloadStageConfig).toHaveBeenCalled()
     expect(config.checkIfStepActive).toHaveBeenCalled()
