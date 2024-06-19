@@ -41,6 +41,7 @@ describe('Docker', () => {
     sidecarEnvVars: '',
     retrieveDefaultConfig: false,
     customDefaultsPaths: '',
+    customStageConditionsPath: '',
     createCheckIfStepActiveMaps: false,
     exportPipelineEnvironment: false
   }

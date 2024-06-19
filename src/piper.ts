@@ -40,14 +40,7 @@ export async function run (): Promise<void> {
         actionCfg.customDefaultsPaths
       )
       if (actionCfg.createCheckIfStepActiveMaps) {
-        await createCheckIfStepActiveMaps(
-          actionCfg.gitHubEnterpriseServer,
-          actionCfg.gitHubEnterpriseApi,
-          actionCfg.sapPiperVersion,
-          actionCfg.gitHubEnterpriseToken,
-          actionCfg.sapPiperOwner,
-          actionCfg.sapPiperRepo
-        )
+        await createCheckIfStepActiveMaps(actionCfg)
       }
     }
     if (actionCfg.stepName !== '') {
@@ -110,6 +103,7 @@ export interface ActionConfiguration {
   sidecarEnvVars: string
   retrieveDefaultConfig: boolean
   customDefaultsPaths: string
+  customStageConditionsPath: string
   createCheckIfStepActiveMaps: boolean
   exportPipelineEnvironment: boolean
 }
@@ -171,6 +165,7 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     sidecarEnvVars: getValue('sidecar-env-vars'),
     retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
     customDefaultsPaths: getValue('custom-defaults-paths'),
+    customStageConditionsPath: getValue('custom-stage-conditions-path'),
     createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
     exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
   }

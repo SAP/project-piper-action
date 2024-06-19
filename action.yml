@@ -56,6 +56,9 @@ inputs:
   custom-defaults-paths:
     description: 'Specify comma-separated custom defaults paths'
     required: false
+  custom-stage-conditions-path:
+    description: 'Specify custom stage conditions YAML file paths. It can be path in filesystem, GitHub raw content URL or GitHub release asset url'
+    required: false
   export-pipeline-environment:
     description: 'Exports pipeline environment to share between jobs as variable with the name "pipelineEnv"'
     required: false

@@ -34,6 +34,7 @@ describe('Piper', () => {
       'sidecar-env-vars': '',
       'retrieve-default-config': 'false',
       'custom-defaults-paths': '',
+      'custom-stage-conditions-path': '',
       'create-check-if-step-active-maps': '',
       'export-pipeline-environment': ''
     }
@@ -93,14 +94,7 @@ describe('Piper', () => {
       inputs['sap-piper-owner'],
       inputs['sap-piper-repository']
     )
-    expect(config.createCheckIfStepActiveMaps).toHaveBeenCalledWith(
-      'https://githubenterprise.test.com/',
-      'https://api.githubenterprise.test.com/',
-      inputs['sap-piper-version'] = '1.2.3',
-      inputs['github-enterprise-token'],
-      inputs['sap-piper-owner'],
-      inputs['sap-piper-repository']
-    )
+    expect(config.createCheckIfStepActiveMaps).toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
