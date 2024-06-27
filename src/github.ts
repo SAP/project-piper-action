@@ -1,4 +1,5 @@
 import * as fs from 'fs'
+import * as os from 'os'
 import { join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
