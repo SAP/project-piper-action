@@ -90,31 +90,6 @@ describe('GitHub package tests', () => {
     expect(core.info).toHaveBeenCalledTimes(1)
   })
 
-  test('downloadPiperBinary - OS step, master', async () => {
-    const assetUrl = `${githubApiURL}/release/assets/123456`
-    jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
-      return {
-        request: async () => {
-          return {
-            data: {
-              tag_name: version,
-              assets: [{ name: 'piper_master', url: assetUrl }]
-            },
-            status: 200
-          }
-        }
-      } as unknown as octokit.Octokit
-    })
-
-    await downloadPiperBinary(osStep, 'master', githubApiURL, token, owner, repo)
-    expect(core.debug).toHaveBeenNthCalledWith(1, 'Fetching binary from GitHub API')
-    expect(core.debug).toHaveBeenNthCalledWith(2, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
-    expect(core.debug).toHaveBeenNthCalledWith(5, `Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.debug).toHaveBeenCalledTimes(5)
-    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper_master'`))
-    expect(core.info).toHaveBeenCalledTimes(1)
-  })
-
   test('downloadPiperBinary - OS step, exact version', async () => {
     const assetUrl = `${githubApiURL}/release/assets/123456`
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {

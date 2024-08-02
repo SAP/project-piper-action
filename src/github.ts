@@ -166,7 +166,7 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?
     piper = 'sap-piper'
   }
   if (version === 'master') {
-    piper += '_master'
+    info(`using _master binaries is deprecated. Using latest release version instead.`)
   }
   return piper
 }
