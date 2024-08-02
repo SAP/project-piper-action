@@ -20351,7 +20351,7 @@ function startSidecar(actionCfg, ctxConfig, sidecarImage) {
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
             dockerRunArgs.push('--network', networkID);
-            const networkAlias = (_a = ctxConfig.dockerName) !== null && _a !== void 0 ? _a : '';
+            const networkAlias = (_a = ctxConfig.sidecarName) !== null && _a !== void 0 ? _a : '';
             if (networkAlias !== '') {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
