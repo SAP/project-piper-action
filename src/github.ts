@@ -3,6 +3,7 @@ import { join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { retry } from '@octokit/plugin-retry'
+import pRetry, {AbortError} from 'p-retry';
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
@@ -50,12 +51,15 @@ export async function downloadPiperBinary (
   }
 
   info(`Downloading '${binaryURL}' as '${piperPath}'`)
-  await downloadTool(
-    binaryURL,
-    piperPath,
-    undefined,
-    headers
-  )
+  await pRetry(async () => {
+    await downloadTool(
+      binaryURL,
+      piperPath,
+      undefined,
+      headers
+    )
+    // check for error
+  }, { retries: 5 })
 
   return piperPath
 }
@@ -156,11 +160,18 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
-  if (response.status !== 200) {
-    throw new Error(`can't get the tag: ${response.status}`)
-  }
-  return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
+  const url = await pRetry(async (): Promise<string> => {
+    const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
+
+    if (response.status !== 200) {
+      // throw new Error(`can't get the tag: ${response.status}`)
+      info('Couldn\'t retrieve Piper download URL')
+      throw new AbortError(response.statusText)
+    }
+    return response.url
+  }, { retries: 5 })
+
+  return await Promise.resolve(url.replace(/tag/, 'download') + `/${piper}`)
 }
 
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
