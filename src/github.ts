@@ -2,6 +2,7 @@ import * as fs from 'fs'
 import { join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
+import { retry } from '@octokit/plugin-retry'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
@@ -88,7 +89,9 @@ async function getPiperReleases (version: string, api: string, token: string, ow
     options.auth = token
   }
 
-  const octokit = new Octokit(options)
+  // the Octokit retry plugin will retry three times by default
+  const OctokitRetry = Octokit.plugin(retry)
+  const octokit = new OctokitRetry(options)
   debug(`Fetching release info from ${api}/repos/${owner}/${repository}/releases/${tag}`)
   const response = await octokit.request(`GET /repos/${owner}/${repository}/releases/${tag}`)
   if (response.status !== 200) {

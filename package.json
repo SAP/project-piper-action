@@ -42,6 +42,7 @@
     "@actions/glob": "0.4.0",
     "@actions/tool-cache": "2.0.1",
     "@octokit/core": "4.2.0",
+    "@octokit/plugin-retry": "^4.1.6",
     "@octokit/rest": "19.0.13",
     "@octokit/types": "11.0.0",
     "expect": "29.7.0",
