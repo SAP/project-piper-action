@@ -106,6 +106,7 @@ export interface ActionConfiguration {
   customStageConditionsPath: string
   createCheckIfStepActiveMaps: boolean
   exportPipelineEnvironment: boolean
+  orchestratorJWT: string
 }
 
 async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
@@ -167,6 +168,7 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
     customDefaultsPaths: getValue('custom-defaults-paths'),
     customStageConditionsPath: getValue('custom-stage-conditions-path'),
     createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
-    exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
+    exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true',
+    orchestratorJWT: getValue('orchestratorJWT')
   }
 }

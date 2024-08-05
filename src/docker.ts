@@ -64,6 +64,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
+    ...getOrchestratorJWT(),
     dockerImage,
     'cat'
   )
@@ -146,6 +147,13 @@ export function getProxyEnvVars (): string[] {
     'HTTPS_PROXY',
     '--env',
     'NO_PROXY'
+  ]
+}
+
+export function getOrchestratorJWT (): string[] {
+  return [
+    '--env',
+    "PIPER_ACTION_ORCHESTRATOR_JWT"
   ]
 }
 
