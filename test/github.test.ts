@@ -4,7 +4,7 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { downloadPiperBinary, buildPiperFromSource } from '../src/github'
+import { downloadPiperBinary, buildPiperFromSource, getPiperDownloadURLWithRetry, getPiperDownloadURL } from '../src/github'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -155,4 +155,29 @@ describe('GitHub package tests', () => {
       await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
     ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
   })
+})
+
+test('getPiperDownloadURLWithRetry - success', async () => {
+  jest.spyOn(global, 'fetch').mockImplementation(async () => {
+    return await Promise.resolve({
+      status: 200,
+      url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+    } as unknown as Response)
+  })
+
+  await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
+  expect(getPiperDownloadURL).toHaveBeenCalledTimes(1)
+})
+
+test('getPiperDownloadURLWithRetry - retry', async () => {
+  jest.spyOn(global, 'fetch').mockImplementation(async () => {
+    return await Promise.resolve({
+      status: 500,
+      url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+    } as unknown as Response)
+  })
+
+  await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
+
+  expect(getPiperDownloadURL).toHaveBeenCalledTimes(5)
 })

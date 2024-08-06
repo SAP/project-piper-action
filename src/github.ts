@@ -158,7 +158,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   return piperPath
 }
 
-async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
+export async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
   const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
   if (response.status !== 200 && !isRetryable(response.status)) {
     throw new AbortError(`Couldn't retrieve Piper tag:${response.status}`)
@@ -166,7 +166,7 @@ async function getPiperDownloadURL (piper: string, version?: string): Promise<st
   return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
 }
 
-async function getPiperDownloadURLWithRetry (piper: string, version?: string): Promise<string> {
+export async function getPiperDownloadURLWithRetry (piper: string, version?: string): Promise<string> {
   const url = await pRetry(async () => await getPiperDownloadURL(piper, version), {
     onFailedAttempt: error => {
       info(`Attempt ${error.attemptNumber} to get the Piper download URL failed. There are ${error.retriesLeft} retries left.`)

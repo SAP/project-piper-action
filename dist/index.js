@@ -21858,7 +21858,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.getPiperDownloadURLWithRetry = exports.getPiperDownloadURL = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -22012,6 +22012,7 @@ function getPiperDownloadURL(piper, version) {
         return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
     });
 }
+exports.getPiperDownloadURL = getPiperDownloadURL;
 function getPiperDownloadURLWithRetry(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         const url = yield (0, p_retry_1.default)(() => __awaiter(this, void 0, void 0, function* () { return yield getPiperDownloadURL(piper, version); }), {
@@ -22023,6 +22024,7 @@ function getPiperDownloadURLWithRetry(piper, version) {
         return url;
     });
 }
+exports.getPiperDownloadURLWithRetry = getPiperDownloadURLWithRetry;
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
     return __awaiter(this, void 0, void 0, function* () {
         let piper = 'piper';
