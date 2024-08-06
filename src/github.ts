@@ -3,7 +3,8 @@ import { join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { retry } from '@octokit/plugin-retry'
-import pRetry, {AbortError} from 'p-retry';
+import pRetry, { AbortError } from 'p-retry'
+import { isRetryable } from './utils'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
@@ -41,7 +42,7 @@ export async function downloadPiperBinary (
     version = tag
   } else {
     debug('Fetching binary from URL')
-    binaryURL = await getPiperDownloadURL(piperBinaryName, version)
+    binaryURL = await getPiperDownloadURLWithRetry(piperBinaryName, version)
     version = binaryURL.split('/').slice(-2)[0]
   }
   version = version.replace(/\./g, '_')
@@ -51,15 +52,13 @@ export async function downloadPiperBinary (
   }
 
   info(`Downloading '${binaryURL}' as '${piperPath}'`)
-  await pRetry(async () => {
-    await downloadTool(
-      binaryURL,
-      piperPath,
-      undefined,
-      headers
-    )
-    // check for error
-  }, { retries: 5 })
+  // Already has retries implemented, see: https://github.com/actions/toolkit/blob/main/packages/tool-cache/src/tool-cache.ts#L38
+  await downloadTool(
+    binaryURL,
+    piperPath,
+    undefined,
+    headers
+  )
 
   return piperPath
 }
@@ -160,18 +159,22 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const url = await pRetry(async (): Promise<string> => {
-    const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
+  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
+  if (!isRetryable(response.status)) {
+    info('Couldn\'t retrieve Piper tag')
+    throw new AbortError(response.statusText)
+  }
+  return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
+}
 
-    if (response.status !== 200) {
-      // throw new Error(`can't get the tag: ${response.status}`)
-      info('Couldn\'t retrieve Piper download URL')
-      throw new AbortError(response.statusText)
-    }
-    return response.url
-  }, { retries: 5 })
-
-  return await Promise.resolve(url.replace(/tag/, 'download') + `/${piper}`)
+async function getPiperDownloadURLWithRetry (piper: string, version?: string): Promise<string> {
+  const url = await pRetry(async () => await getPiperDownloadURL(piper, version), {
+    onFailedAttempt: error => {
+      info(`Attempt ${error.attemptNumber} to get the Piper download URL failed. There are ${error.retriesLeft} retries left.`)
+    },
+    retries: 5
+  })
+  return url
 }
 
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
