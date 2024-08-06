@@ -22006,8 +22006,8 @@ exports.buildPiperFromSource = buildPiperFromSource;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         const response = yield fetch(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`);
-        if (!(0, utils_1.isRetryable)(response.status)) {
-            throw new p_retry_1.AbortError(`Couldn't retrieve Piper tag: error code ${response.statusText}`);
+        if (response.status !== 200 && !(0, utils_1.isRetryable)(response.status)) {
+            throw new p_retry_1.AbortError(`Couldn't retrieve Piper tag:${response.status}`);
         }
         return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
     });
