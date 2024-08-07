@@ -153,7 +153,7 @@ export function getProxyEnvVars (): string[] {
 export function getOrchestratorJWT (): string[] {
   return [
     '--env',
-    "PIPER_ACTION_ORCHESTRATOR_JWT"
+    "PIPER_ORCHESTRATOR_JWT"
   ]
 }
 

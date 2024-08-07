@@ -19571,7 +19571,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getOrchestratorJWT = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -19629,7 +19629,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getOrchestratorJWT(), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -19715,6 +19715,13 @@ function getProxyEnvVars() {
     ];
 }
 exports.getProxyEnvVars = getProxyEnvVars;
+function getOrchestratorJWT() {
+    return [
+        '--env',
+        "PIPER_ORCHESTRATOR_JWT"
+    ];
+}
+exports.getOrchestratorJWT = getOrchestratorJWT;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
