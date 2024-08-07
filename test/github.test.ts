@@ -3,6 +3,7 @@ import fs from 'fs'
 import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
+import { jest } from '@jest/globals'
 
 import { downloadPiperBinary, buildPiperFromSource, getPiperDownloadURLWithRetry, getPiperDownloadURL } from '../src/github'
 
@@ -140,44 +141,45 @@ describe('GitHub package tests', () => {
     expect(core.info).toHaveBeenCalledTimes(1)
   })
 
-  test('Get dev Piper', async () => {
-    const owner = 'SAP'
-    const repository = 'jenkins-library'
-    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
-    const shortCommitSHA = commitISH.slice(0, 7)
-    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
-    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
-    jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockReturnValue([])
-    jest.spyOn([], 'find').mockImplementation(jest.fn())
-    expect(
-      await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
-  })
-})
-
-test('getPiperDownloadURLWithRetry - success', async () => {
-  jest.spyOn(global, 'fetch').mockImplementation(async () => {
-    return await Promise.resolve({
-      status: 200,
-      url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
-    } as unknown as Response)
+    test('Get dev Piper', async () => {
+      const owner = 'SAP'
+      const repository = 'jenkins-library'
+      const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
+      const shortCommitSHA = commitISH.slice(0, 7)
+      jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
+      jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
+      jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
+      jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
+      jest.spyOn(fs, 'readdirSync').mockReturnValue([])
+      jest.spyOn([], 'find').mockImplementation(jest.fn())
+      expect(
+        await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
+      ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+    })
   })
 
-  await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
-  expect(getPiperDownloadURL).toHaveBeenCalledTimes(1)
-})
+  test('getPiperDownloadURLWithRetry - success', async () => {
+    jest.spyOn(global, 'fetch').mockImplementation(async () => {
+      return await Promise.resolve({
+        status: 200,
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+      } as unknown as Response)
+    })
 
-test('getPiperDownloadURLWithRetry - retry', async () => {
-  jest.spyOn(global, 'fetch').mockImplementation(async () => {
-    return await Promise.resolve({
-      status: 500,
-      url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
-    } as unknown as Response)
+    await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
+    expect(getPiperDownloadURL).toHaveBeenCalledTimes(1)
   })
 
-  await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
+  test('getPiperDownloadURLWithRetry - retry', async () => {
+    jest.spyOn(global, 'fetch').mockImplementation(async () => {
+      return await Promise.resolve({
+        status: 500,
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+      } as unknown as Response)
+    })
 
-  expect(getPiperDownloadURL).toHaveBeenCalledTimes(5)
+    await getPiperDownloadURLWithRetry('piper', 'v1.0.0')
+
+    expect(getPiperDownloadURL).toHaveBeenCalledTimes(5)
+  })
 })

@@ -3,12 +3,13 @@
   "version": "0.0.1",
   "description": "CI/CD tooling for the SAP Ecosystem",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "lint": "eslint src/**/*.ts test/**/*.ts",
     "lint:ci": "eslint src/**/*.ts test/**/*.ts --format json-relative --output-file reports/eslint-report.json",
     "dist:build": "ncc build src/main.ts -o dist --source-map --license licenses.txt",
     "dist:update": "npm run dist:build && git add dist/** && git commit -m 'update dist folder' && git push",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:ci": "JEST_JUNIT_OUTPUT_DIR=reports/ JEST_JUNIT_OUTPUT_NAME=TEST-jest.xml jest --ci --reporters=default --reporters=jest-junit --reporters=jest-sonar --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcovonly --coverageDirectory=reports/",
     "all": "npm run lint && npm run prepare && npm run test"
   },
@@ -49,6 +50,7 @@
     "js-data": "3.0.11",
     "node-fetch": "2.7.0",
     "p-retry": "^6.2.0",
+    "ts-jest-resolver": "^2.0.1",
     "ts-node": "10.9.2",
     "uuid": "9.0.0"
   },
