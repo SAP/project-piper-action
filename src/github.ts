@@ -154,7 +154,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const response = await fetchRetry(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`, 5).catch(async (err) => {
+  const response = await fetchRetry(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch(async (err) => {
     return await Promise.reject(new Error(`Can't get the tag: ${err}`))
   })
   return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)

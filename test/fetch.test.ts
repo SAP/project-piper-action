@@ -6,6 +6,8 @@ jest.mock('@actions/core')
 
 describe('Fetch package tests', () => {
   const testURL = 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+  const tries = 3
+  const delay = 0
   const mockResponse500 = {
     status: 500,
     statusText: 'Internal Server Error'
@@ -25,7 +27,7 @@ describe('Fetch package tests', () => {
       return mockResponse200
     })
 
-    await fetchRetry(testURL, 5)
+    await fetchRetry(testURL, tries, delay)
     expect(core.info).toHaveBeenCalledTimes(0)
   })
 
@@ -37,7 +39,7 @@ describe('Fetch package tests', () => {
       return mockResponse200
     })
 
-    await fetchRetry(testURL, 3)
+    await fetchRetry(testURL, tries, delay)
 
     expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')
@@ -49,7 +51,7 @@ describe('Fetch package tests', () => {
       return mockResponse500
     })
 
-    await expect(fetchRetry(testURL, 3)).rejects.toThrow(`Error fetching ${testURL}`)
+    await expect(fetchRetry(testURL, tries, delay)).rejects.toThrow(`Error fetching ${testURL}`)
 
     expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')

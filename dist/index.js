@@ -19909,21 +19909,25 @@ function wait(delay) {
     });
 }
 exports.wait = wait;
-function fetchRetry(url, tries) {
+function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
+        let attempt = 0;
         while (tries > 0) {
             const response = yield fetch(url);
             if (response.status === 200) {
                 return response;
             }
             (0, core_1.info)(`Error while fetching ${url}: ${response.statusText}`);
-            tries -= 1;
             if (!isRetryable(response.status)) {
                 break;
             }
-            (0, core_1.info)(`Retrying ${tries} more time(s)...`);
+            attempt += 1;
+            tries -= 1;
             if (tries > 0) {
-                yield wait(1000);
+                const delayTime = baseDelayMS * Math.pow(2, attempt - 1);
+                (0, core_1.info)(`Retrying ${tries} more time(s)...`);
+                (0, core_1.info)(`Waiting ${delayTime} ms`);
+                yield wait(delayTime);
             }
         }
         return yield Promise.reject(new Error(`Error fetching ${url}`));
@@ -19931,15 +19935,13 @@ function fetchRetry(url, tries) {
 }
 exports.fetchRetry = fetchRetry;
 function isRetryable(code) {
-    // server error
-    if (code >= 500 && code !== 501) {
-        return true;
+    switch (code) {
+        case 408: // Request Timeout
+        case 429: // Too Many Requests
+            return true;
+        default:
+            return code >= 500 && code !== 501; // Retry for server errors except 501
     }
-    // too many requests or timeouts are retryable too
-    if (code === 429 || code === 408) {
-        return true;
-    }
-    return false;
 }
 
 
@@ -20125,7 +20127,7 @@ function buildPiperFromSource(version) {
 exports.buildPiperFromSource = buildPiperFromSource;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`, 5).catch((err) => __awaiter(this, void 0, void 0, function* () {
+        const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch((err) => __awaiter(this, void 0, void 0, function* () {
             return yield Promise.reject(new Error(`Can't get the tag: ${err}`));
         }));
         return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
