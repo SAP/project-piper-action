@@ -19940,7 +19940,7 @@ function isRetryable(code) {
         case 429: // Too Many Requests
             return true;
         default:
-            return code >= 500 && code !== 501; // Retry for server errors except 501
+            return code >= 500 && code !== 501; // Retry for server errors except 501 (Not Implemented)
     }
 }
 
