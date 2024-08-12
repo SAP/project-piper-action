@@ -19912,7 +19912,7 @@ exports.wait = wait;
 function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
-        while (tries > 0) {
+        while (tries > attempt) {
             const response = yield fetch(url);
             if (response.status === 200) {
                 return response;
@@ -19922,10 +19922,9 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
                 break;
             }
             attempt += 1;
-            tries -= 1;
-            if (tries > 0) {
+            if (tries > attempt) {
                 const delayTime = baseDelayMS * Math.pow(2, attempt - 1);
-                (0, core_1.info)(`Retrying ${tries} more time(s)...`);
+                (0, core_1.info)(`Retrying ${tries - attempt} more time(s)...`);
                 (0, core_1.info)(`Waiting ${delayTime} ms`);
                 yield wait(delayTime);
             }
@@ -19937,7 +19936,6 @@ exports.fetchRetry = fetchRetry;
 function isRetryable(code) {
     switch (code) {
         case 408: // Request Timeout
-        case 429: // Too Many Requests
             return true;
         default:
             return code >= 500 && code !== 501; // Retry for server errors except 501 (Not Implemented)
