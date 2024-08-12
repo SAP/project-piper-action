@@ -23,7 +23,7 @@ export async function fetchRetry (url: string, tries = 5, baseDelayMS = 1000): P
 
     if (tries > 0) {
       const delayTime = baseDelayMS * Math.pow(2, attempt - 1)
-      info(`Retrying ${tries} more time(s)...`)
+      info(`Retrying ${tries-attempt} more time(s)...`)
       info(`Waiting ${delayTime} ms`)
       await wait(delayTime)
     }
