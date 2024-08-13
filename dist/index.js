@@ -19718,7 +19718,9 @@ exports.getProxyEnvVars = getProxyEnvVars;
 function getOrchestratorJWT() {
     return [
         '--env',
-        "PIPER_ORCHESTRATOR_JWT"
+        'PIPER_ORCHESTRATOR_JWT',
+        '--env',
+        'PIPER_RUNNER_JWT'
     ];
 }
 exports.getOrchestratorJWT = getOrchestratorJWT;
