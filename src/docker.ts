@@ -153,9 +153,7 @@ export function getProxyEnvVars (): string[] {
 export function getOrchestratorJWT (): string[] {
   return [
     '--env',
-    'PIPER_ORCHESTRATOR_JWT',
-    '--env',
-    'PIPER_RUNNER_JWT'
+    'PIPER_TRUST_ENGINE_TOKEN'
   ]
 }
 
