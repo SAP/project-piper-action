@@ -20138,7 +20138,7 @@ function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
             piper = 'sap-piper';
         }
         if (version === 'master') {
-            (0, core_2.info)(`using _master binaries is deprecated. Using latest release version instead.`);
+            (0, core_2.info)('using _master binaries is deprecated. Using latest release version instead.');
         }
         return piper;
     });
