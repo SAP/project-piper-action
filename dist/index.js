@@ -19886,6 +19886,65 @@ exports.executePiper = executePiper;
 
 /***/ }),
 
+/***/ 7560:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fetchRetry = exports.wait = void 0;
+const core_1 = __nccwpck_require__(2186);
+function wait(delay) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return yield new Promise((resolve) => setTimeout(resolve, delay));
+    });
+}
+exports.wait = wait;
+function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let attempt = 0;
+        while (tries > attempt) {
+            const response = yield fetch(url);
+            if (response.status === 200) {
+                return response;
+            }
+            (0, core_1.info)(`Error while fetching ${url}: ${response.statusText}`);
+            if (!isRetryable(response.status)) {
+                break;
+            }
+            attempt += 1;
+            if (tries > attempt) {
+                const delayTime = baseDelayMS * Math.pow(2, attempt - 1);
+                (0, core_1.info)(`Retrying ${tries - attempt} more time(s)...`);
+                (0, core_1.info)(`Waiting ${delayTime} ms`);
+                yield wait(delayTime);
+            }
+        }
+        return yield Promise.reject(new Error(`Error fetching ${url}`));
+    });
+}
+exports.fetchRetry = fetchRetry;
+function isRetryable(code) {
+    switch (code) {
+        case 408: // Request Timeout
+            return true;
+        default:
+            return code >= 500 && code !== 501; // Retry for server errors except 501 (Not Implemented)
+    }
+}
+
+
+/***/ }),
+
 /***/ 978:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -19933,6 +19992,7 @@ const tool_cache_1 = __nccwpck_require__(7784);
 const core_2 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
 const enterprise_1 = __nccwpck_require__(4340);
+const fetch_1 = __nccwpck_require__(7560);
 exports.GITHUB_COM_SERVER_URL = 'https://github.com';
 exports.GITHUB_COM_API_URL = 'https://api.github.com';
 exports.PIPER_OWNER = 'SAP';
@@ -20065,10 +20125,9 @@ function buildPiperFromSource(version) {
 exports.buildPiperFromSource = buildPiperFromSource;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield fetch(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`);
-        if (response.status !== 200) {
-            throw new Error(`can't get the tag: ${response.status}`);
-        }
+        const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch((err) => __awaiter(this, void 0, void 0, function* () {
+            return yield Promise.reject(new Error(`Can't get the tag: ${err}`));
+        }));
         return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
     });
 }
@@ -20351,7 +20410,7 @@ function startSidecar(actionCfg, ctxConfig, sidecarImage) {
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
             dockerRunArgs.push('--network', networkID);
-            const networkAlias = (_a = ctxConfig.dockerName) !== null && _a !== void 0 ? _a : '';
+            const networkAlias = (_a = ctxConfig.sidecarName) !== null && _a !== void 0 ? _a : '';
             if (networkAlias !== '') {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
