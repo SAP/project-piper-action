@@ -64,7 +64,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
-    ...getOrchestratorJWT(),
+    ...getTrustEngineJWT(),
     dockerImage,
     'cat'
   )
@@ -150,10 +150,10 @@ export function getProxyEnvVars (): string[] {
   ]
 }
 
-export function getOrchestratorJWT (): string[] {
+export function getTrustEngineJWT (): string[] {
   return [
     '--env',
-    'PIPER_TRUST_ENGINE_TOKEN'
+    'PIPER_trustEngineToken'
   ]
 }
 
