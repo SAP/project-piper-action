@@ -37,7 +37,7 @@ export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: a
   if (networkID !== '') {
     dockerRunArgs.push('--network', networkID)
 
-    const networkAlias = ctxConfig.dockerName ?? ''
+    const networkAlias = ctxConfig.sidecarName ?? ''
     if (networkAlias !== '') {
       dockerRunArgs.push('--network-alias', networkAlias)
     }

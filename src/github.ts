@@ -8,6 +8,7 @@ import { downloadTool, extractZip } from '@actions/tool-cache'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
+import { fetchRetry } from './fetch'
 
 export const GITHUB_COM_SERVER_URL = 'https://github.com'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
@@ -153,10 +154,9 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const response = await fetch(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`)
-  if (response.status !== 200) {
-    throw new Error(`can't get the tag: ${response.status}`)
-  }
+  const response = await fetchRetry(`${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch(async (err) => {
+    return await Promise.reject(new Error(`Can't get the tag: ${err}`))
+  })
   return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
 }
 
@@ -166,7 +166,7 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?
     piper = 'sap-piper'
   }  
   if (version === 'master') {
-    piper += '_master'
+    info('using _master binaries is deprecated. Using latest release version instead.')
   }
   // Determine the running platform - only the available precompiled binaries in GitHub
   switch (process.platform) {
