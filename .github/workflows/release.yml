@@ -78,12 +78,12 @@ jobs:
       # }
       - name: Decode SMTP secrets and set them in GITHUB_ENV
         id: smtp_secrets
-        if: steps.check.outputs.status == 'failure' ||  steps.check.outputs.status == 'cancelled'
+        if: steps.check.outputs.status == 'failure' || steps.check.outputs.status == 'cancelled'
         run: >
-          echo "${{ secrets.SMTP_CONFIG }}" | 
-          base64 --decode | 
-          jq -r 'to_entries[] | "\(.key)=\(.value)"' | 
-          while read line; do 
+          echo "${{ secrets.SMTP_CONFIG }}" |
+          base64 --decode |
+          jq -r 'to_entries[] | "\(.key)=\(.value)"' |
+          while read line; do
             echo "$line" >> $GITHUB_ENV; echo "::add-mask::${line#*=}";
           done
 
