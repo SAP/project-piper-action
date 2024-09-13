@@ -84,14 +84,14 @@ jobs:
           base64 --decode | 
           jq -r 'to_entries[] | "\(.key)=\(.value)"' | 
           while read line; do 
-            echo "$line" >> $GITHUB_ENV; echo "::add-mask::${line#*=}"; 
+            echo "$line" >> $GITHUB_ENV; echo "::add-mask::${line#*=}";
           done
 
       - name: Notify Piper team on failure or cancelled
         if: steps.smtp_secrets.conclusion == 'success'
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: ${{ env.smtp_url }}
+          connection_url: ${{ env.smtp_url }}
           subject: Workflow failure in ${{ github.repository }}
           priority: high
           to: ${{ env.smtp_mail_rcpt }}
