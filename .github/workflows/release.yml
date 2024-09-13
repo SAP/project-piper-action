@@ -76,7 +76,7 @@ jobs:
       #   "smtp_mail_from": "from@mail.example",
       #   "smtp_mail_rcpt": "to@mail.example",
       # }
-      - name: Decode SMTP secrets
+      - name: Decode SMTP secrets and set them in GITHUB_ENV
         id: smtp_secrets
         if: steps.check.outputs.status == 'failure' ||  steps.check.outputs.status == 'cancelled'
         run: >
