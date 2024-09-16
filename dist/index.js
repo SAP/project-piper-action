@@ -19797,11 +19797,10 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             return '';
         }
         // get URL of defaults from the release (gh api, authenticated)
-        const [url] = yield (0, github_1.getReleaseAssetUrl)(assetname, version, apiURL, token, owner, repository);
-        if (url !== '')
-            return url;
+        // const [url] = await getReleaseAssetUrl(assetname, version, apiURL, token, owner, repository)
+        // if (url !== '') return url
         // fallback to get URL of defaults in the repository (unauthenticated)
-        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`;
+        return `${process.env.GITHUB_API_URL}/repos/C5347299/${repository}/contents/resources/${filename}`;
     });
 }
 exports.getEnterpriseConfigUrl = getEnterpriseConfigUrl;
