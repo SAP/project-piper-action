@@ -8,7 +8,7 @@ export async function fetchRetry (url: string, tries = 5, baseDelayMS = 1000): P
   let attempt = 0
 
   while (tries > attempt) {
-    const response = await fetch(url)
+    const response = await fetch(url, { method: "HEAD" })
     if (response.status === 200) {
       return response
     }

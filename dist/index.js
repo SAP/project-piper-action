@@ -19920,7 +19920,7 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
         while (tries > attempt) {
-            const response = yield fetch(url);
+            const response = yield fetch(url, { method: "HEAD" });
             if (response.status === 200) {
                 return response;
             }
