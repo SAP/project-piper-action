@@ -20019,7 +20019,8 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('repository is not provided');
         let binaryURL;
         const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
+        // const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
+        const piperBinaryName = 'piper';
         if (token !== '') {
             (0, core_2.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -20297,7 +20298,7 @@ function preparePiperBinary(actionCfg) {
         }
         else {
             piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-            piperPath = '.pipeline/piper';
+            // piperPath = '.pipeline/piper'
         }
         if (piperPath === undefined || piperPath === '') {
             throw new Error('Piper binary path is empty. Please check your action inputs.');
