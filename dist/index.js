@@ -20289,17 +20289,15 @@ exports.run = run;
 function preparePiperBinary(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         let piperPath;
-        if (actionCfg.piperVersion.startsWith('test')) {
-            piperPath = '.pipeline/piper';
-        }
-        else if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
         else if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
             piperPath = yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         else {
-            piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+            piperPath = '.pipeline/piper';
+            // piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
         }
         if (piperPath === undefined || piperPath === '') {
             throw new Error('Piper binary path is empty. Please check your action inputs.');
