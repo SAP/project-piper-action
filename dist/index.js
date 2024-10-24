@@ -20251,6 +20251,7 @@ exports.internalActionVariables = {
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.info)("=================================================checkpoint-START");
         try {
             const actionCfg = yield getActionConfig({ required: false });
             yield preparePiperBinary(actionCfg);
@@ -20286,7 +20287,7 @@ function run() {
             yield (0, docker_1.cleanupContainers)();
             (0, core_1.info)("=================================================checkpoint5");
         }
-        (0, core_1.info)("=================================================checkpoint6");
+        (0, core_1.info)("=================================================checkpoint-END");
     });
 }
 exports.run = run;
@@ -20705,11 +20706,8 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const piper_1 = __nccwpck_require__(309);
-const core_1 = __nccwpck_require__(2186);
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-(0, core_1.info)("=================================================checkpoint-START");
-(0, piper_1.run)().finally();
-(0, core_1.info)("=================================================checkpoint-END");
+(0, piper_1.run)();
 
 })();
 
