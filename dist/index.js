@@ -20296,8 +20296,8 @@ function preparePiperBinary(actionCfg) {
             piperPath = yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         else {
+            piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
             piperPath = '.pipeline/piper';
-            // piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
         }
         if (piperPath === undefined || piperPath === '') {
             throw new Error('Piper binary path is empty. Please check your action inputs.');
