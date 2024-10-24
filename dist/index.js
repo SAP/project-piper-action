@@ -20266,11 +20266,14 @@ function run() {
                 const flags = actionCfg.flags.split(' ');
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
+                (0, core_1.debug)("=================================================checkpoint1");
                 yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                (0, core_1.debug)("=================================================checkpoint2");
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
         catch (error) {
+            (0, core_1.debug)("=================================================checkpoint3");
             (0, core_1.setFailed)((() => {
                 if (error instanceof Error) {
                     return error.message;
@@ -20279,8 +20282,11 @@ function run() {
             })());
         }
         finally {
+            (0, core_1.debug)("=================================================checkpoint4");
             yield (0, docker_1.cleanupContainers)();
+            (0, core_1.debug)("=================================================checkpoint5");
         }
+        (0, core_1.debug)("=================================================checkpoint6");
     });
 }
 exports.run = run;
@@ -20699,8 +20705,10 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const piper_1 = __nccwpck_require__(309);
+const core_1 = __nccwpck_require__(2186);
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 (0, piper_1.run)();
+(0, core_1.debug)("=================================================checkpoint-END");
 
 })();
 
