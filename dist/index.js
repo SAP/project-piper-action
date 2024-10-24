@@ -20267,14 +20267,11 @@ function run() {
                 const flags = actionCfg.flags.split(' ');
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                (0, core_1.info)("=================================================checkpoint1");
                 yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
-                (0, core_1.info)("=================================================checkpoint2");
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
         catch (error) {
-            (0, core_1.info)("=================================================checkpoint3");
             (0, core_1.setFailed)((() => {
                 if (error instanceof Error) {
                     return error.message;
@@ -20283,9 +20280,7 @@ function run() {
             })());
         }
         finally {
-            (0, core_1.info)("=================================================checkpoint4");
             yield (0, docker_1.cleanupContainers)();
-            (0, core_1.info)("=================================================checkpoint5");
         }
         (0, core_1.info)("=================================================checkpoint-END");
     });
@@ -20294,7 +20289,10 @@ exports.run = run;
 function preparePiperBinary(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         let piperPath;
-        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+        if (actionCfg.piperVersion.startsWith('test')) {
+            piperPath = '.pipeline/piper';
+        }
+        else if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
         else if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
