@@ -20017,10 +20017,9 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('owner is not provided');
         if (repo === '')
             throw new Error('repository is not provided');
-        let binaryURL;
+        let binaryURL = '';
         const headers = {};
-        // const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
-        const piperBinaryName = 'piper';
+        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
         if (token !== '') {
             (0, core_2.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -20031,8 +20030,12 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         }
         else {
             (0, core_2.debug)('Fetching binary from URL');
-            binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            version = binaryURL.split('/').slice(-2)[0];
+            // binaryURL = await getPiperDownloadURL(piperBinaryName, version)
+            // version = binaryURL.split('/').slice(-2)[0]
+            if (!isEnterprise) {
+                binaryURL = 'https://github.com/SAP/jenkins-library/releases/download/v1.398.0/piper';
+                version = 'v1_398_0';
+            }
         }
         version = version.replace(/\./g, '_');
         const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
