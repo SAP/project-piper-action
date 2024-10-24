@@ -20707,7 +20707,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-(0, piper_1.run)();
+(0, piper_1.run)().finally();
 (0, core_1.info)("=================================================checkpoint-END");
 
 })();
