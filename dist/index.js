@@ -19920,12 +19920,12 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
         while (tries > attempt) {
-            const response = {
-                status: 200,
-                statusText: 'some status text',
-                url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.398.0',
-            };
-            // const response = await fetch(url)
+            // const response = {
+            //   status: 200,
+            //   statusText: 'some status text',
+            //   url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.398.0',
+            // } as unknown as Response
+            const response = yield fetch(url);
             if (response.status === 200) {
                 return response;
             }
@@ -20137,10 +20137,8 @@ function buildPiperFromSource(version) {
 exports.buildPiperFromSource = buildPiperFromSource;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch((err) => __awaiter(this, void 0, void 0, function* () {
-            return yield Promise.reject(new Error(`Can't get the tag: ${err}`));
-        }));
-        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
+        const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`);
+        return response.url.replace(/tag/, 'download') + `/${piper}`;
     });
 }
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
