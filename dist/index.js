@@ -19924,11 +19924,6 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
         while (tries > attempt) {
-            // const response = {
-            //   status: 200,
-            //   statusText: 'some status text',
-            //   url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.398.0',
-            // } as unknown as Response
             const response = yield (0, node_fetch_1.default)(url);
             if (response.status === 200) {
                 return response;
@@ -20026,7 +20021,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('owner is not provided');
         if (repo === '')
             throw new Error('repository is not provided');
-        let binaryURL = '';
+        let binaryURL;
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
         if (token !== '') {
@@ -20260,7 +20255,6 @@ exports.internalActionVariables = {
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        (0, core_1.info)("=================================================checkpoint-START");
         try {
             const actionCfg = yield getActionConfig({ required: false });
             yield preparePiperBinary(actionCfg);
@@ -20291,7 +20285,6 @@ function run() {
         finally {
             yield (0, docker_1.cleanupContainers)();
         }
-        (0, core_1.info)("=================================================checkpoint-END");
     });
 }
 exports.run = run;
@@ -20306,7 +20299,6 @@ function preparePiperBinary(actionCfg) {
         }
         else {
             piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-            // piperPath = '.pipeline/piper'
         }
         if (piperPath === undefined || piperPath === '') {
             throw new Error('Piper binary path is empty. Please check your action inputs.');
