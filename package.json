@@ -46,7 +46,7 @@
     "@octokit/types": "11.0.0",
     "expect": "29.7.0",
     "js-data": "3.0.11",
-    "node-fetch": "2.7.0",
+    "node-fetch": "^2.7.0",
     "ts-node": "10.9.2",
     "uuid": "9.0.0"
   },
