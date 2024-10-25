@@ -20030,12 +20030,8 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         }
         else {
             (0, core_2.debug)('Fetching binary from URL');
-            // binaryURL = await getPiperDownloadURL(piperBinaryName, version)
-            // version = binaryURL.split('/').slice(-2)[0]
-            if (!isEnterprise) {
-                binaryURL = 'https://github.com/SAP/jenkins-library/releases/download/v1.398.0/piper';
-                version = 'v1_398_0';
-            }
+            binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
+            version = binaryURL.split('/').slice(-2)[0];
         }
         version = version.replace(/\./g, '_');
         const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
@@ -20139,7 +20135,7 @@ function getPiperDownloadURL(piper, version) {
         const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch((err) => __awaiter(this, void 0, void 0, function* () {
             return yield Promise.reject(new Error(`Can't get the tag: ${err}`));
         }));
-        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
+        return response.url.replace(/tag/, 'download') + `/${piper}`;
     });
 }
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
