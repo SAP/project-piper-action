@@ -19907,9 +19907,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchRetry = exports.wait = void 0;
 const core_1 = __nccwpck_require__(2186);
+const node_fetch_1 = __importDefault(__nccwpck_require__(467));
 function wait(delay) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield new Promise((resolve) => setTimeout(resolve, delay));
@@ -19925,10 +19929,9 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
             //   statusText: 'some status text',
             //   url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.398.0',
             // } as unknown as Response
-            const response = yield fetch(url);
-            const data = response.json();
+            const response = yield (0, node_fetch_1.default)(url);
             if (response.status === 200) {
-                return data;
+                return response;
             }
             (0, core_1.info)(`Error while fetching ${url}: ${response.statusText}`);
             if (!isRetryable(response.status)) {
@@ -19942,7 +19945,7 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
                 yield wait(delayTime);
             }
         }
-        throw new Error(`Error fetching ${url}`);
+        return yield Promise.reject(new Error(`Error fetching ${url}`));
     });
 }
 exports.fetchRetry = fetchRetry;
@@ -20139,9 +20142,9 @@ exports.buildPiperFromSource = buildPiperFromSource;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         const response = yield (0, fetch_1.fetchRetry)(`${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`).catch((err) => __awaiter(this, void 0, void 0, function* () {
-            throw new Error(`Can't get the tag: ${err}`);
+            return yield Promise.reject(new Error(`Can't get the tag: ${err}`));
         }));
-        return response.url.replace(/tag/, 'download') + `/${piper}`;
+        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
     });
 }
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
