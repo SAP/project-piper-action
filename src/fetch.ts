@@ -1,4 +1,7 @@
 import { info } from '@actions/core'
+import fetch, {
+  Response,
+} from 'node-fetch'
 
 export async function wait (delay: number): Promise<string> {
   return await new Promise((resolve) => setTimeout(resolve, delay))

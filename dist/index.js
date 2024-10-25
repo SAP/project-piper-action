@@ -19907,9 +19907,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fetchRetry = exports.wait = void 0;
 const core_1 = __nccwpck_require__(2186);
+const node_fetch_1 = __importDefault(__nccwpck_require__(467));
 function wait(delay) {
     return __awaiter(this, void 0, void 0, function* () {
         return yield new Promise((resolve) => setTimeout(resolve, delay));
@@ -19920,7 +19924,7 @@ function fetchRetry(url, tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
         while (tries > attempt) {
-            const response = yield fetch(url);
+            const response = yield (0, node_fetch_1.default)(url);
             if (response.status === 200) {
                 return response;
             }
