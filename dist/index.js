@@ -20290,7 +20290,7 @@ function preparePiperBinary(actionCfg) {
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             piperPath = yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
-        else if (actionCfg.piperVersion.startsWith('devel:')) {
+        else if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
             piperPath = yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         else {
