@@ -27,7 +27,7 @@ describe('Fetch package tests', () => {
       return mockResponse200
     })
 
-    await fetchRetry(testURL, tries, delay)
+    await fetchRetry(testURL, undefined, tries, delay)
     expect(core.info).toHaveBeenCalledTimes(0)
   })
 
@@ -39,7 +39,7 @@ describe('Fetch package tests', () => {
       return mockResponse200
     })
 
-    await fetchRetry(testURL, tries, delay)
+    await fetchRetry(testURL, undefined, tries, delay)
 
     expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')
@@ -51,7 +51,7 @@ describe('Fetch package tests', () => {
       return mockResponse500
     })
 
-    await expect(fetchRetry(testURL, tries, delay)).rejects.toThrow(`Error fetching ${testURL}`)
+    await expect(fetchRetry(testURL, undefined, tries, delay)).rejects.toThrow(`Error fetching ${testURL}`)
 
     expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')
