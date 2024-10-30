@@ -4,11 +4,11 @@ export async function wait (delay: number): Promise<string> {
   return await new Promise((resolve) => setTimeout(resolve, delay))
 }
 
-export async function fetchRetry (url: string, tries = 5, baseDelayMS = 1000): Promise<Response> {
+export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDelayMS = 1000): Promise<Response> {
   let attempt = 0
 
   while (tries > attempt) {
-    const response = await fetch(url)
+    const response = await fetch(url, { method })
     if (response.status === 200) {
       return response
     }
