@@ -194,7 +194,6 @@ export function generateDefaultConfigFlags (paths: string[]): string[] {
 }
 
 export async function readContextConfig (stepName: string, flags: string[]): Promise<any> {
-  debug(`in the right place`)
   if (['version', 'help', 'getConfig','getDefaults'].includes(stepName)) {
     return {}
   }

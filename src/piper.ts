@@ -29,7 +29,7 @@ export async function run (): Promise<void> {
 
     await loadPipelineEnv()
     await executePiper('version')
-    if (onGitHubEnterprise()) {
+    if (onGitHubEnterprise() && actionCfg.stepName !== "getDefaults" ) {
       await getDefaultConfig(
         actionCfg.gitHubEnterpriseServer,
         actionCfg.gitHubEnterpriseApi,
