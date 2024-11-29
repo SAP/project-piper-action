@@ -20257,7 +20257,7 @@ function run() {
             yield preparePiperBinary(actionCfg);
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             yield (0, execute_1.executePiper)('version');
-            if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== "getDefaults") {
+            if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== 'getDefaults') {
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
