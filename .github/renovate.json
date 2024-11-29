@@ -6,6 +6,9 @@
   "baseBranches": [
     "main"
   ],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "matchDepTypes": ["devDependencies"],
