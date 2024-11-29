@@ -13,7 +13,10 @@
     {
       "matchDepTypes": ["devDependencies"],
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "labels": [
+        "maintenance"
+      ]
     }
   ]
 }
