@@ -9,7 +9,7 @@ import {
   getOrchestratorEnvVars,
   getProxyEnvVars,
   getVaultEnvVars,
-  getTrustEngineJWT,
+  getSystemTrustJWT,
   runContainers,
   startContainer,
   stopContainer
@@ -104,7 +104,7 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getTrustEngineJWT(),
+      ...getSystemTrustJWT(),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -133,7 +133,7 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getTrustEngineJWT(),
+      ...getSystemTrustJWT(),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -166,7 +166,7 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getTrustEngineJWT(),
+      ...getSystemTrustJWT(),
       ctxCfg.dockerImage,
       'cat'
     ]
@@ -204,7 +204,7 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getTrustEngineJWT(),
+      ...getSystemTrustJWT(),
       ctxCfg.dockerImage,
       'cat'
     ]
