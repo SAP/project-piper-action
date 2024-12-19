@@ -4,7 +4,8 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { downloadPiperBinary, buildPiperFromSource } from '../src/github'
+import { downloadPiperBinary } from '../src/github'
+import { buildPiperFromSource } from '../src/build'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')

@@ -2,7 +2,7 @@ import { dirname } from 'path'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { v4 as uuidv4 } from 'uuid'
-import type { ActionConfiguration } from './piper'
+import { type ActionConfiguration } from './types'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
 
