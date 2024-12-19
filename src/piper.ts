@@ -115,12 +115,7 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
       // EnVs should be provided like this
       // PIPER_ACTION_DOWNLOAD_URL
       value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
-      if (value === '') {
-        if (defaultValue !== undefined) {
-          return defaultValue
-        }
-        return ''
-      }
+      if (value === '') return defaultValue ?? ''
     }
     debug(`${param}: ${value}`)
     return value
@@ -128,12 +123,8 @@ async function getActionConfig (options: InputOptions): Promise<ActionConfigurat
   let enterpriseHost: string = ''
   let enterpriseApi: string = ''
   if (onGitHubEnterprise()) {
-    if (process.env.GITHUB_SERVER_URL !== undefined) {
-      enterpriseHost = process.env.GITHUB_SERVER_URL
-    }
-    if (process.env.GITHUB_API_URL !== undefined) {
-      enterpriseApi = process.env.GITHUB_API_URL
-    }
+    enterpriseHost = process.env.GITHUB_SERVER_URL ?? ''
+    enterpriseApi = process.env.GITHUB_API_URL ?? ''
   }
 
   let stepNameValue = getValue('step-name')

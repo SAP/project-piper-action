@@ -20,21 +20,20 @@ export function onGitHubEnterprise (): boolean {
 }
 
 export async function getEnterpriseConfigUrl (configType: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  let assetname: string = ''
-  let filename: string = ''
-
-  if (configType === DEFAULT_CONFIG) {
-    assetname = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
-    filename = ENTERPRISE_DEFAULTS_FILENAME
-  } else if (configType === STAGE_CONFIG) {
-    assetname = ENTERPRISE_STAGE_CONFIG_FILENAME
-    filename = ENTERPRISE_STAGE_CONFIG_FILENAME
-  } else {
+  if (configType !== DEFAULT_CONFIG && configType !== STAGE_CONFIG) {
     return ''
   }
 
+  let assetName: string = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
+  let filename: string = ENTERPRISE_DEFAULTS_FILENAME
+
+  if (configType === STAGE_CONFIG) {
+    assetName = ENTERPRISE_STAGE_CONFIG_FILENAME
+    filename = ENTERPRISE_STAGE_CONFIG_FILENAME
+  }
+
   // get URL of defaults from the release (gh api, authenticated)
-  const [url] = await getReleaseAssetUrl(assetname, version, apiURL, token, owner, repository)
+  const [url] = await getReleaseAssetUrl(assetName, version, apiURL, token, owner, repository)
   if (url !== '') return url
   // fallback to get URL of defaults in the repository (unauthenticated)
   return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`
