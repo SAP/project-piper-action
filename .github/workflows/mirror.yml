@@ -2,6 +2,7 @@ name: Trigger Mirror
 
 on:
   push:
+  workflow_dispatch:
 
 permissions:
   contents: read
