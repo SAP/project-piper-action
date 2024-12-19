@@ -2,8 +2,6 @@ name: Trigger Mirror
 
 on:
   push:
-    branches:
-      - main
 
 permissions:
   contents: read
