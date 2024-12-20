@@ -162,13 +162,29 @@ async function getPiperDownloadURL (piper: string, version?: string): Promise<st
 }
 
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
-  let piper = 'piper'
+  let piper = 'piper'  
   if (isEnterpriseStep) {
     piper = 'sap-piper'
-  }
+  }  
   if (version === 'master') {
     info('using _master binaries is deprecated. Using latest release version instead.')
   }
+  // Determine the running platform - only the available precompiled binaries in GitHub
+  switch (process.platform) {
+    case 'linux', 'freebsd', 'openbsd':
+      // Default Piper executable. Do nothing - for reference only
+      break
+    case 'darwin':
+      if (process.arch === 'arm64')
+        piper += '-darwin.arm64'
+      if (process.arch === 'x64' || process.arch === 'ia32')
+        piper += '-darwin.x86_64'
+      break
+    case 'win32':
+      // Windows binary not available yet
+      break      
+  }
+  
   return piper
 }
 
