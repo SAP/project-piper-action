@@ -21,7 +21,7 @@ jobs:
             -w "%{http_code}" \
             --max-time 30 \
             "${{ secrets.MIRROR_API_URL }}/dispatches" \
-            -d '{"event_type":"mirror_trigger","client_payload":{"source_repo":"https://github.com/${{ github.repository }}"}}')
+            -d '{"event_type":"mirror_trigger","client_payload":{"source_repo":"https://github.com/${{ github.repository }}", "branch_name":"${{ github.head_ref || github.ref_name }}"}}')
 
           status_code=${response: -3}
           if [ "$status_code" -ne 204 ]; then
