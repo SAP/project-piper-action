@@ -27,3 +27,4 @@ jobs:
           if [ "$status_code" -ne 204 ]; then
             echo "Failed to trigger mirror workflow. Status code: $status_code"
             exit 1
+          fi
