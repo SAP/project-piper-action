@@ -20469,7 +20469,12 @@ function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
     Object.entries(jsonStringEnvVars)
         .forEach(([key, value]) => {
         result.push('--env');
-        result.push(`${key}=${value}`);
+        if (value === '') {
+            result.push(key);
+        }
+        else {
+            result.push(`${key}=${value}`);
+        }
     });
     return result;
 }
