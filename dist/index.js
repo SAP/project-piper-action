@@ -38798,24 +38798,25 @@ exports.internalActionVariables = {
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const roleId = process.env.PIPER_VAULTAPPROLEID;
-            const secretId = process.env.PIPER_VAULTAPPSECRETID;
-            if (roleId === undefined || roleId === '') {
-                (0, core_1.setFailed)('PIPER_VAULTAPPROLEID is not set. Please provide the Role ID to authenticate with Vault.');
-            }
-            if (secretId === undefined || secretId === '') {
-                (0, core_1.setFailed)('PIPER_VAULTAPPSECRETID is not set. Please provide the Secret ID to authenticate with Vault.');
-            }
-        }
-        catch (error) {
-            (0, core_1.setFailed)((() => {
-                if (error instanceof Error) {
-                    return error.message;
-                }
-                return String(error);
-            })());
-        }
+        // TODO: Where to put this check?
+        // try {
+        //   const roleId = process.env.PIPER_VAULTAPPROLEID
+        //   const secretId = process.env.PIPER_VAULTAPPSECRETID
+        //
+        //   if (roleId === undefined || roleId === '') {
+        //     setFailed('PIPER_VAULTAPPROLEID is not set. Please provide the Role ID to authenticate with Vault.')
+        //   }
+        //   if (secretId === undefined || secretId === '') {
+        //     setFailed('PIPER_VAULTAPPSECRETID is not set. Please provide the Secret ID to authenticate with Vault.')
+        //   }
+        // } catch (error: unknown) {
+        //   setFailed((() => {
+        //     if (error instanceof Error) {
+        //       return error.message
+        //     }
+        //     return String(error)
+        //   })())
+        // }
         try {
             const actionCfg = yield getActionConfig({ required: false });
             yield preparePiperBinary(actionCfg);
