@@ -43,7 +43,7 @@ export async function run (): Promise<void> {
   }
 
   try {
-    const actionCfg = await getActionConfig({ required: false })
+    const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     await preparePiperBinary(actionCfg)
 
     await loadPipelineEnv()
