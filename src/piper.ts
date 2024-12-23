@@ -23,24 +23,25 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
-  try {
-    const roleId = process.env.PIPER_VAULTAPPROLEID
-    const secretId = process.env.PIPER_VAULTAPPSECRETID
-
-    if (roleId === undefined || roleId === '') {
-      setFailed('PIPER_VAULTAPPROLEID is not set. Please provide the Role ID to authenticate with Vault.')
-    }
-    if (secretId === undefined || secretId === '') {
-      setFailed('PIPER_VAULTAPPSECRETID is not set. Please provide the Secret ID to authenticate with Vault.')
-    }
-  } catch (error: unknown) {
-    setFailed((() => {
-      if (error instanceof Error) {
-        return error.message
-      }
-      return String(error)
-    })())
-  }
+  // TODO: Where to put this check?
+  // try {
+  //   const roleId = process.env.PIPER_VAULTAPPROLEID
+  //   const secretId = process.env.PIPER_VAULTAPPSECRETID
+  //
+  //   if (roleId === undefined || roleId === '') {
+  //     setFailed('PIPER_VAULTAPPROLEID is not set. Please provide the Role ID to authenticate with Vault.')
+  //   }
+  //   if (secretId === undefined || secretId === '') {
+  //     setFailed('PIPER_VAULTAPPSECRETID is not set. Please provide the Secret ID to authenticate with Vault.')
+  //   }
+  // } catch (error: unknown) {
+  //   setFailed((() => {
+  //     if (error instanceof Error) {
+  //       return error.message
+  //     }
+  //     return String(error)
+  //   })())
+  // }
 
   try {
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
