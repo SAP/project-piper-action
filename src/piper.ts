@@ -23,8 +23,28 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
+  // TODO: Where to put this check?
+  // try {
+  //   const roleId = process.env.PIPER_VAULTAPPROLEID
+  //   const secretId = process.env.PIPER_VAULTAPPSECRETID
+  //
+  //   if (roleId === undefined || roleId === '') {
+  //     setFailed('PIPER_VAULTAPPROLEID is not set. Please provide the Role ID to authenticate with Vault.')
+  //   }
+  //   if (secretId === undefined || secretId === '') {
+  //     setFailed('PIPER_VAULTAPPSECRETID is not set. Please provide the Secret ID to authenticate with Vault.')
+  //   }
+  // } catch (error: unknown) {
+  //   setFailed((() => {
+  //     if (error instanceof Error) {
+  //       return error.message
+  //     }
+  //     return String(error)
+  //   })())
+  // }
+
   try {
-    const actionCfg = await getActionConfig({ required: false })
+    const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     await preparePiperBinary(actionCfg)
 
     await loadPipelineEnv()
@@ -108,39 +128,29 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
+function getEnvValue (param: string, defaultValue: string = ''): string {
+  // EnVs should be provided like this:
+  // PIPER_ACTION_DOWNLOAD_URL
+  return process.env[param] ?? defaultValue
+}
+
 async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
-  const getValue = (param: string, defaultValue?: string): string => {
+  const getValue = (param: string, defaultValue: string = ''): string => {
     let value: string = getInput(param, options)
     if (value === '') {
-      // EnVs should be provided like this
-      // PIPER_ACTION_DOWNLOAD_URL
-      value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
-      if (value === '') {
-        if (defaultValue !== undefined) {
-          return defaultValue
-        }
-        return ''
-      }
+      value = getEnvValue(`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`, defaultValue)
     }
-    debug(`${param}: ${value}`)
+
+    if (value !== '') debug(`${param}: ${value}`)
     return value
   }
-  let enterpriseHost: string = ''
-  let enterpriseApi: string = ''
-  if (onGitHubEnterprise()) {
-    if (process.env.GITHUB_SERVER_URL !== undefined) {
-      enterpriseHost = process.env.GITHUB_SERVER_URL
-    }
-    if (process.env.GITHUB_API_URL !== undefined) {
-      enterpriseApi = process.env.GITHUB_API_URL
-    }
-  }
+
+  const enterpriseHost: string = onGitHubEnterprise() ? process.env.GITHUB_SERVER_URL ?? '' : ''
+  const enterpriseApi: string = onGitHubEnterprise() ? process.env.GITHUB_API_URL ?? '' : ''
 
   let stepNameValue = getValue('step-name')
   // TODO: remove command input
-  if (stepNameValue === undefined || stepNameValue === '') {
-    stepNameValue = getValue('command')
-  }
+  if (stepNameValue === '') stepNameValue = getValue('command')
 
   return {
     stepName: stepNameValue,

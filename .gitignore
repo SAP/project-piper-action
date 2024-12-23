@@ -4,3 +4,4 @@ go*linux-amd64.tar.gz
 .idea/
 reports/
 **/.DS_store
+pnpm-lock.yaml

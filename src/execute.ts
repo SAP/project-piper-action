@@ -39,33 +39,28 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
+
   if (containerID === '') {
-    return await exec(piperPath, [
-      stepName,
-      ...flags
-    ],
-    options)
-      .then(exitCode => {
-        return { output: piperOutput, error: piperError, exitCode }
-      })
-      .catch(err => {
-        throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
-      })
-  } else {
-    return await exec('docker', [
-      'exec',
-      containerID,
-      `/piper/${path.basename(piperPath)}`,
-      stepName,
-      ...flags
-    ], options).then(exitCode => {
+    const args = [stepName, ...flags]
+    return await exec(piperPath, args, options)
+      .then(exitCode => { return { output: piperOutput, error: piperError, exitCode } })
+      .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
+  }
+  // execute in docker container
+  const args = [
+    'exec',
+    containerID,
+    `/piper/${path.basename(piperPath)}`,
+    stepName,
+    ...flags
+  ]
+  return await exec('docker', args, options)
+    .then(exitCode => {
       return {
         output: piperOutput,
         error: piperError,
         exitCode
       }
-    }).catch(err => {
-      throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
     })
-  }
+    .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
 }
