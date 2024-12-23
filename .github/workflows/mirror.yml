@@ -1,0 +1,31 @@
+name: Trigger Mirror
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger_mirror:
+    name: Trigger Mirror Workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger mirror workflow
+        run: |
+          echo "branch name: ${{ github.head_ref || github.ref_name }}"
+          response=$(curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: Bearer ${{ secrets.MIRROR_WORKFLOW_TOKEN }}" \
+            -w "%{http_code}" \
+            --max-time 30 \
+            "${{ secrets.MIRROR_API_URL }}/dispatches" \
+            -d '{"event_type":"mirror_trigger","client_payload":{"source_repo":"https://github.com/${{ github.repository }}", "source_branch":"${{ github.head_ref || github.ref_name }}"}}')
+
+          status_code=${response: -3}
+          if [ "$status_code" -ne 204 ]; then
+            echo "Failed to trigger mirror workflow. Status code: $status_code"
+            exit 1
+          fi
