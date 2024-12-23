@@ -19,6 +19,14 @@ export function getHost (url: string): string {
   return url === '' ? '' : new URL(url).host
 }
 
+// export async function downloadPiperBinary (
+//   1 stepName: string,
+//   2 version: string,
+//   3 apiURL: string,
+//   4 token: string,
+//   5 owner: string,
+//   6 repo: string
+
 export async function downloadPiperBinary (
   stepName: string, version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<string> {
