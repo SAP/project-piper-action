@@ -19719,7 +19719,7 @@ function getSystemTrustToken() {
     return [
         '--env',
         'PIPER_systemTrustToken',
-        // PIPER_trustEngineToken is still created for compatibility with jenkins-library version <1.414.0
+        // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
         '--env',
         'PIPER_trustEngineToken'
     ];
