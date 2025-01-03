@@ -64,7 +64,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
-    ...getTrustEngineJWT(),
+    ...getSystemTrustToken(),
     dockerImage,
     'cat'
   )
@@ -150,8 +150,11 @@ export function getProxyEnvVars (): string[] {
   ]
 }
 
-export function getTrustEngineJWT (): string[] {
+export function getSystemTrustToken (): string[] {
   return [
+    '--env',
+    'PIPER_systemTrustToken',
+    // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
     '--env',
     'PIPER_trustEngineToken'
   ]
