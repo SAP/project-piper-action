@@ -9,7 +9,7 @@ import {
 } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
-import { getDefaultConfig, readContextConfig, createCheckIfStepActiveMaps } from './config'
+import { type ActionConfiguration, getDefaultConfig, readContextConfig, createCheckIfStepActiveMaps } from './config'
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
@@ -78,34 +78,6 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
   internalActionVariables.piperBinPath = piperPath
   debug('obtained piper binary at '.concat(piperPath))
   chmodSync(piperPath, 0o775)
-}
-
-export interface ActionConfiguration {
-  stepName: string
-  flags: string
-  piperVersion: string
-  piperOwner: string
-  piperRepo: string
-  sapPiperVersion: string
-  sapPiperOwner: string
-  sapPiperRepo: string
-  gitHubServer: string
-  gitHubApi: string
-  gitHubToken: string
-  gitHubEnterpriseServer: string
-  gitHubEnterpriseApi: string
-  gitHubEnterpriseToken: string
-  dockerImage: string
-  dockerOptions: string
-  dockerEnvVars: string
-  sidecarImage: string
-  sidecarOptions: string
-  sidecarEnvVars: string
-  retrieveDefaultConfig: boolean
-  customDefaultsPaths: string
-  customStageConditionsPath: string
-  createCheckIfStepActiveMaps: boolean
-  exportPipelineEnvironment: boolean
 }
 
 async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {

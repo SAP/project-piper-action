@@ -4,7 +4,7 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { downloadPiperBinary, buildPiperFromSource } from '../src/github'
+import { downloadPiperBinary, buildPiperFromSource, parseDevVersion } from '../src/github'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -129,5 +129,20 @@ describe('GitHub package tests', () => {
     expect(
       await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
     ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+  })
+})
+
+describe('parseVersion', () => {
+  it('should parse a valid version string', () => {
+    const version = 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+    const { owner, repository, commitISH } = parseDevVersion(version)
+    expect(owner).toBe('GH_OWNER')
+    expect(repository).toBe('REPOSITORY')
+    expect(commitISH).toBe('COMMITISH')
+  })
+
+  it('should throw an error for an invalid version string', () => {
+    const version = 'invalid:version:string'
+    expect(() => parseDevVersion(version)).toThrow('broken version')
   })
 })

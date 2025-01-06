@@ -82,7 +82,7 @@ export async function getReleaseAssetUrl (
 
 // by default for inner source Piper
 async function getPiperReleases (version: string, api: string, token: string, owner: string, repository: string): Promise<OctokitResponse<any>> {
-  const tag = getTag(true, version)
+  const tag = getTag(version, true)
   const options: OctokitOptions = {}
   options.baseUrl = api
   if (token !== '') {
@@ -101,37 +101,31 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperFromSource (version: string): Promise<string> {
-  const versionComponents = version.split(':')
-  if (versionComponents.length !== 4) {
-    throw new Error('broken version')
-  }
-  const
-    owner = versionComponents[1]
-  const repository = versionComponents[2]
-  const commitISH = versionComponents[3]
-  const versionName = (() => {
-    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-      throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
-    }
-    return commitISH.slice(0, 7)
-  })()
+  const { owner, repository, commitISH } = parseDevVersion(version)
+  const versionName = getVersionName(commitISH)
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   const piperPath = `${path}/piper`
-  if (fs.existsSync(piperPath)) {
-    return piperPath
-  }
-  // TODO
-  // check if cache is available
+
+  if (fs.existsSync(piperPath)) return piperPath
+
+  // TODO: check if cache is available
   info(`Building Piper from ${version}`)
   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
-  await extractZip(
-    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
-  const wd = cwd()
 
-  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
-    return name.includes(repository)
-  }) ?? '')
+  await downloadAndExtract(url, path)
+
+  const repositoryPath = getRepositoryPath(path, repository)
+  await buildBinary(repositoryPath, commitISH, owner, repository)
+
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // TODO: await download cache
+
+  return piperPath
+}
+
+async function buildBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+  const wd = cwd()
   chdir(repositoryPath)
 
   const cgoEnabled = process.env.CGO_ENABLED
@@ -147,17 +141,29 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   )
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
-  fs.rmSync(repositoryPath, { recursive: true, force: true })
-  // TODO
-  // await download cache
-  return piperPath
+}
+
+function getVersionName (commitISH: string): string {
+  if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+    throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
+  }
+  return commitISH.slice(0, 7)
+}
+
+async function downloadAndExtract (url: string, path: string): Promise<void> {
+  await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
+}
+
+function getRepositoryPath (path: string, repository: string): string {
+  return join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
 }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
-  const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(false, version)}`
-  const response = await fetchRetry(tagURL, 'HEAD').catch(async (err) => {
-    return await Promise.reject(new Error(`Can't get the tag: ${err}`))
-  })
+  const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
+  const response = await fetchRetry(tagURL, 'HEAD')
+    .catch(async (err) => {
+      throw new Error(`Can't get the tag: ${err}`)
+    })
   return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
 }
 
@@ -172,10 +178,19 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?
   return piper
 }
 
-function getTag (forAPICall: boolean, version: string | undefined): string {
+function getTag (version: string | undefined, forAPICall: boolean): string {
   if (version === undefined) return 'latest'
 
   version = version.toLowerCase()
   if (version === '' || version === 'master' || version === 'latest') return 'latest'
   return `${forAPICall ? 'tags' : 'tag'}/${version}`
+}
+
+export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4 || versionComponents[0] !== 'devel') {
+    throw new Error('broken version')
+  }
+  const [, owner, repository, commitISH] = versionComponents
+  return { owner, repository, commitISH }
 }
