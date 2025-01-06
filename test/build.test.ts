@@ -7,8 +7,8 @@ describe('parseDevelVersion', () => {
     const { env, owner, repository, commitISH } = parseDevelVersion(version)
     expect(env).toBe('devel')
     expect(owner).toBe('GH_OWNER')
-    expect(repository).toBe('REPOSITORY')
     expect(commitISH).toBe('COMMITISH')
+    expect(repository).toBe('REPOSITORY')
   })
 
   it('should throw an error for an invalid version string', () => {
