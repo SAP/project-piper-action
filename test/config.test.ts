@@ -10,7 +10,7 @@ import * as artifact from '@actions/artifact'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
-import type { ActionConfiguration } from '../src/piper'
+import type { ActionConfiguration } from '../src/types'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')

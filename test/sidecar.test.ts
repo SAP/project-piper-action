@@ -1,7 +1,8 @@
 import * as exec from '@actions/exec'
 import * as core from '@actions/core'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from '../src/sidecar'
-import { type ActionConfiguration, internalActionVariables } from '../src/piper'
+import { internalActionVariables } from '../src/piper'
+import { type ActionConfiguration } from '../src/types'
 import { getOrchestratorEnvVars, getProxyEnvVars, getVaultEnvVars } from '../src/docker'
 import * as docker from '../src/docker'
 

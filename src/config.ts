@@ -12,7 +12,7 @@ import {
   STAGE_CONFIG,
   getEnterpriseConfigUrl
 } from './enterprise'
-import type { ActionConfiguration } from './piper'
+import { type ActionConfiguration } from './types'
 import { internalActionVariables } from './piper'
 
 export const CONFIG_DIR = '.pipeline'
@@ -21,25 +21,21 @@ export const ARTIFACT_NAME = 'Pipeline defaults'
 export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
-    if (process.env.defaultsFlags !== undefined) {
-      debug(`Defaults flags: ${process.env.defaultsFlags}`)
-    } else {
-      debug('But no defaults flags available in the environment!')
-    }
-    return await Promise.resolve(0)
+    debug(process.env.defaultsFlags !== undefined ? `Defaults flags: ${process.env.defaultsFlags}` : 'But no defaults flags available in the environment!')
+    return 0
   }
 
   try {
     await restoreDefaultConfig()
     info('Defaults restored from artifact')
-    return await Promise.resolve(0)
+    return 0
   } catch (err: unknown) {
     // throws an error with message containing 'Unable to find' if artifact does not exist
     if (err instanceof Error && !err.message.includes('Unable to find')) throw err
     // continue with downloading defaults and upload as artifact
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
-    return await Promise.resolve(0)
+    return 0
   }
 }
 

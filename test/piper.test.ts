@@ -6,6 +6,7 @@ import * as piper from '../src/piper'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
+import * as build from '../src/build'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
 import { GITHUB_COM_API_URL } from '../src/github'
@@ -41,7 +42,7 @@ describe('Piper', () => {
 
     fs.chmodSync = jest.fn()
     jest.spyOn(github, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
-    jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
+    jest.spyOn(build, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./build'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -104,7 +105,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(github.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
+    expect(build.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
