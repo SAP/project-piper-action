@@ -1,4 +1,5 @@
-// tokenize functions splits a string of CLI flags by whitespace, additionally handling
+// tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
+// and space separated string values
 export function tokenize (input: string): string[] {
   // Regular expression to find quoted strings or sequences of non-whitespace characters
   const regex = /"([^"]*)"|\S+/g
