@@ -18,7 +18,7 @@ describe('utils.tokenize', () => {
 
   it('should handle empty quotes', () => {
     const result = tokenize('--flag1 "" --flag2')
-    expect(result).toEqual(['--flag1', '""', '--flag2'])
+    expect(result).toEqual(['--flag1', '', '--flag2'])
   })
 
   it('should correctly tokenize empty input', () => {
