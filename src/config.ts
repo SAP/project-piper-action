@@ -55,6 +55,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   }
 
   try {
+    info('Trying to restore defaults from artifact')
     await restoreDefaultConfig()
     info('Defaults restored from artifact')
     return 0

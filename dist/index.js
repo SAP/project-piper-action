@@ -37919,6 +37919,7 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
             return 0;
         }
         try {
+            (0, core_1.info)('Trying to restore defaults from artifact');
             yield restoreDefaultConfig();
             (0, core_1.info)('Defaults restored from artifact');
             return 0;
@@ -38851,11 +38852,17 @@ exports.internalActionVariables = {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            (0, core_1.info)('Getting action configuration');
             const actionCfg = yield getActionConfig({ required: false });
+            (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
+            (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
+            (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
+            (0, core_1.info)('Executing action - version');
             yield (0, execute_1.executePiper)('version');
             if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== 'getDefaults') {
+                (0, core_1.debug)('Enterprise step detected');
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
@@ -38870,12 +38877,7 @@ function run() {
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
         catch (error) {
-            (0, core_1.setFailed)((() => {
-                if (error instanceof Error) {
-                    return error.message;
-                }
-                return String(error);
-            })());
+            (0, core_1.setFailed)(error instanceof Error ? error.message : String(error));
         }
         finally {
             yield (0, docker_1.cleanupContainers)();

@@ -1,4 +1,4 @@
-import { debug, getInput, setFailed, type InputOptions } from '@actions/core'
+import { debug, getInput, setFailed, type InputOptions, info } from '@actions/core'
 import {
   GITHUB_COM_API_URL,
   GITHUB_COM_SERVER_URL,
@@ -24,12 +24,20 @@ export const internalActionVariables = {
 
 export async function run (): Promise<void> {
   try {
+    info('Getting action configuration')
     const actionCfg = await getActionConfig({ required: false })
+    debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
+
+    info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
 
+    info('Loading pipeline environment')
     await loadPipelineEnv()
+
+    info('Executing action - version')
     await executePiper('version')
     if (onGitHubEnterprise() && actionCfg.stepName !== 'getDefaults') {
+      debug('Enterprise step detected')
       await getDefaultConfig(
         actionCfg.gitHubEnterpriseServer,
         actionCfg.gitHubEnterpriseApi,
@@ -51,12 +59,7 @@ export async function run (): Promise<void> {
     }
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {
-    setFailed((() => {
-      if (error instanceof Error) {
-        return error.message
-      }
-      return String(error)
-    })())
+    setFailed(error instanceof Error ? error.message : String(error))
   } finally {
     await cleanupContainers()
   }
