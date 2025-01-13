@@ -11,6 +11,7 @@ import { isEnterpriseStep } from './enterprise'
 import { fetchRetry } from './fetch'
 
 export const GITHUB_COM_SERVER_URL = 'https://github.com'
+export const GITHUB_WDF_SAP_SERVER_URL = 'https://github.wdf.sap.corp'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
 export const PIPER_OWNER = 'SAP'
 export const PIPER_REPOSITORY = 'jenkins-library'
@@ -99,6 +100,29 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   return response
 }
 
+// Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
+export async function buildPiperInnerSource (version: string): Promise<string> {
+  const { owner, repository, commitISH } = parseDevVersion(version)
+  const versionName = getVersionName(commitISH)
+  const path = `${process.cwd()}/${versionName}`
+  const piperPath = `${path}/piper`
+
+  if (fs.existsSync(piperPath)) return piperPath
+
+  info(`Building Inner Source Piper from ${version}`)
+  const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${version}.zip`
+  info(`URL: ${url}`)
+
+  await downloadAndExtract(url, path)
+
+  const repositoryPath = getRepositoryPath(path, PIPER_REPOSITORY)
+  await buildInnerBinary(repositoryPath, version, PIPER_OWNER, PIPER_REPOSITORY)
+
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+
+  return piperPath
+}
+
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperFromSource (version: string): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
@@ -122,6 +146,25 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   // TODO: await download cache
 
   return piperPath
+}
+
+async function buildInnerBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+  const wd = cwd()
+  chdir(repositoryPath)
+
+  const cgoEnabled = process.env.CGO_ENABLED
+  process.env.CGO_ENABLED = '0'
+  await exec(
+    'go build -o ../piper',
+    [
+      '-ldflags',
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
+    ]
+  )
+  process.env.CGO_ENABLED = cgoEnabled
+  chdir(wd)
 }
 
 async function buildBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
@@ -188,8 +231,11 @@ function getTag (version: string | undefined, forAPICall: boolean): string {
 
 export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
   const versionComponents = version.split(':')
-  if (versionComponents.length !== 4 || versionComponents[0] !== 'devel') {
+  if (versionComponents.length !== 4) {
     throw new Error('broken version')
+  }
+  if (versionComponents[0] !== 'devel' && versionComponents[0] !== 'inner') {
+    throw new Error('devel or inner source version expected')
   }
   const [, owner, repository, commitISH] = versionComponents
   return { owner, repository, commitISH }

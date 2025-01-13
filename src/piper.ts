@@ -5,7 +5,7 @@ import {
   PIPER_OWNER,
   PIPER_REPOSITORY,
   buildPiperFromSource,
-  downloadPiperBinary
+  downloadPiperBinary, buildPiperInnerSource
 } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -63,14 +63,8 @@ export async function run (): Promise<void> {
 }
 
 async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
-  let piperPath
-  if (isEnterpriseStep(actionCfg.stepName)) {
-    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
-  } else if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
-    piperPath = await buildPiperFromSource(actionCfg.piperVersion)
-  } else {
-    piperPath = await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
-  }
+  const piperPath = await preparePiperPath(actionCfg)
+
   if (piperPath === undefined || piperPath === '') {
     throw new Error('Piper binary path is empty. Please check your action inputs.')
   }
@@ -78,6 +72,21 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
   internalActionVariables.piperBinPath = piperPath
   debug('obtained piper binary at '.concat(piperPath))
   chmodSync(piperPath, 0o775)
+}
+
+async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
+  // inner:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+  if (actionCfg.piperVersion.startsWith('inner:') && actionCfg.stepName !== '') {
+    return await buildPiperInnerSource(actionCfg.piperVersion)
+  }
+  if (isEnterpriseStep(actionCfg.stepName)) {
+    return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  }
+  // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+  if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
+    return await buildPiperFromSource(actionCfg.piperVersion)
+  }
+  return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
 async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
