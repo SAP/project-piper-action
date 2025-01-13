@@ -211,14 +211,10 @@ async function getPiperDownloadURL (piper: string, version?: string): Promise<st
 }
 
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
-  let piper = 'piper'
-  if (isEnterpriseStep) {
-    piper = 'sap-piper'
-  }
   if (version === 'master') {
     info('using _master binaries is deprecated. Using latest release version instead.')
   }
-  return piper
+  return isEnterpriseStep ? 'sap-piper' : 'piper'
 }
 
 function getTag (version: string | undefined, forAPICall: boolean): string {
@@ -234,8 +230,8 @@ export function parseDevVersion (version: string): { owner: string, repository: 
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
   }
-  if (versionComponents[0] !== 'devel' && versionComponents[0] !== 'inner') {
-    throw new Error('devel or inner source version expected')
+  if (versionComponents[0] !== 'devel') {
+    throw new Error('devel source version expected')
   }
   const [, owner, repository, commitISH] = versionComponents
   return { owner, repository, commitISH }

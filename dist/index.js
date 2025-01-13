@@ -38731,14 +38731,10 @@ function getPiperDownloadURL(piper, version) {
 }
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        let piper = 'piper';
-        if (isEnterpriseStep) {
-            piper = 'sap-piper';
-        }
         if (version === 'master') {
             (0, core_2.info)('using _master binaries is deprecated. Using latest release version instead.');
         }
-        return piper;
+        return isEnterpriseStep ? 'sap-piper' : 'piper';
     });
 }
 function getTag(version, forAPICall) {
@@ -38754,8 +38750,8 @@ function parseDevVersion(version) {
     if (versionComponents.length !== 4) {
         throw new Error('broken version');
     }
-    if (versionComponents[0] !== 'devel' && versionComponents[0] !== 'inner') {
-        throw new Error('devel or inner source version expected');
+    if (versionComponents[0] !== 'devel') {
+        throw new Error('devel source version expected');
     }
     const [, owner, repository, commitISH] = versionComponents;
     return { owner, repository, commitISH };
@@ -38901,8 +38897,8 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
-            // inner:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-            if (actionCfg.sapPiperVersion.startsWith('inner:') && actionCfg.stepName !== '') {
+            // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+            if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
                 return yield (0, github_1.buildPiperInnerSource)(actionCfg.piperVersion);
             }
             return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
