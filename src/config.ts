@@ -56,7 +56,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 
   try {
     info('Trying to restore defaults from artifact')
-    await restoreDefaultConfig()
+    await restoreDefaultConfig() // this fails
     info('Defaults restored from artifact')
     return 0
   } catch (err: unknown) {
@@ -72,6 +72,10 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
+  // version: devel:.....
+  if (version.startsWith('devel:')) {
+    version = 'latest'
+  }
   const enterpriseDefaultsURL = await getEnterpriseConfigUrl(DEFAULT_CONFIG, apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
@@ -180,6 +184,7 @@ export async function checkIfStepActive (stepName: string, stageName: string, ou
   return result.exitCode
 }
 
+// ?
 export async function restoreDefaultConfig (): Promise<void> {
   const artifactClient = artifact.create()
   const tempDir = path.join(CONFIG_DIR, 'defaults_temp')

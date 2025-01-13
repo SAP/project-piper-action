@@ -37920,7 +37920,7 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
         }
         try {
             (0, core_1.info)('Trying to restore defaults from artifact');
-            yield restoreDefaultConfig();
+            yield restoreDefaultConfig(); // this fails
             (0, core_1.info)('Defaults restored from artifact');
             return 0;
         }
@@ -37939,6 +37939,10 @@ exports.getDefaultConfig = getDefaultConfig;
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
+        // version: devel:.....
+        if (version.startsWith('devel:')) {
+            version = 'latest';
+        }
         const enterpriseDefaultsURL = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.DEFAULT_CONFIG, apiURL, version, token, owner, repository);
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
@@ -38036,6 +38040,7 @@ function checkIfStepActive(stepName, stageName, outputMaps) {
     });
 }
 exports.checkIfStepActive = checkIfStepActive;
+// ?
 function restoreDefaultConfig() {
     return __awaiter(this, void 0, void 0, function* () {
         const artifactClient = artifact.create();
