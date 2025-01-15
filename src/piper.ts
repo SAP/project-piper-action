@@ -13,6 +13,7 @@ import { getDefaultConfig, readContextConfig, createCheckIfStepActiveMaps } from
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
+import { tokenize } from './utils'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
@@ -44,7 +45,7 @@ export async function run (): Promise<void> {
       }
     }
     if (actionCfg.stepName !== '') {
-      const flags = actionCfg.flags.split(' ')
+      const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
       await runContainers(actionCfg, contextConfig)
       await executePiper(actionCfg.stepName, flags)

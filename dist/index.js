@@ -20246,6 +20246,7 @@ const config_1 = __nccwpck_require__(6373);
 const pipelineEnv_1 = __nccwpck_require__(269);
 const docker_1 = __nccwpck_require__(6512);
 const enterprise_1 = __nccwpck_require__(4340);
+const utils_1 = __nccwpck_require__(1314);
 // Global runtime variables that is accessible within a single action execution
 exports.internalActionVariables = {
     piperBinPath: '',
@@ -20267,7 +20268,7 @@ function run() {
                 }
             }
             if (actionCfg.stepName !== '') {
-                const flags = actionCfg.flags.split(' ');
+                const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
@@ -20477,6 +20478,38 @@ function parseDockerEnvVars(actionCfgEnvVars, ctxConfigEnvVars) {
     return result;
 }
 exports.parseDockerEnvVars = parseDockerEnvVars;
+
+
+/***/ }),
+
+/***/ 1314:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.tokenize = void 0;
+// tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
+// and space separated string values
+function tokenize(input) {
+    // Regular expression to find quoted strings or sequences of non-whitespace characters
+    const regex = /"([^"]*)"|\S+/g;
+    const tokens = [];
+    let match;
+    // Use the exec method to find all matches in the input string
+    while ((match = regex.exec(input)) !== null) {
+        // match[1] will hold the matched content inside quotes if it exists,
+        // otherwise use match[0] which covers the non-quoted matches
+        if (match[1] !== undefined) {
+            tokens.push(match[1]); // Pushes the inside of the quotes to the array
+        }
+        else {
+            tokens.push(match[0]); // Pushes the non-quoted match to the array
+        }
+    }
+    return tokens;
+}
+exports.tokenize = tokenize;
 
 
 /***/ }),
