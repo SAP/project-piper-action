@@ -20483,15 +20483,17 @@ exports.parseDockerEnvVars = parseDockerEnvVars;
 /***/ }),
 
 /***/ 1314:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.tokenize = void 0;
+const core_1 = __nccwpck_require__(2186);
 // tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
 // and space separated string values
 function tokenize(input) {
+    (0, core_1.debug)(`BEFORE TOKENIZE: ${input}`);
     // Regular expression to find quoted strings or sequences of non-whitespace characters
     const regex = /"([^"]*)"|\S+/g;
     const tokens = [];
