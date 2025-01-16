@@ -20509,6 +20509,7 @@ function tokenize(input) {
             tokens.push(match[0]); // Pushes the non-quoted match to the array
         }
     }
+    (0, core_1.debug)(`AFTER TOKENIZE: ${tokens}`);
     return tokens;
 }
 exports.tokenize = tokenize;
