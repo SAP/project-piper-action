@@ -228,7 +228,7 @@ function getTag (version: string | undefined, forAPICall: boolean): string {
 export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
-    throw new Error('broken version')
+    throw new Error('broken version: ' + version)
   }
   if (versionComponents[0] !== 'devel') {
     throw new Error('devel source version expected')
