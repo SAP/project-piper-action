@@ -20492,22 +20492,21 @@ exports.tokenize = void 0;
 // tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
 // and space separated string values
 function tokenize(input) {
-    // Regular expression to find quoted strings or sequences of non-whitespace characters
-    const regex = /"([^"]*)"|\S+/g;
-    const tokens = [];
-    let match;
-    // Use the exec method to find all matches in the input string
-    while ((match = regex.exec(input)) !== null) {
-        // match[1] will hold the matched content inside quotes if it exists,
-        // otherwise use match[0] which covers the non-quoted matches
-        if (match[1] !== undefined) {
-            tokens.push(match[1]); // Pushes the inside of the quotes to the array
-        }
-        else {
-            tokens.push(match[0]); // Pushes the non-quoted match to the array
-        }
+    // This regular expression looks for:
+    // 1. Sequences inside double quotes which may contain spaces (captured including the quotes)
+    // 2. Or sequences of non-space characters
+    const regex = /"[^"]*"|\S+/g;
+    const matches = input.match(regex);
+    if (matches == null) {
+        return [];
     }
-    return tokens;
+    return matches.map(arg => {
+        // Preserve the double quotes around arguments
+        if (arg.startsWith('"') && arg.endsWith('"')) {
+            return arg;
+        }
+        return arg;
+    });
 }
 exports.tokenize = tokenize;
 
