@@ -1,6 +1,10 @@
+import { debug } from '@actions/core'
+
 // tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
 // and space separated string values
+
 export function tokenize (input: string): string[] {
+  debug(`BEFORE TOKENIZE: ${input}`)
   // Regular expression to find quoted strings or sequences of non-whitespace characters
   const regex = /"([^"]*)"|\S+/g
 
@@ -18,5 +22,6 @@ export function tokenize (input: string): string[] {
     }
   }
 
+  debug(`AFTER TOKENIZE: ${tokens}`)
   return tokens
 }
