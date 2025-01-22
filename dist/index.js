@@ -38643,9 +38643,13 @@ function buildPiperInnerSource(version) {
         const { owner, repository, commitISH } = parseDevVersion(version);
         const versionName = getVersionName(commitISH);
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        (0, core_2.info)(`path: ${path}`);
         const piperPath = `${path}/piper`;
-        if (fs.existsSync(piperPath))
+        (0, core_2.info)(`piperPath: ${piperPath}`);
+        if (fs.existsSync(piperPath)) {
+            (0, core_2.info)(`piperPath exists: ${piperPath}`);
             return piperPath;
+        }
         (0, core_2.info)(`Building Inner Source Piper from ${version}`);
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
@@ -38657,14 +38661,19 @@ function buildPiperInnerSource(version) {
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
+        (0, core_2.info)(`Building Inner Source Piper from ${version}`);
         yield (0, exec_1.exec)('go build -o ../piper', [
             '-ldflags',
             `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
-        ]);
+        ]).catch((err) => {
+            throw new Error(`Can't build Inner Source Piper: ${err}`);
+        });
         process.env.CGO_ENABLED = cgoEnabled;
+        (0, core_2.info)('Changing directory back to working directory: ' + wd);
         (0, process_1.chdir)(wd);
+        (0, core_2.info)('Removing repositoryPath: ' + repositoryPath);
         fs.rmSync(repositoryPath, { recursive: true, force: true });
         // await downloadAndExtract(url, path)
         //
@@ -38672,6 +38681,7 @@ function buildPiperInnerSource(version) {
         // await buildInnerBinary(repositoryPath, version, PIPER_OWNER, PIPER_REPOSITORY)
         //
         // fs.rmSync(repositoryPath, { recursive: true, force: true })
+        (0, core_2.info)(`Returning piperPath: ${piperPath}`);
         return piperPath;
     });
 }
@@ -38793,15 +38803,14 @@ function getVersionName(commitISH) {
     }
     return commitISH.slice(0, 7);
 }
-function downloadAndExtract(url, path) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
-    });
-}
-function getRepositoryPath(path, repository) {
-    var _a;
-    return (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => name.includes(repository))) !== null && _a !== void 0 ? _a : '');
-}
+//
+// async function downloadAndExtract (url: string, path: string): Promise<void> {
+//   await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
+// }
+//
+// function getRepositoryPath (path: string, repository: string): string {
+//   return join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
+// }
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         const tagURL = `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`;
@@ -38982,6 +38991,7 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+            (0, core_1.info)('Preparing Piper binary for enterprise step');
             // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
                 (0, core_1.info)('Building Piper from inner source');

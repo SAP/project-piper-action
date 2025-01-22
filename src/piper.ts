@@ -80,6 +80,7 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   if (isEnterpriseStep(actionCfg.stepName)) {
+    info('Preparing Piper binary for enterprise step')
     // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
     if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
       info('Building Piper from inner source')

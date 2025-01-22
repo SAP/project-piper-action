@@ -106,9 +106,14 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   const versionName = getVersionName(commitISH)
 
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+  info(`path: ${path}`)
   const piperPath = `${path}/piper`
+  info(`piperPath: ${piperPath}`)
 
-  if (fs.existsSync(piperPath)) return piperPath
+  if (fs.existsSync(piperPath)) {
+    info(`piperPath exists: ${piperPath}`)
+    return piperPath
+  }
 
   info(`Building Inner Source Piper from ${version}`)
   const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
@@ -125,6 +130,7 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
 
   const cgoEnabled = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
+  info(`Building Inner Source Piper from ${version}`)
   await exec(
     'go build -o ../piper',
     [
@@ -133,9 +139,15 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
     ]
-  )
+  ).catch((err) => {
+    throw new Error(`Can't build Inner Source Piper: ${err}`)
+  })
+
   process.env.CGO_ENABLED = cgoEnabled
+
+  info('Changing directory back to working directory: ' + wd)
   chdir(wd)
+  info('Removing repositoryPath: ' + repositoryPath)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
   // await downloadAndExtract(url, path)
   //
@@ -144,6 +156,7 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   //
   // fs.rmSync(repositoryPath, { recursive: true, force: true })
 
+  info(`Returning piperPath: ${piperPath}`)
   return piperPath
 }
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
@@ -269,14 +282,14 @@ function getVersionName (commitISH: string): string {
   }
   return commitISH.slice(0, 7)
 }
-
-async function downloadAndExtract (url: string, path: string): Promise<void> {
-  await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
-}
-
-function getRepositoryPath (path: string, repository: string): string {
-  return join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
-}
+//
+// async function downloadAndExtract (url: string, path: string): Promise<void> {
+//   await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
+// }
+//
+// function getRepositoryPath (path: string, repository: string): string {
+//   return join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
+// }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
