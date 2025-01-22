@@ -38646,7 +38646,7 @@ function buildPiperInnerSource(version) {
         if (fs.existsSync(piperPath))
             return piperPath;
         (0, core_2.info)(`Building Inner Source Piper from ${version}`);
-        const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${version}.zip`;
+        const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         yield downloadAndExtract(url, path);
         const repositoryPath = getRepositoryPath(path, exports.PIPER_REPOSITORY);

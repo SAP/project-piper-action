@@ -110,7 +110,7 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   if (fs.existsSync(piperPath)) return piperPath
 
   info(`Building Inner Source Piper from ${version}`)
-  const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${version}.zip`
+  const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
 
   await downloadAndExtract(url, path)
