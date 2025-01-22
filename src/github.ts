@@ -119,13 +119,21 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
 
-  await extractZip(
-    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
+  info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
+  const zipFile = await downloadTool(url, `${path}/source-code.zip`).catch((err) => {
+    throw new Error(`Can't download Inner Source Piper: ${err}`)
+  })
+
+  info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
+  await extractZip(zipFile, `${path}`).catch((err) => {
+    throw new Error(`Can't extract Inner Source Piper: ${err}`)
+  })
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
     return name.includes(repository)
   }) ?? '')
+  info(`repositoryPath: ${repositoryPath}`)
   chdir(repositoryPath)
 
   const cgoEnabled = process.env.CGO_ENABLED

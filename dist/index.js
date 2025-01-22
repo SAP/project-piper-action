@@ -38653,11 +38653,19 @@ function buildPiperInnerSource(version) {
         (0, core_2.info)(`Building Inner Source Piper from ${version}`);
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
-        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
+        (0, core_2.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
+        const zipFile = yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`).catch((err) => {
+            throw new Error(`Can't download Inner Source Piper: ${err}`);
+        });
+        (0, core_2.info)(`Extracting Inner Source Piper from ${zipFile} to ${path}`);
+        yield (0, tool_cache_1.extractZip)(zipFile, `${path}`).catch((err) => {
+            throw new Error(`Can't extract Inner Source Piper: ${err}`);
+        });
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
             return name.includes(repository);
         })) !== null && _a !== void 0 ? _a : '');
+        (0, core_2.info)(`repositoryPath: ${repositoryPath}`);
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
