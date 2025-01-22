@@ -83,7 +83,7 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
     if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
       info('Building Piper from inner source')
-      return await buildPiperInnerSource(actionCfg.piperVersion)
+      return await buildPiperInnerSource(actionCfg.sapPiperVersion)
     }
     info('Downloading Piper binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
