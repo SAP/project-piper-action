@@ -104,7 +104,8 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 export async function buildPiperInnerSource (version: string): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
   const versionName = getVersionName(commitISH)
-  const path = `${process.cwd()}/${versionName}`
+
+  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   const piperPath = `${path}/piper`
 
   if (fs.existsSync(piperPath)) return piperPath
@@ -113,43 +114,13 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
 
-  await downloadAndExtract(url, path)
-
-  const repositoryPath = getRepositoryPath(path, PIPER_REPOSITORY)
-  await buildInnerBinary(repositoryPath, version, PIPER_OWNER, PIPER_REPOSITORY)
-
-  fs.rmSync(repositoryPath, { recursive: true, force: true })
-
-  return piperPath
-}
-
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-export async function buildPiperFromSource (version: string): Promise<string> {
-  const { owner, repository, commitISH } = parseDevVersion(version)
-  const versionName = getVersionName(commitISH)
-  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
-  const piperPath = `${path}/piper`
-
-  if (fs.existsSync(piperPath)) return piperPath
-
-  // TODO: check if cache is available
-  info(`Building Piper from ${version}`)
-  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
-  info(`URL: ${url}`)
-
-  await downloadAndExtract(url, path)
-
-  const repositoryPath = getRepositoryPath(path, repository)
-  await buildBinary(repositoryPath, commitISH, owner, repository)
-
-  fs.rmSync(repositoryPath, { recursive: true, force: true })
-  // TODO: await download cache
-
-  return piperPath
-}
-
-async function buildInnerBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+  await extractZip(
+    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
   const wd = cwd()
+
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
+    return name.includes(repository)
+  }) ?? '')
   chdir(repositoryPath)
 
   const cgoEnabled = process.env.CGO_ENABLED
@@ -165,10 +136,49 @@ async function buildInnerBinary (repositoryPath: string, commitISH: string, owne
   )
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
-}
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // await downloadAndExtract(url, path)
+  //
+  // const repositoryPath = getRepositoryPath(path, PIPER_REPOSITORY)
+  // await buildInnerBinary(repositoryPath, version, PIPER_OWNER, PIPER_REPOSITORY)
+  //
+  // fs.rmSync(repositoryPath, { recursive: true, force: true })
 
-async function buildBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+  return piperPath
+}
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+export async function buildPiperFromSource (version: string): Promise<string> {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4) {
+    throw new Error('broken version')
+  }
+  const owner = versionComponents[1]
+  const repository = versionComponents[2]
+  const commitISH = versionComponents[3]
+  const versionName = (() => {
+    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+      throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
+    }
+    return commitISH.slice(0, 7)
+  })()
+  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+  const piperPath = `${path}/piper`
+  if (fs.existsSync(piperPath)) {
+    return piperPath
+  }
+  // TODO
+  // check if cache is available
+  info(`Building Piper from ${version}`)
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+  info(`URL: ${url}`)
+
+  await extractZip(
+    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
   const wd = cwd()
+
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
+    return name.includes(repository)
+  }) ?? '')
   chdir(repositoryPath)
 
   const cgoEnabled = process.env.CGO_ENABLED
@@ -184,7 +194,74 @@ async function buildBinary (repositoryPath: string, commitISH: string, owner: st
   )
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // TODO
+  // await download cache
+  return piperPath
 }
+
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// export async function buildPiperFromSource (version: string): Promise<string> {
+//   const { owner, repository, commitISH } = parseDevVersion(version)
+//   const versionName = getVersionName(commitISH)
+//   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+//   const piperPath = `${path}/piper`
+//
+//   if (fs.existsSync(piperPath)) return piperPath
+//
+//   // TODO: check if cache is available
+//   info(`Building Piper from ${version}`)
+//   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+//   info(`URL: ${url}`)
+//
+//   await downloadAndExtract(url, path)
+//
+//   const repositoryPath = getRepositoryPath(path, repository)
+//   await buildBinary(repositoryPath, commitISH, owner, repository)
+//
+//   fs.rmSync(repositoryPath, { recursive: true, force: true })
+//   // TODO: await download cache
+//
+//   return piperPath
+// }
+
+// async function buildInnerBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+//   const wd = cwd()
+//   chdir(repositoryPath)
+//
+//   const cgoEnabled = process.env.CGO_ENABLED
+//   process.env.CGO_ENABLED = '0'
+//   await exec(
+//     'go build -o ../piper',
+//     [
+//       '-ldflags',
+//       `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+//       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
+//       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
+//     ]
+//   )
+//   process.env.CGO_ENABLED = cgoEnabled
+//   chdir(wd)
+// }
+//
+// async function buildBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
+//   const wd = cwd()
+//   chdir(repositoryPath)
+//
+//   const cgoEnabled = process.env.CGO_ENABLED
+//   process.env.CGO_ENABLED = '0'
+//   await exec(
+//     'go build -o ../piper',
+//     [
+//       '-ldflags',
+//       `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+//       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
+//       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+//     ]
+//   )
+//   process.env.CGO_ENABLED = cgoEnabled
+//   chdir(wd)
+// }
 
 function getVersionName (commitISH: string): string {
   if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
