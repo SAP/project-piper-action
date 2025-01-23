@@ -184,25 +184,9 @@ async function downloadWithAuth (url: string, githubToken: string, destination: 
     setFailed('GitHub Token is not provided')
   }
   try {
-    info('🔄 Fetching pre-signed download URL...')
+    info(`🔄 Trying to download with auth ${url} to ${destination}`)
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Redirect: 'follow'
-      }
-    })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    info('JSON response: ' + JSON.stringify(response))
-
-    const downloadUrl = response.url // Get the redirected URL
-    info(`🔗 Redirected URL: ${downloadUrl}`)
-
-    const zipFile = await downloadTool(downloadUrl, destination)
+    const zipFile = await downloadTool(url, destination, githubToken)
     info(`✅ Downloaded successfully to ${zipFile}`)
     return zipFile
   } catch (error) {

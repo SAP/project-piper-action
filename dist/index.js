@@ -38709,20 +38709,8 @@ function downloadWithAuth(url, githubToken, destination) {
             (0, core_2.setFailed)('GitHub Token is not provided');
         }
         try {
-            (0, core_2.info)('🔄 Fetching pre-signed download URL...');
-            const response = yield fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${githubToken}`,
-                    Redirect: 'follow'
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            (0, core_2.info)('JSON response: ' + JSON.stringify(response));
-            const downloadUrl = response.url; // Get the redirected URL
-            (0, core_2.info)(`🔗 Redirected URL: ${downloadUrl}`);
-            const zipFile = yield (0, tool_cache_1.downloadTool)(downloadUrl, destination);
+            (0, core_2.info)(`🔄 Trying to download with auth ${url} to ${destination}`);
+            const zipFile = yield (0, tool_cache_1.downloadTool)(url, destination, githubToken);
             (0, core_2.info)(`✅ Downloaded successfully to ${zipFile}`);
             return zipFile;
         }
