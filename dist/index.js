@@ -38701,6 +38701,9 @@ function buildPiperInnerSource(version, githubToken) {
 exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, githubToken, destination) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
+            githubToken = process.env.PIPER_GITHUB_TOKEN;
+        }
         (0, core_2.info)('GH Token is: ' + githubToken);
         if (githubToken === '') {
             (0, core_2.setFailed)('GitHub Token is not provided');

@@ -176,6 +176,9 @@ export async function buildPiperInnerSource (version: string, githubToken: strin
 }
 
 async function downloadWithAuth (url: string, githubToken: string, destination: string): Promise<string> {
+  if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
+    githubToken = process.env.PIPER_GITHUB_TOKEN
+  }
   info('GH Token is: ' + githubToken)
   if (githubToken === '') {
     setFailed('GitHub Token is not provided')
