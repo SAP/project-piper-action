@@ -38786,6 +38786,12 @@ function downloadWithAuth(url, destination) {
         }
         try {
             (0, core_2.info)(`🔄 Trying to download with auth ${url} to ${destination}`);
+            // Ensure the parent directory exists
+            const dir = (0, path_1.dirname)(destination);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+                (0, core_2.info)(`📂 Created directory: ${dir}`);
+            }
             const zipFile = yield downloadZip(url, destination, wdfGithubToken).catch((err) => {
                 throw new Error(`Can't download with auth: ${err}`);
             });

@@ -1,5 +1,5 @@
 import * as fs from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
@@ -196,6 +196,13 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
   }
   try {
     info(`🔄 Trying to download with auth ${url} to ${destination}`)
+
+    // Ensure the parent directory exists
+    const dir = dirname(destination)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+      info(`📂 Created directory: ${dir}`)
+    }
 
     const zipFile = await downloadZip(url, destination, wdfGithubToken).catch((err) => {
       throw new Error(`Can't download with auth: ${err}`)
