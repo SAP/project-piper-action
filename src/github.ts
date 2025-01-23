@@ -179,14 +179,29 @@ export async function buildPiperInnerSource (version: string, githubToken: strin
 
 async function downloadWithAuth (url: string, githubToken: string, destination: string): Promise<string> {
   try {
-    const authenticatedUrl = `${url}?access_token=${githubToken}`
-    const zipFile: string = await downloadTool(authenticatedUrl, destination)
-    info(`✅ Downloaded to ${zipFile}`)
+    info('🔄 Fetching pre-signed download URL...')
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const downloadUrl = response.url // Get the redirected URL
+    info(`🔗 Redirected URL: ${downloadUrl}`)
+
+    const zipFile = await downloadTool(downloadUrl, destination)
+    info(`✅ Downloaded successfully to ${zipFile}`)
     return zipFile
-  } catch (error: unknown) {
+  } catch (error) {
     setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
+    return ''
   }
-  return ''
 }
 
 function listFilesAndFolders (dirPath: string): void {

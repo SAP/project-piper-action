@@ -38703,15 +38703,26 @@ exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, githubToken, destination) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const authenticatedUrl = `${url}?access_token=${githubToken}`;
-            const zipFile = yield (0, tool_cache_1.downloadTool)(authenticatedUrl, destination);
-            (0, core_2.info)(`✅ Downloaded to ${zipFile}`);
+            (0, core_2.info)('🔄 Fetching pre-signed download URL...');
+            const response = yield fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${githubToken}`,
+                    Accept: 'application/vnd.github.v3+json'
+                }
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const downloadUrl = response.url; // Get the redirected URL
+            (0, core_2.info)(`🔗 Redirected URL: ${downloadUrl}`);
+            const zipFile = yield (0, tool_cache_1.downloadTool)(downloadUrl, destination);
+            (0, core_2.info)(`✅ Downloaded successfully to ${zipFile}`);
             return zipFile;
         }
         catch (error) {
             (0, core_2.setFailed)(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`);
+            return '';
         }
-        return '';
     });
 }
 function listFilesAndFolders(dirPath) {
