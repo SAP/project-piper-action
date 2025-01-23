@@ -1,17 +1,16 @@
 import * as fs from 'fs'
-import { dirname, join } from 'path'
+import { join } from 'path'
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { debug, getInput, info, setFailed } from '@actions/core'
+import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
 import { fetchRetry } from './fetch'
 
 export const GITHUB_COM_SERVER_URL = 'https://github.com'
-export const GITHUB_WDF_SAP_SERVER_URL = 'https://github.wdf.sap.corp'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
 export const PIPER_OWNER = 'SAP'
 export const PIPER_REPOSITORY = 'jenkins-library'
@@ -100,158 +99,6 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   return response
 }
 
-// Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
-export async function buildPiperInnerSource (version: string): Promise<string> {
-  const { owner, repository, commitISH } = parseDevVersion(version)
-  const versionName = getVersionName(commitISH)
-
-  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
-  info(`path: ${path}`)
-  const piperPath = `${path}/piper`
-  info(`piperPath: ${piperPath}`)
-
-  if (fs.existsSync(piperPath)) {
-    info(`piperPath exists: ${piperPath}`)
-    return piperPath
-  }
-
-  info(`Building Inner Source Piper from ${version}`)
-  const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
-  info(`URL: ${url}`)
-
-  info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
-  const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`)
-    .catch((err) => {
-      throw new Error(`Can't download Inner Source Piper: ${err}`)
-    })
-
-  info(`Listing cwd: ${cwd()}`)
-  listFilesAndFolders(cwd())
-
-  info(`Listing $path: ${path}`)
-  listFilesAndFolders(path)
-
-  info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
-  await extractZip(zipFile, `${path}`).catch((err) => {
-    throw new Error(`Can't extract Inner Source Piper: ${err}`)
-  })
-  const wd = cwd()
-
-  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
-    return name.includes(repository)
-  }) ?? '')
-  info(`repositoryPath: ${repositoryPath}`)
-  chdir(repositoryPath)
-
-  const cgoEnabled = process.env.CGO_ENABLED
-  process.env.CGO_ENABLED = '0'
-  info(`Building Inner Source Piper from ${version}`)
-  await exec(
-    'go build -o ../piper',
-    [
-      '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
-    ]
-  ).catch((err) => {
-    throw new Error(`Can't build Inner Source Piper: ${err}`)
-  })
-
-  process.env.CGO_ENABLED = cgoEnabled
-
-  info('Changing directory back to working directory: ' + wd)
-  chdir(wd)
-  info('Removing repositoryPath: ' + repositoryPath)
-  fs.rmSync(repositoryPath, { recursive: true, force: true })
-  // await downloadAndExtract(url, path)
-  //
-  // const repositoryPath = getRepositoryPath(path, PIPER_REPOSITORY)
-  // await buildInnerBinary(repositoryPath, version, PIPER_OWNER, PIPER_REPOSITORY)
-  //
-  // fs.rmSync(repositoryPath, { recursive: true, force: true })
-
-  info(`Returning piperPath: ${piperPath}`)
-  return piperPath
-}
-
-async function downloadWithAuth (url: string, destination: string): Promise<string> {
-  let wdfGithubToken = ''
-  if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
-    wdfGithubToken = process.env.PIPER_GITHUB_TOKEN
-  }
-  const token = getInput('github-token', { required: true })
-  if (token === '') {
-    info('token from getInput is empty')
-  } else {
-    info('token from getInput: ' + token)
-  }
-  info('GH Token is: ' + wdfGithubToken)
-  if (wdfGithubToken === '') {
-    info('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
-    if (token === '') {
-      setFailed('❌ GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
-    }
-    wdfGithubToken = token
-  }
-  try {
-    info(`🔄 Trying to download with auth ${url} to ${destination}`)
-
-    // Ensure the parent directory exists
-    const dir = dirname(destination)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-      info(`📂 Created directory: ${dir}`)
-    }
-
-    const zipFile = await downloadZip(url, destination, wdfGithubToken).catch((err) => {
-      throw new Error(`Can't download with auth: ${err}`)
-    })
-    info(`✅ Downloaded successfully to ${zipFile}`)
-    return zipFile
-  } catch (error) {
-    setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
-    return ''
-  }
-}
-
-async function downloadZip (url: string, zipPath: string, token?: string): Promise<string> {
-  try {
-    info(`🔄 Downloading ZIP from ${url}`)
-
-    const headers: Record<string, string> = {
-      Accept: 'application/vnd.github.v3.raw'
-    }
-
-    if (typeof token === 'string' && token.trim() !== '') {
-      headers.Authorization = `Bearer ${token}`
-    }
-
-    const response = await fetch(url, { headers })
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-    }
-
-    const buffer = await response.arrayBuffer()
-    fs.writeFileSync(zipPath, Buffer.from(buffer))
-
-    info(`✅ ZIP downloaded successfully to ${zipPath}`)
-  } catch (error) {
-    setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
-  }
-  return zipPath
-}
-
-function listFilesAndFolders (dirPath: string): void {
-  const items = fs.readdirSync(dirPath)
-  items.forEach(item => {
-    const fullPath = join(dirPath, item)
-    const stats = fs.statSync(fullPath)
-    info(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
-  })
-}
-
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperFromSource (version: string): Promise<string> {
   const versionComponents = version.split(':')
@@ -305,84 +152,6 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   // await download cache
   return piperPath
 }
-
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-// export async function buildPiperFromSource (version: string): Promise<string> {
-//   const { owner, repository, commitISH } = parseDevVersion(version)
-//   const versionName = getVersionName(commitISH)
-//   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
-//   const piperPath = `${path}/piper`
-//
-//   if (fs.existsSync(piperPath)) return piperPath
-//
-//   // TODO: check if cache is available
-//   info(`Building Piper from ${version}`)
-//   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
-//   info(`URL: ${url}`)
-//
-//   await downloadAndExtract(url, path)
-//
-//   const repositoryPath = getRepositoryPath(path, repository)
-//   await buildBinary(repositoryPath, commitISH, owner, repository)
-//
-//   fs.rmSync(repositoryPath, { recursive: true, force: true })
-//   // TODO: await download cache
-//
-//   return piperPath
-// }
-
-// async function buildInnerBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
-//   const wd = cwd()
-//   chdir(repositoryPath)
-//
-//   const cgoEnabled = process.env.CGO_ENABLED
-//   process.env.CGO_ENABLED = '0'
-//   await exec(
-//     'go build -o ../piper',
-//     [
-//       '-ldflags',
-//       `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-//       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
-//       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
-//     ]
-//   )
-//   process.env.CGO_ENABLED = cgoEnabled
-//   chdir(wd)
-// }
-//
-// async function buildBinary (repositoryPath: string, commitISH: string, owner: string, repository: string): Promise<void> {
-//   const wd = cwd()
-//   chdir(repositoryPath)
-//
-//   const cgoEnabled = process.env.CGO_ENABLED
-//   process.env.CGO_ENABLED = '0'
-//   await exec(
-//     'go build -o ../piper',
-//     [
-//       '-ldflags',
-//       `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-//       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
-//       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-//     ]
-//   )
-//   process.env.CGO_ENABLED = cgoEnabled
-//   chdir(wd)
-// }
-
-function getVersionName (commitISH: string): string {
-  if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-    throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
-  }
-  return commitISH.slice(0, 7)
-}
-//
-// async function downloadAndExtract (url: string, path: string): Promise<void> {
-//   await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
-// }
-//
-// function getRepositoryPath (path: string, repository: string): string {
-//   return join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
-// }
 
 async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
