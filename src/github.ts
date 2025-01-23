@@ -210,11 +210,10 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
 
 async function downloadZip (url: string, zipPath: string, token?: string): Promise<string> {
   try {
-    info(`🔄 Downloading ZIP from ${url}...`)
+    info(`🔄 Downloading ZIP from ${url}`)
 
     const headers: Record<string, string> = {
-      'User-Agent': 'Node.js',
-      Accept: 'application/octet-stream' // Ensure binary download
+      Accept: 'application/vnd.github.v3.raw'
     }
 
     if (typeof token === 'string' && token.trim() !== '') {

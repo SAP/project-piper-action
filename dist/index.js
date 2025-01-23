@@ -38801,10 +38801,9 @@ function downloadWithAuth(url, destination) {
 function downloadZip(url, zipPath, token) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            (0, core_2.info)(`🔄 Downloading ZIP from ${url}...`);
+            (0, core_2.info)(`🔄 Downloading ZIP from ${url}`);
             const headers = {
-                'User-Agent': 'Node.js',
-                Accept: 'application/octet-stream' // Ensure binary download
+                Accept: 'application/vnd.github.v3.raw'
             };
             if (typeof token === 'string' && token.trim() !== '') {
                 headers.Authorization = `Bearer ${token}`;
