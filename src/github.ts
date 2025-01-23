@@ -101,7 +101,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 }
 
 // Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
-export async function buildPiperInnerSource (version: string, githubToken: string): Promise<string> {
+export async function buildPiperInnerSource (version: string): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
   const versionName = getVersionName(commitISH)
 
@@ -120,7 +120,7 @@ export async function buildPiperInnerSource (version: string, githubToken: strin
   info(`URL: ${url}`)
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
-  const zipFile = await downloadWithAuth(url, githubToken, `${path}/source-code.zip`)
+  const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`)
     .catch((err) => {
       throw new Error(`Can't download Inner Source Piper: ${err}`)
     })
@@ -175,18 +175,21 @@ export async function buildPiperInnerSource (version: string, githubToken: strin
   return piperPath
 }
 
-async function downloadWithAuth (url: string, githubToken: string, destination: string): Promise<string> {
+async function downloadWithAuth (url: string, destination: string): Promise<string> {
+  let wdfGithubToken = ''
   if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
-    githubToken = process.env.PIPER_GITHUB_TOKEN
+    wdfGithubToken = process.env.PIPER_GITHUB_TOKEN
   }
-  info('GH Token is: ' + githubToken)
-  if (githubToken === '') {
-    setFailed('GitHub Token is not provided')
+  info('GH Token is: ' + wdfGithubToken)
+  if (wdfGithubToken === '') {
+    setFailed('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
   }
   try {
     info(`🔄 Trying to download with auth ${url} to ${destination}`)
 
-    const zipFile = await downloadTool(url, destination, githubToken)
+    const zipFile = await downloadTool(url, destination, wdfGithubToken).catch((err) => {
+      throw new Error(`Can't download with auth: ${err}`)
+    })
     info(`✅ Downloaded successfully to ${zipFile}`)
     return zipFile
   } catch (error) {

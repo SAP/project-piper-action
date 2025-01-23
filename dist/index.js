@@ -37898,7 +37898,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.downloadStageConfig = exports.createCheckIfStepActiveMaps = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
+exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.downloadStageConfig = exports.createCheckIfStepActiveMaps = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.getActionConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(6071);
@@ -37909,6 +37909,70 @@ const enterprise_1 = __nccwpck_require__(8675);
 const piper_1 = __nccwpck_require__(6914);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
+function getActionConfig(options) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const getValue = (param, defaultValue) => {
+            var _a;
+            let value = (0, core_1.getInput)(param, options);
+            if (value === '') {
+                // EnVs should be provided like this
+                // PIPER_ACTION_DOWNLOAD_URL
+                value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
+                if (value === '') {
+                    if (defaultValue !== undefined) {
+                        return defaultValue;
+                    }
+                    return '';
+                }
+            }
+            (0, core_1.debug)(`${param}: ${value}`);
+            return value;
+        };
+        let enterpriseHost = '';
+        let enterpriseApi = '';
+        if ((0, enterprise_1.onGitHubEnterprise)()) {
+            if (process.env.GITHUB_SERVER_URL !== undefined) {
+                enterpriseHost = process.env.GITHUB_SERVER_URL;
+            }
+            if (process.env.GITHUB_API_URL !== undefined) {
+                enterpriseApi = process.env.GITHUB_API_URL;
+            }
+        }
+        let stepNameValue = getValue('step-name');
+        // TODO: remove command input
+        if (stepNameValue === undefined || stepNameValue === '') {
+            stepNameValue = getValue('command');
+        }
+        return {
+            stepName: stepNameValue,
+            flags: getValue('flags'),
+            piperVersion: getValue('piper-version'),
+            piperOwner: getValue('piper-owner', github_1.PIPER_OWNER),
+            piperRepo: getValue('piper-repository', github_1.PIPER_REPOSITORY),
+            sapPiperVersion: getValue('sap-piper-version'),
+            sapPiperOwner: getValue('sap-piper-owner'),
+            sapPiperRepo: getValue('sap-piper-repository'),
+            gitHubToken: getValue('github-token'),
+            gitHubServer: github_1.GITHUB_COM_SERVER_URL,
+            gitHubApi: github_1.GITHUB_COM_API_URL,
+            gitHubEnterpriseServer: enterpriseHost,
+            gitHubEnterpriseApi: enterpriseApi,
+            gitHubEnterpriseToken: getValue('github-enterprise-token'),
+            dockerImage: getValue('docker-image'),
+            dockerOptions: getValue('docker-options'),
+            dockerEnvVars: getValue('docker-env-vars'),
+            sidecarImage: getValue('sidecar-image'),
+            sidecarOptions: getValue('sidecar-options'),
+            sidecarEnvVars: getValue('sidecar-env-vars'),
+            retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
+            customDefaultsPaths: getValue('custom-defaults-paths'),
+            customStageConditionsPath: getValue('custom-stage-conditions-path'),
+            createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
+            exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
+        };
+    });
+}
+exports.getActionConfig = getActionConfig;
 function getDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         if (fs.existsSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_DEFAULTS_FILENAME))) {
@@ -38637,7 +38701,7 @@ function getPiperReleases(version, api, token, owner, repository) {
     });
 }
 // Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
-function buildPiperInnerSource(version, githubToken) {
+function buildPiperInnerSource(version) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, commitISH } = parseDevVersion(version);
@@ -38654,7 +38718,7 @@ function buildPiperInnerSource(version, githubToken) {
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         (0, core_2.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
-        const zipFile = yield downloadWithAuth(url, githubToken, `${path}/source-code.zip`)
+        const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`)
             .catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
@@ -38699,18 +38763,21 @@ function buildPiperInnerSource(version, githubToken) {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
-function downloadWithAuth(url, githubToken, destination) {
+function downloadWithAuth(url, destination) {
     return __awaiter(this, void 0, void 0, function* () {
+        let wdfGithubToken = '';
         if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
-            githubToken = process.env.PIPER_GITHUB_TOKEN;
+            wdfGithubToken = process.env.PIPER_GITHUB_TOKEN;
         }
-        (0, core_2.info)('GH Token is: ' + githubToken);
-        if (githubToken === '') {
-            (0, core_2.setFailed)('GitHub Token is not provided');
+        (0, core_2.info)('GH Token is: ' + wdfGithubToken);
+        if (wdfGithubToken === '') {
+            (0, core_2.setFailed)('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
         }
         try {
             (0, core_2.info)(`🔄 Trying to download with auth ${url} to ${destination}`);
-            const zipFile = yield (0, tool_cache_1.downloadTool)(url, destination, githubToken);
+            const zipFile = yield (0, tool_cache_1.downloadTool)(url, destination, wdfGithubToken).catch((err) => {
+                throw new Error(`Can't download with auth: ${err}`);
+            });
             (0, core_2.info)(`✅ Downloaded successfully to ${zipFile}`);
             return zipFile;
         }
@@ -38987,7 +39054,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             (0, core_1.info)('Getting action configuration');
-            const actionCfg = yield getActionConfig({ required: false });
+            const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
@@ -39038,7 +39105,7 @@ function preparePiperPath(actionCfg) {
             // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
                 (0, core_1.info)('Building Piper from inner source');
-                return yield (0, github_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken);
+                return yield (0, github_1.buildPiperInnerSource)(actionCfg.sapPiperVersion);
             }
             (0, core_1.info)('Downloading Piper binary');
             return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
@@ -39048,69 +39115,6 @@ function preparePiperPath(actionCfg) {
             return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-    });
-}
-function getActionConfig(options) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const getValue = (param, defaultValue) => {
-            var _a;
-            let value = (0, core_1.getInput)(param, options);
-            if (value === '') {
-                // EnVs should be provided like this
-                // PIPER_ACTION_DOWNLOAD_URL
-                value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
-                if (value === '') {
-                    if (defaultValue !== undefined) {
-                        return defaultValue;
-                    }
-                    return '';
-                }
-            }
-            (0, core_1.debug)(`${param}: ${value}`);
-            return value;
-        };
-        let enterpriseHost = '';
-        let enterpriseApi = '';
-        if ((0, enterprise_1.onGitHubEnterprise)()) {
-            if (process.env.GITHUB_SERVER_URL !== undefined) {
-                enterpriseHost = process.env.GITHUB_SERVER_URL;
-            }
-            if (process.env.GITHUB_API_URL !== undefined) {
-                enterpriseApi = process.env.GITHUB_API_URL;
-            }
-        }
-        let stepNameValue = getValue('step-name');
-        // TODO: remove command input
-        if (stepNameValue === undefined || stepNameValue === '') {
-            stepNameValue = getValue('command');
-        }
-        return {
-            stepName: stepNameValue,
-            flags: getValue('flags'),
-            piperVersion: getValue('piper-version'),
-            piperOwner: getValue('piper-owner', github_1.PIPER_OWNER),
-            piperRepo: getValue('piper-repository', github_1.PIPER_REPOSITORY),
-            sapPiperVersion: getValue('sap-piper-version'),
-            sapPiperOwner: getValue('sap-piper-owner'),
-            sapPiperRepo: getValue('sap-piper-repository'),
-            gitHubToken: getValue('github-token'),
-            gitHubServer: github_1.GITHUB_COM_SERVER_URL,
-            gitHubApi: github_1.GITHUB_COM_API_URL,
-            gitHubEnterpriseServer: enterpriseHost,
-            gitHubEnterpriseApi: enterpriseApi,
-            gitHubEnterpriseToken: getValue('github-enterprise-token'),
-            dockerImage: getValue('docker-image'),
-            dockerOptions: getValue('docker-options'),
-            dockerEnvVars: getValue('docker-env-vars'),
-            sidecarImage: getValue('sidecar-image'),
-            sidecarOptions: getValue('sidecar-options'),
-            sidecarEnvVars: getValue('sidecar-env-vars'),
-            retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
-            customDefaultsPaths: getValue('custom-defaults-paths'),
-            customStageConditionsPath: getValue('custom-stage-conditions-path'),
-            createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
-            exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
-        };
     });
 }
 

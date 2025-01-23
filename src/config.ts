@@ -1,16 +1,23 @@
 import * as path from 'path'
 import * as fs from 'fs'
-import { debug, exportVariable, info } from '@actions/core'
+import { debug, exportVariable, getInput, info, type InputOptions } from '@actions/core'
 import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
-import { getHost } from './github'
+import {
+  getHost,
+  GITHUB_COM_API_URL,
+  GITHUB_COM_SERVER_URL,
+  PIPER_OWNER,
+  PIPER_REPOSITORY
+} from './github'
 import {
   ENTERPRISE_DEFAULTS_FILENAME,
   ENTERPRISE_STAGE_CONFIG_FILENAME,
   DEFAULT_CONFIG,
   STAGE_CONFIG,
-  getEnterpriseConfigUrl
+  getEnterpriseConfigUrl,
+  onGitHubEnterprise
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -43,6 +50,68 @@ export interface ActionConfiguration {
   customStageConditionsPath: string
   createCheckIfStepActiveMaps: boolean
   exportPipelineEnvironment: boolean
+}
+export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
+  const getValue = (param: string, defaultValue?: string): string => {
+    let value: string = getInput(param, options)
+    if (value === '') {
+      // EnVs should be provided like this
+      // PIPER_ACTION_DOWNLOAD_URL
+      value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
+      if (value === '') {
+        if (defaultValue !== undefined) {
+          return defaultValue
+        }
+        return ''
+      }
+    }
+    debug(`${param}: ${value}`)
+    return value
+  }
+  let enterpriseHost: string = ''
+  let enterpriseApi: string = ''
+  if (onGitHubEnterprise()) {
+    if (process.env.GITHUB_SERVER_URL !== undefined) {
+      enterpriseHost = process.env.GITHUB_SERVER_URL
+    }
+    if (process.env.GITHUB_API_URL !== undefined) {
+      enterpriseApi = process.env.GITHUB_API_URL
+    }
+  }
+
+  let stepNameValue = getValue('step-name')
+  // TODO: remove command input
+  if (stepNameValue === undefined || stepNameValue === '') {
+    stepNameValue = getValue('command')
+  }
+
+  return {
+    stepName: stepNameValue,
+    flags: getValue('flags'),
+    piperVersion: getValue('piper-version'),
+    piperOwner: getValue('piper-owner', PIPER_OWNER),
+    piperRepo: getValue('piper-repository', PIPER_REPOSITORY),
+    sapPiperVersion: getValue('sap-piper-version'),
+    sapPiperOwner: getValue('sap-piper-owner'),
+    sapPiperRepo: getValue('sap-piper-repository'),
+    gitHubToken: getValue('github-token'),
+    gitHubServer: GITHUB_COM_SERVER_URL,
+    gitHubApi: GITHUB_COM_API_URL,
+    gitHubEnterpriseServer: enterpriseHost,
+    gitHubEnterpriseApi: enterpriseApi,
+    gitHubEnterpriseToken: getValue('github-enterprise-token'),
+    dockerImage: getValue('docker-image'),
+    dockerOptions: getValue('docker-options'),
+    dockerEnvVars: getValue('docker-env-vars'),
+    sidecarImage: getValue('sidecar-image'),
+    sidecarOptions: getValue('sidecar-options'),
+    sidecarEnvVars: getValue('sidecar-env-vars'),
+    retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
+    customDefaultsPaths: getValue('custom-defaults-paths'),
+    customStageConditionsPath: getValue('custom-stage-conditions-path'),
+    createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
+    exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
+  }
 }
 
 export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
