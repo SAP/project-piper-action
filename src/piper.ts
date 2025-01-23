@@ -79,6 +79,8 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 }
 
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
+  info('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
+
   if (isEnterpriseStep(actionCfg.stepName)) {
     info('Preparing Piper binary for enterprise step')
     // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a

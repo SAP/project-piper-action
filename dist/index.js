@@ -38702,6 +38702,9 @@ exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, githubToken, destination) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_2.info)('GH Token is: ' + githubToken);
+        if (githubToken === '') {
+            (0, core_2.setFailed)('GitHub Token is not provided');
+        }
         try {
             (0, core_2.info)('🔄 Fetching pre-signed download URL...');
             const response = yield fetch(url, {
@@ -39038,6 +39041,7 @@ function preparePiperBinary(actionCfg) {
 }
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.info)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
             // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
