@@ -37895,7 +37895,7 @@ function buildPiperInnerSource(version) {
         const versionName = getVersionName(commitISH);
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         (0, core_1.info)(`path: ${path}`);
-        const piperPath = `${path}/piper`;
+        const piperPath = `${path}/sap-piper`;
         (0, core_1.info)(`piperPath: ${piperPath}`);
         if (fs_1.default.existsSync(piperPath)) {
             (0, core_1.info)(`piperPath exists: ${piperPath}`);
