@@ -38786,7 +38786,7 @@ function downloadWithAuth(url, destination) {
         }
         try {
             (0, core_2.info)(`🔄 Trying to download with auth ${url} to ${destination}`);
-            const zipFile = yield (0, tool_cache_1.downloadTool)(url, destination, wdfGithubToken).catch((err) => {
+            const zipFile = yield downloadZip(url, destination, wdfGithubToken).catch((err) => {
                 throw new Error(`Can't download with auth: ${err}`);
             });
             (0, core_2.info)(`✅ Downloaded successfully to ${zipFile}`);
@@ -38796,6 +38796,31 @@ function downloadWithAuth(url, destination) {
             (0, core_2.setFailed)(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`);
             return '';
         }
+    });
+}
+function downloadZip(url, zipPath, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            (0, core_2.info)(`🔄 Downloading ZIP from ${url}...`);
+            const headers = {
+                'User-Agent': 'Node.js',
+                Accept: 'application/octet-stream' // Ensure binary download
+            };
+            if (typeof token === 'string' && token.trim() !== '') {
+                headers.Authorization = `Bearer ${token}`;
+            }
+            const response = yield fetch(url, { headers });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            const buffer = yield response.arrayBuffer();
+            fs.writeFileSync(zipPath, Buffer.from(buffer));
+            (0, core_2.info)(`✅ ZIP downloaded successfully to ${zipPath}`);
+        }
+        catch (error) {
+            (0, core_2.setFailed)(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        return zipPath;
     });
 }
 function listFilesAndFolders(dirPath) {

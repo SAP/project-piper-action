@@ -197,7 +197,7 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
   try {
     info(`🔄 Trying to download with auth ${url} to ${destination}`)
 
-    const zipFile = await downloadTool(url, destination, wdfGithubToken).catch((err) => {
+    const zipFile = await downloadZip(url, destination, wdfGithubToken).catch((err) => {
       throw new Error(`Can't download with auth: ${err}`)
     })
     info(`✅ Downloaded successfully to ${zipFile}`)
@@ -206,6 +206,35 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
     setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
     return ''
   }
+}
+
+async function downloadZip (url: string, zipPath: string, token?: string): Promise<string> {
+  try {
+    info(`🔄 Downloading ZIP from ${url}...`)
+
+    const headers: Record<string, string> = {
+      'User-Agent': 'Node.js',
+      Accept: 'application/octet-stream' // Ensure binary download
+    }
+
+    if (typeof token === 'string' && token.trim() !== '') {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
+
+    const buffer = await response.arrayBuffer()
+    fs.writeFileSync(zipPath, Buffer.from(buffer))
+
+    info(`✅ ZIP downloaded successfully to ${zipPath}`)
+  } catch (error) {
+    setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  return zipPath
 }
 
 function listFilesAndFolders (dirPath: string): void {
