@@ -180,7 +180,7 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
   if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
     wdfGithubToken = process.env.PIPER_GITHUB_TOKEN
   }
-  const token = getInput('github_token', { required: true })
+  const token = getInput('github-token', { required: true })
   if (token === '') {
     info('token from getInput is empty')
   } else {

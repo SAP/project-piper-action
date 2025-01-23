@@ -38769,7 +38769,7 @@ function downloadWithAuth(url, destination) {
         if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
             wdfGithubToken = process.env.PIPER_GITHUB_TOKEN;
         }
-        const token = (0, core_2.getInput)('github_token', { required: true });
+        const token = (0, core_2.getInput)('github-token', { required: true });
         if (token === '') {
             (0, core_2.info)('token from getInput is empty');
         }
