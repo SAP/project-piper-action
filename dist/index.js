@@ -38769,9 +38769,20 @@ function downloadWithAuth(url, destination) {
         if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
             wdfGithubToken = process.env.PIPER_GITHUB_TOKEN;
         }
+        const token = (0, core_2.getInput)('github_token', { required: true });
+        if (token === '') {
+            (0, core_2.info)('token from getInput is empty');
+        }
+        else {
+            (0, core_2.info)('token from getInput: ' + token);
+        }
         (0, core_2.info)('GH Token is: ' + wdfGithubToken);
         if (wdfGithubToken === '') {
-            (0, core_2.setFailed)('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
+            (0, core_2.info)('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
+            if (token === '') {
+                (0, core_2.setFailed)('❌ GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
+            }
+            wdfGithubToken = token;
         }
         try {
             (0, core_2.info)(`🔄 Trying to download with auth ${url} to ${destination}`);

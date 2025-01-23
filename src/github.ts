@@ -5,7 +5,7 @@ import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { debug, info, setFailed } from '@actions/core'
+import { debug, getInput, info, setFailed } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
 import { fetchRetry } from './fetch'
@@ -180,9 +180,19 @@ async function downloadWithAuth (url: string, destination: string): Promise<stri
   if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
     wdfGithubToken = process.env.PIPER_GITHUB_TOKEN
   }
+  const token = getInput('github_token', { required: true })
+  if (token === '') {
+    info('token from getInput is empty')
+  } else {
+    info('token from getInput: ' + token)
+  }
   info('GH Token is: ' + wdfGithubToken)
   if (wdfGithubToken === '') {
-    setFailed('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
+    info('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
+    if (token === '') {
+      setFailed('❌ GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
+    }
+    wdfGithubToken = token
   }
   try {
     info(`🔄 Trying to download with auth ${url} to ${destination}`)
