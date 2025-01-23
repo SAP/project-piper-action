@@ -38638,7 +38638,7 @@ function getPiperReleases(version, api, token, owner, repository) {
     });
 }
 // Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
-function buildPiperInnerSource(version) {
+function buildPiperInnerSource(version, githubToken) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, commitISH } = parseDevVersion(version);
@@ -38655,7 +38655,7 @@ function buildPiperInnerSource(version) {
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         (0, core_2.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
-        const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`)
+        const zipFile = yield downloadWithAuth(url, githubToken, `${path}/source-code.zip`)
             .catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
@@ -38700,11 +38700,10 @@ function buildPiperInnerSource(version) {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
-function downloadWithAuth(url, destination) {
+function downloadWithAuth(url, githubToken, destination) {
     return __awaiter(this, void 0, void 0, function* () {
-        const token = (0, core_2.getInput)('github_token', { required: true });
         try {
-            const authenticatedUrl = `${url}?access_token=${token}`;
+            const authenticatedUrl = `${url}?access_token=${githubToken}`;
             const zipFile = yield (0, tool_cache_1.downloadTool)(authenticatedUrl, destination);
             (0, core_2.info)(`✅ Downloaded to ${zipFile}`);
             return zipFile;
@@ -39032,7 +39031,7 @@ function preparePiperPath(actionCfg) {
             // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
                 (0, core_1.info)('Building Piper from inner source');
-                return yield (0, github_1.buildPiperInnerSource)(actionCfg.sapPiperVersion);
+                return yield (0, github_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.gitHubToken);
             }
             (0, core_1.info)('Downloading Piper binary');
             return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);

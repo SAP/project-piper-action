@@ -103,7 +103,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 }
 
 // Format for inner source development versions (all parts required): 'inner:GH_OWNER:REPOSITORY:COMMITISH'
-export async function buildPiperInnerSource (version: string): Promise<string> {
+export async function buildPiperInnerSource (version: string, githubToken: string): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
   const versionName = getVersionName(commitISH)
 
@@ -122,7 +122,7 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   info(`URL: ${url}`)
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
-  const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`)
+  const zipFile = await downloadWithAuth(url, githubToken, `${path}/source-code.zip`)
     .catch((err) => {
       throw new Error(`Can't download Inner Source Piper: ${err}`)
     })
@@ -177,11 +177,9 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   return piperPath
 }
 
-async function downloadWithAuth (url: string, destination: string): Promise<string> {
-  const token = getInput('github_token', { required: true })
-
+async function downloadWithAuth (url: string, githubToken: string, destination: string): Promise<string> {
   try {
-    const authenticatedUrl = `${url}?access_token=${token}`
+    const authenticatedUrl = `${url}?access_token=${githubToken}`
     const zipFile: string = await downloadTool(authenticatedUrl, destination)
     info(`✅ Downloaded to ${zipFile}`)
     return zipFile
