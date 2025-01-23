@@ -37926,12 +37926,8 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        yield (0, exec_1.exec)('go build -o ../sap-piper', [
-            '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
-        ]).catch((err) => {
+        yield (0, exec_1.exec)('go build -o ../sap-piper')
+            .catch((err) => {
             throw new Error(`Can't build Inner Source Piper: ${err}`);
         });
         process.env.CGO_ENABLED = cgoEnabled;

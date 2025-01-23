@@ -1,6 +1,6 @@
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 import { parseDevVersion } from './github'
-import { getInput, info, setFailed } from '@actions/core'
+import { info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
@@ -54,17 +54,10 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const cgoEnabled = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
   info(`Building Inner Source Piper from ${version}`)
-  await exec(
-    'go build -o ../sap-piper',
-    [
-      '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}`
-    ]
-  ).catch((err) => {
-    throw new Error(`Can't build Inner Source Piper: ${err}`)
-  })
+  await exec('go build -o ../sap-piper')
+    .catch((err) => {
+      throw new Error(`Can't build Inner Source Piper: ${err}`)
+    })
 
   process.env.CGO_ENABLED = cgoEnabled
 
