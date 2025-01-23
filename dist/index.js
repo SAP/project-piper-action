@@ -37888,7 +37888,7 @@ const process_1 = __nccwpck_require__(7282);
 const exec_1 = __nccwpck_require__(8445);
 const tool_cache_1 = __nccwpck_require__(725);
 exports.GITHUB_WDF_SAP_SERVER_URL = 'https://github.wdf.sap.corp';
-function buildPiperInnerSource(version) {
+function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, commitISH } = (0, github_1.parseDevVersion)(version);
@@ -37905,7 +37905,7 @@ function buildPiperInnerSource(version) {
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_1.info)(`URL: ${url}`);
         (0, core_1.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
-        const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`)
+        const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
             .catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
@@ -37944,13 +37944,9 @@ function buildPiperInnerSource(version) {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
-function downloadWithAuth(url, destination) {
+function downloadWithAuth(url, destination, wdfGithubToken) {
     return __awaiter(this, void 0, void 0, function* () {
-        let wdfGithubToken = '';
-        if (process.env.PIPER_GITHUB_TOKEN !== undefined && process.env.PIPER_GITHUB_TOKEN !== '') {
-            wdfGithubToken = process.env.PIPER_GITHUB_TOKEN;
-        }
-        const token = (0, core_1.getInput)('github-token', { required: true });
+        const token = (0, core_1.getInput)('wdf-github-enterprise-token', { required: true });
         if (token === '') {
             (0, core_1.info)('token from getInput is empty');
         }
@@ -38125,6 +38121,7 @@ function getActionConfig(options) {
             gitHubEnterpriseServer: enterpriseHost,
             gitHubEnterpriseApi: enterpriseApi,
             gitHubEnterpriseToken: getValue('github-enterprise-token'),
+            wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
             dockerImage: getValue('docker-image'),
             dockerOptions: getValue('docker-options'),
             dockerEnvVars: getValue('docker-env-vars'),
@@ -39102,7 +39099,7 @@ function preparePiperPath(actionCfg) {
             // devel:ContinuousDelivery:piper-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
                 (0, core_1.info)('Building Piper from inner source');
-                return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion);
+                return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
             (0, core_1.info)('Downloading Piper binary');
             return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);

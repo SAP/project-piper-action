@@ -39,6 +39,7 @@ export interface ActionConfiguration {
   gitHubEnterpriseServer: string
   gitHubEnterpriseApi: string
   gitHubEnterpriseToken: string
+  wdfGithubEnterpriseToken: string
   dockerImage: string
   dockerOptions: string
   dockerEnvVars: string
@@ -100,6 +101,7 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     gitHubEnterpriseServer: enterpriseHost,
     gitHubEnterpriseApi: enterpriseApi,
     gitHubEnterpriseToken: getValue('github-enterprise-token'),
+    wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
     dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
