@@ -126,10 +126,10 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
     throw new Error(`Can't download Inner Source Piper: ${err}`)
   })
 
-  info('Listing cwd: ')
+  info(`Listing cwd: ${cwd()}`)
   listFilesAndFolders(cwd())
 
-  info('Listing $path: ')
+  info(`Listing $path: ${path}`)
   listFilesAndFolders(path)
 
   info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)

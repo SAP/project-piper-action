@@ -38658,9 +38658,9 @@ function buildPiperInnerSource(version) {
         const zipFile = yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`).catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
-        (0, core_2.info)('Listing cwd: ');
+        (0, core_2.info)(`Listing cwd: ${(0, process_1.cwd)()}`);
         listFilesAndFolders((0, process_1.cwd)());
-        (0, core_2.info)('Listing $path: ');
+        (0, core_2.info)(`Listing $path: ${path}`);
         listFilesAndFolders(path);
         (0, core_2.info)(`Extracting Inner Source Piper from ${zipFile} to ${path}`);
         yield (0, tool_cache_1.extractZip)(zipFile, `${path}`).catch((err) => {
