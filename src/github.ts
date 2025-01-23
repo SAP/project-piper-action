@@ -1,13 +1,11 @@
 import * as fs from 'fs'
 import { join } from 'path'
-import * as path from 'path'
-
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { debug, error, getInput, info, setFailed } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
 import { fetchRetry } from './fetch'
@@ -178,19 +176,22 @@ export async function buildPiperInnerSource (version: string, githubToken: strin
 }
 
 async function downloadWithAuth (url: string, githubToken: string, destination: string): Promise<string> {
+  info('GH Token is: ' + githubToken)
   try {
     info('🔄 Fetching pre-signed download URL...')
 
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${githubToken}`,
-        Accept: 'application/vnd.github.v3.raw,*/*'
+        Redirect: 'follow'
       }
     })
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
+
+    info('JSON response: ' + JSON.stringify(response))
 
     const downloadUrl = response.url // Get the redirected URL
     info(`🔗 Redirected URL: ${downloadUrl}`)
@@ -207,7 +208,7 @@ async function downloadWithAuth (url: string, githubToken: string, destination: 
 function listFilesAndFolders (dirPath: string): void {
   const items = fs.readdirSync(dirPath)
   items.forEach(item => {
-    const fullPath = path.join(dirPath, item)
+    const fullPath = join(dirPath, item)
     const stats = fs.statSync(fullPath)
     info(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
   })

@@ -38548,7 +38548,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseDevVersion = exports.buildPiperFromSource = exports.buildPiperInnerSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_WDF_SAP_SERVER_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
-const path = __importStar(__nccwpck_require__(1017));
 const process_1 = __nccwpck_require__(7282);
 const core_1 = __nccwpck_require__(6217);
 const tool_cache_1 = __nccwpck_require__(725);
@@ -38702,17 +38701,19 @@ function buildPiperInnerSource(version, githubToken) {
 exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, githubToken, destination) {
     return __awaiter(this, void 0, void 0, function* () {
+        (0, core_2.info)('GH Token is: ' + githubToken);
         try {
             (0, core_2.info)('🔄 Fetching pre-signed download URL...');
             const response = yield fetch(url, {
                 headers: {
                     Authorization: `Bearer ${githubToken}`,
-                    Accept: 'application/vnd.github.v3.raw,*/*'
+                    Redirect: 'follow'
                 }
             });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+            (0, core_2.info)('JSON response: ' + JSON.stringify(response));
             const downloadUrl = response.url; // Get the redirected URL
             (0, core_2.info)(`🔗 Redirected URL: ${downloadUrl}`);
             const zipFile = yield (0, tool_cache_1.downloadTool)(downloadUrl, destination);
@@ -38728,7 +38729,7 @@ function downloadWithAuth(url, githubToken, destination) {
 function listFilesAndFolders(dirPath) {
     const items = fs.readdirSync(dirPath);
     items.forEach(item => {
-        const fullPath = path.join(dirPath, item);
+        const fullPath = (0, path_1.join)(dirPath, item);
         const stats = fs.statSync(fullPath);
         (0, core_2.info)(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`);
     });
