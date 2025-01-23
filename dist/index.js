@@ -38707,7 +38707,7 @@ function downloadWithAuth(url, githubToken, destination) {
             const response = yield fetch(url, {
                 headers: {
                     Authorization: `Bearer ${githubToken}`,
-                    Accept: 'application/vnd.github.v3+json'
+                    Accept: 'application/vnd.github.v3.raw,*/*'
                 }
             });
             if (!response.ok) {

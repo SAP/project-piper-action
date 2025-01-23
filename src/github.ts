@@ -184,7 +184,7 @@ async function downloadWithAuth (url: string, githubToken: string, destination: 
     const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${githubToken}`,
-        Accept: 'application/vnd.github.v3+json'
+        Accept: 'application/vnd.github.v3.raw,*/*'
       }
     })
 
