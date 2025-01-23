@@ -37946,20 +37946,9 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
 exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, destination, wdfGithubToken) {
     return __awaiter(this, void 0, void 0, function* () {
-        const token = (0, core_1.getInput)('wdf-github-enterprise-token', { required: true });
-        if (token === '') {
-            (0, core_1.info)('token from getInput is empty');
-        }
-        else {
-            (0, core_1.info)('token from getInput: ' + token);
-        }
         (0, core_1.info)('GH Token is: ' + wdfGithubToken);
         if (wdfGithubToken === '') {
-            (0, core_1.info)('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
-            if (token === '') {
-                (0, core_1.setFailed)('❌ GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings');
-            }
-            wdfGithubToken = token;
+            (0, core_1.setFailed)('WDF GitHub Token is not provided, please set the PIPER_WDF_GITHUB_TOKEN environment variable in Settings');
         }
         try {
             (0, core_1.info)(`🔄 Trying to download with auth ${url} to ${destination}`);

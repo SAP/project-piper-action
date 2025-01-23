@@ -78,19 +78,9 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
 }
 
 async function downloadWithAuth (url: string, destination: string, wdfGithubToken: string): Promise<string> {
-  const token = getInput('wdf-github-enterprise-token', { required: true })
-  if (token === '') {
-    info('token from getInput is empty')
-  } else {
-    info('token from getInput: ' + token)
-  }
   info('GH Token is: ' + wdfGithubToken)
   if (wdfGithubToken === '') {
-    info('WDF GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
-    if (token === '') {
-      setFailed('❌ GitHub Token is not provided, please set the PIPER_GITHUB_TOKEN environment variable in Settings')
-    }
-    wdfGithubToken = token
+    setFailed('WDF GitHub Token is not provided, please set the PIPER_WDF_GITHUB_TOKEN environment variable in Settings')
   }
   try {
     info(`🔄 Trying to download with auth ${url} to ${destination}`)
