@@ -7,7 +7,7 @@ import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { debug, info } from '@actions/core'
+import { debug, error, getInput, info, setFailed } from '@actions/core'
 import { exec } from '@actions/exec'
 import { isEnterpriseStep } from './enterprise'
 import { fetchRetry } from './fetch'
@@ -122,9 +122,10 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   info(`URL: ${url}`)
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
-  const zipFile = await downloadTool(url, `${path}/source-code.zip`).catch((err) => {
-    throw new Error(`Can't download Inner Source Piper: ${err}`)
-  })
+  const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`)
+    .catch((err) => {
+      throw new Error(`Can't download Inner Source Piper: ${err}`)
+    })
 
   info(`Listing cwd: ${cwd()}`)
   listFilesAndFolders(cwd())
@@ -176,12 +177,26 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   return piperPath
 }
 
+async function downloadWithAuth (url: string, destination: string): Promise<string> {
+  const token = getInput('github_token', { required: true })
+
+  try {
+    const authenticatedUrl = `${url}?access_token=${token}`
+    const zipFile: string = await downloadTool(authenticatedUrl, destination)
+    info(`✅ Downloaded to ${zipFile}`)
+    return zipFile
+  } catch (error: unknown) {
+    setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  return ''
+}
+
 function listFilesAndFolders (dirPath: string): void {
   const items = fs.readdirSync(dirPath)
   items.forEach(item => {
     const fullPath = path.join(dirPath, item)
-    const isDirectory = fs.statSync(fullPath).isDirectory()
-    info(`${isDirectory ? '📁' : '📄'} ${item}`)
+    const stats = fs.statSync(fullPath)
+    info(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
   })
 }
 

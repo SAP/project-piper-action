@@ -38655,7 +38655,8 @@ function buildPiperInnerSource(version) {
         const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         (0, core_2.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
-        const zipFile = yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`).catch((err) => {
+        const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`)
+            .catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
         (0, core_2.info)(`Listing cwd: ${(0, process_1.cwd)()}`);
@@ -38699,12 +38700,27 @@ function buildPiperInnerSource(version) {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
+function downloadWithAuth(url, destination) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const token = (0, core_2.getInput)('github_token', { required: true });
+        try {
+            const authenticatedUrl = `${url}?access_token=${token}`;
+            const zipFile = yield (0, tool_cache_1.downloadTool)(authenticatedUrl, destination);
+            (0, core_2.info)(`✅ Downloaded to ${zipFile}`);
+            return zipFile;
+        }
+        catch (error) {
+            (0, core_2.setFailed)(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+        return '';
+    });
+}
 function listFilesAndFolders(dirPath) {
     const items = fs.readdirSync(dirPath);
     items.forEach(item => {
         const fullPath = path.join(dirPath, item);
-        const isDirectory = fs.statSync(fullPath).isDirectory();
-        (0, core_2.info)(`${isDirectory ? '📁' : '📄'} ${item}`);
+        const stats = fs.statSync(fullPath);
+        (0, core_2.info)(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`);
     });
 }
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
