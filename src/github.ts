@@ -1,5 +1,7 @@
 import * as fs from 'fs'
 import { join } from 'path'
+import * as path from 'path'
+
 import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
@@ -124,6 +126,12 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
     throw new Error(`Can't download Inner Source Piper: ${err}`)
   })
 
+  info('Listing cwd: ')
+  listFilesAndFolders(cwd())
+
+  info('Listing $path: ')
+  listFilesAndFolders(path)
+
   info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
   await extractZip(zipFile, `${path}`).catch((err) => {
     throw new Error(`Can't extract Inner Source Piper: ${err}`)
@@ -167,6 +175,16 @@ export async function buildPiperInnerSource (version: string): Promise<string> {
   info(`Returning piperPath: ${piperPath}`)
   return piperPath
 }
+
+function listFilesAndFolders (dirPath: string): void {
+  const items = fs.readdirSync(dirPath)
+  items.forEach(item => {
+    const fullPath = path.join(dirPath, item)
+    const isDirectory = fs.statSync(fullPath).isDirectory()
+    info(`${isDirectory ? '📁' : '📄'} ${item}`)
+  })
+}
+
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperFromSource (version: string): Promise<string> {
   const versionComponents = version.split(':')

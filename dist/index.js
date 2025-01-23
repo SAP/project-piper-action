@@ -38548,6 +38548,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseDevVersion = exports.buildPiperFromSource = exports.buildPiperInnerSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_WDF_SAP_SERVER_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
+const path = __importStar(__nccwpck_require__(1017));
 const process_1 = __nccwpck_require__(7282);
 const core_1 = __nccwpck_require__(6217);
 const tool_cache_1 = __nccwpck_require__(725);
@@ -38657,6 +38658,10 @@ function buildPiperInnerSource(version) {
         const zipFile = yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`).catch((err) => {
             throw new Error(`Can't download Inner Source Piper: ${err}`);
         });
+        (0, core_2.info)('Listing cwd: ');
+        listFilesAndFolders((0, process_1.cwd)());
+        (0, core_2.info)('Listing $path: ');
+        listFilesAndFolders(path);
         (0, core_2.info)(`Extracting Inner Source Piper from ${zipFile} to ${path}`);
         yield (0, tool_cache_1.extractZip)(zipFile, `${path}`).catch((err) => {
             throw new Error(`Can't extract Inner Source Piper: ${err}`);
@@ -38694,6 +38699,14 @@ function buildPiperInnerSource(version) {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
+function listFilesAndFolders(dirPath) {
+    const items = fs.readdirSync(dirPath);
+    items.forEach(item => {
+        const fullPath = path.join(dirPath, item);
+        const isDirectory = fs.statSync(fullPath).isDirectory();
+        (0, core_2.info)(`${isDirectory ? '📁' : '📄'} ${item}`);
+    });
+}
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 function buildPiperFromSource(version) {
     var _a;
