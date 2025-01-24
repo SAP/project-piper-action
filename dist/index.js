@@ -38518,6 +38518,89 @@ exports.dockerExecReadOutput = dockerExecReadOutput;
 
 /***/ }),
 
+/***/ 1706:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.downloadPiperBinary = void 0;
+const fs_1 = __importDefault(__nccwpck_require__(7147));
+const core_1 = __nccwpck_require__(6071);
+const tool_cache_1 = __nccwpck_require__(725);
+const enterprise_1 = __nccwpck_require__(8675);
+const github_1 = __nccwpck_require__(4292);
+const fetch_1 = __nccwpck_require__(8556);
+function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName);
+        if (isEnterprise && token === '')
+            throw new Error('Token is not provided for enterprise step');
+        if (owner === '')
+            throw new Error('owner is not provided');
+        if (repo === '')
+            throw new Error('repository is not provided');
+        let binaryURL;
+        const headers = {};
+        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
+        if (token !== '') {
+            (0, core_1.debug)('Fetching binary from GitHub API');
+            headers.Accept = 'application/octet-stream';
+            headers.Authorization = `token ${token}`;
+            const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
+            binaryURL = binaryAssetURL;
+            version = tag;
+        }
+        else {
+            (0, core_1.debug)('Fetching binary from URL');
+            binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
+            version = binaryURL.split('/').slice(-2)[0];
+        }
+        version = version.replace(/\./g, '_');
+        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
+        if (fs_1.default.existsSync(piperPath)) {
+            return piperPath;
+        }
+        (0, core_1.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
+        yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
+        return piperPath;
+    });
+}
+exports.downloadPiperBinary = downloadPiperBinary;
+function getPiperDownloadURL(piper, version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const tagURL = `${github_1.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${(0, github_1.getTag)(version, false)}`;
+        const response = yield (0, fetch_1.fetchRetry)(tagURL, 'HEAD')
+            .catch((err) => __awaiter(this, void 0, void 0, function* () {
+            throw new Error(`Can't get the tag: ${err}`);
+        }));
+        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
+    });
+}
+function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (version === 'master') {
+            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
+        }
+        return isEnterpriseStep ? 'sap-piper' : 'piper';
+    });
+}
+
+
+/***/ }),
+
 /***/ 8675:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -38758,7 +38841,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.downloadPiperBinary = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.getTag = exports.parseDevVersion = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -38766,8 +38849,6 @@ const core_1 = __nccwpck_require__(6217);
 const tool_cache_1 = __nccwpck_require__(725);
 const core_2 = __nccwpck_require__(6071);
 const exec_1 = __nccwpck_require__(8445);
-const enterprise_1 = __nccwpck_require__(8675);
-const fetch_1 = __nccwpck_require__(8556);
 exports.GITHUB_COM_SERVER_URL = 'https://github.com';
 exports.GITHUB_COM_API_URL = 'https://api.github.com';
 exports.PIPER_OWNER = 'SAP';
@@ -38776,42 +38857,6 @@ function getHost(url) {
     return url === '' ? '' : new URL(url).host;
 }
 exports.getHost = getHost;
-function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName);
-        if (isEnterprise && token === '')
-            throw new Error('Token is not provided for enterprise step');
-        if (owner === '')
-            throw new Error('owner is not provided');
-        if (repo === '')
-            throw new Error('repository is not provided');
-        let binaryURL;
-        const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
-        if (token !== '') {
-            (0, core_2.debug)('Fetching binary from GitHub API');
-            headers.Accept = 'application/octet-stream';
-            headers.Authorization = `token ${token}`;
-            const [binaryAssetURL, tag] = yield getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo);
-            binaryURL = binaryAssetURL;
-            version = tag;
-        }
-        else {
-            (0, core_2.debug)('Fetching binary from URL');
-            binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            version = binaryURL.split('/').slice(-2)[0];
-        }
-        version = version.replace(/\./g, '_');
-        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
-        if (fs.existsSync(piperPath)) {
-            return piperPath;
-        }
-        (0, core_2.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
-        yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
-        return piperPath;
-    });
-}
-exports.downloadPiperBinary = downloadPiperBinary;
 function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
@@ -38898,32 +38943,6 @@ function buildPiperFromSource(version) {
     });
 }
 exports.buildPiperFromSource = buildPiperFromSource;
-function getPiperDownloadURL(piper, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const tagURL = `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`;
-        const response = yield (0, fetch_1.fetchRetry)(tagURL, 'HEAD')
-            .catch((err) => __awaiter(this, void 0, void 0, function* () {
-            throw new Error(`Can't get the tag: ${err}`);
-        }));
-        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
-    });
-}
-function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master') {
-            (0, core_2.info)('using _master binaries is deprecated. Using latest release version instead.');
-        }
-        return isEnterpriseStep ? 'sap-piper' : 'piper';
-    });
-}
-function getTag(version, forAPICall) {
-    if (version === undefined)
-        return 'latest';
-    version = version.toLowerCase();
-    if (version === '' || version === 'master' || version === 'latest')
-        return 'latest';
-    return `${forAPICall ? 'tags' : 'tag'}/${version}`;
-}
 function parseDevVersion(version) {
     const versionComponents = version.split(':');
     if (versionComponents.length !== 4) {
@@ -38936,6 +38955,15 @@ function parseDevVersion(version) {
     return { owner, repository, commitISH };
 }
 exports.parseDevVersion = parseDevVersion;
+function getTag(version, forAPICall) {
+    if (version === undefined)
+        return 'latest';
+    version = version.toLowerCase();
+    if (version === '' || version === 'master' || version === 'latest')
+        return 'latest';
+    return `${forAPICall ? 'tags' : 'tag'}/${version}`;
+}
+exports.getTag = getTag;
 
 
 /***/ }),
@@ -39022,6 +39050,7 @@ const docker_1 = __nccwpck_require__(5582);
 const enterprise_1 = __nccwpck_require__(8675);
 const utils_1 = __nccwpck_require__(2303);
 const build_1 = __nccwpck_require__(210);
+const download_1 = __nccwpck_require__(1706);
 // Global runtime variables that is accessible within a single action execution
 exports.internalActionVariables = {
     piperBinPath: '',
@@ -39087,13 +39116,13 @@ function preparePiperPath(actionCfg) {
                 return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
             (0, core_1.info)('Downloading Piper binary');
-            return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
         if (actionCfg.piperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
             return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
-        return yield (0, github_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }
 

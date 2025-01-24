@@ -1,8 +1,5 @@
 import { debug, setFailed, info } from '@actions/core'
-import {
-  buildPiperFromSource,
-  downloadPiperBinary
-} from './github'
+import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -17,6 +14,7 @@ import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import { tokenize } from './utils'
 import { buildPiperInnerSource } from './build'
+import { downloadPiperBinary } from './download'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
@@ -29,7 +27,7 @@ export const internalActionVariables = {
 export async function run (): Promise<void> {
   try {
     info('Getting action configuration')
-    const actionCfg = await getActionConfig({ required: false })
+    const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
 
     info('Preparing Piper binary')

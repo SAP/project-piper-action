@@ -52,6 +52,7 @@ export interface ActionConfiguration {
   createCheckIfStepActiveMaps: boolean
   exportPipelineEnvironment: boolean
 }
+
 export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
     let value: string = getInput(param, options)
