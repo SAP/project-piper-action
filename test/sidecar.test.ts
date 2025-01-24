@@ -24,6 +24,7 @@ describe('Sidecar', () => {
     gitHubEnterpriseServer: '',
     gitHubEnterpriseApi: '',
     gitHubEnterpriseToken: '',
+    wdfGithubEnterpriseToken: '',
     dockerImage: '',
     dockerOptions: '',
     dockerEnvVars: '',

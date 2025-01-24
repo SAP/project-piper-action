@@ -68,7 +68,7 @@ export async function run (): Promise<void> {
 }
 
 async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
-  const piperPath = await preparePiperPath(actionCfg)
+  const piperPath: string = await preparePiperPath(actionCfg)
 
   if (piperPath === undefined || piperPath === '') {
     throw new Error('Piper binary path is empty. Please check your action inputs.')

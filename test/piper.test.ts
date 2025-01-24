@@ -138,7 +138,7 @@ describe('Piper', () => {
     jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve(''))
 
     await piper.run()
-    expect(core.setFailed).toBeCalledWith('Piper binary path is empty. Please check your action inputs.')
+    expect(core.setFailed).toHaveBeenCalledWith('Piper binary path is empty. Please check your action inputs.')
     expect(internalActionVariables.piperBinPath).toEqual('')
     expect(execute.executePiper).not.toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()
