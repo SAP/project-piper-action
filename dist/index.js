@@ -19384,6 +19384,27 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
     });
 }
 exports.getDefaultConfig = getDefaultConfig;
+function processCustomDefaultsPath(path, currentBranch) {
+    var _a;
+    // Handle absolute GitHub URLs
+    if (path.startsWith('http')) {
+        const url = new URL(path);
+        return url.toString();
+    }
+    // Handle relative paths with branch references (org/repo/path@branch)
+    const branchMatch = path.match(/^([^@]+)@(.+)$/);
+    if (branchMatch) {
+        const [, filePath, branch] = branchMatch;
+        return `${process.env.GITHUB_SERVER_URL}/${filePath}?ref=${branch}`;
+    }
+    // For simple file paths, don't add server URL or branch
+    if (path.startsWith('./') || path.startsWith('../') || !path.includes('/')) {
+        return path;
+    }
+    // Handle organization/repository paths (without branch reference)
+    const branch = (_a = currentBranch !== null && currentBranch !== void 0 ? currentBranch : process.env.GITHUB_REF_NAME) !== null && _a !== void 0 ? _a : 'main';
+    return `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/${path}?ref=${branch}`;
+}
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
@@ -19391,8 +19412,9 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
+        const currentBranch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME;
         const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : [];
-        defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray);
+        defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray.map(path => processCustomDefaultsPath(path.trim(), currentBranch)));
         const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat();
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
@@ -19406,7 +19428,21 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
-        const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
+        // Ensure defaultConfigs is always an array
+        if (!Array.isArray(defaultConfigs)) {
+            defaultConfigs = [defaultConfigs];
+        }
+        // When saving files, sanitize filenames by removing query parameters
+        const sanitizeFilename = (url) => {
+            try {
+                const parsed = new URL(url);
+                return path.basename(parsed.pathname);
+            }
+            catch (_a) {
+                return path.basename(url);
+            }
+        };
+        const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config) => (Object.assign(Object.assign({}, config), { filepath: sanitizeFilename(config.filepath) }))));
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);
         (0, core_1.exportVariable)('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths));
         return uploadResponse;
