@@ -248,4 +248,73 @@ describe('Config', () => {
 
     delete process.env.GITHUB_JOB
   })
+
+  test('Process URLs with branch references', async () => {
+    process.env.GITHUB_SERVER_URL = 'https://github.com'
+    process.env.GITHUB_REPOSITORY = 'org/repo'
+    process.env.GITHUB_REF_NAME = 'main'
+
+    const customPaths = [
+      'org/repo/config.yaml@feature',
+      'local/config.yaml',
+      'https://github.com/org/repo/config.yaml?ref=develop',
+      'shared/config.yaml'
+    ].join(',')
+
+    piperExecResultMock = generatePiperGetDefaultsOutput([
+      'http://mock.test/asset/piper-defaults.yml'
+    ])
+
+    const errorCode = await config.downloadDefaultConfig(
+      'https://github.com',
+      'https://api.github.com',
+      'v1.0.0',
+      'token',
+      'org',
+      'repo',
+      customPaths
+    )
+
+    expect(errorCode).toBe(0)
+    expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+      '--defaultsFile',
+      'http://mock.test/asset/piper-defaults.yml',
+      '--defaultsFile',
+      'https://github.com/org/repo/config.yaml?ref=feature',
+      '--defaultsFile',
+      'https://github.com/org/repo/local/config.yaml?ref=main',
+      '--defaultsFile', 
+      'https://github.com/org/repo/config.yaml?ref=develop',
+      '--defaultsFile',
+      'https://github.com/org/repo/shared/config.yaml?ref=main'
+    ]))
+  })
+
+  test('Sanitizes filenames when saving', async () => {
+    const paths = [
+      'https://github.com/org/repo/config.yaml?ref=feature',
+      'local/config.yaml'
+    ]
+    
+    piperExecResultMock = generatePiperGetDefaultsOutput(paths)
+
+    const result = await config.downloadDefaultConfig(
+      'https://github.com',
+      'https://api.github.com',
+      'v1.0.0',
+      'token',
+      'org',
+      'repo',
+      paths.join(',')
+    )
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('config.yaml'),
+      expect.anything()
+    )
+    expect(fs.writeFileSync).not.toHaveBeenCalledWith(
+      expect.stringContaining('?ref='),
+      expect.anything()
+    )
+  })
 })
