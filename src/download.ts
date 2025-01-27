@@ -20,12 +20,14 @@ export async function downloadPiperBinary (
   let binaryURL
   const headers: any = {}
   const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  debug(`version: ${version}`)
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
     headers.Authorization = `token ${token}`
 
     const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
+    debug(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`)
     binaryURL = binaryAssetURL
     version = tag
   } else {

@@ -38555,11 +38555,13 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
         let binaryURL;
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
+        (0, core_1.debug)(`version: ${version}`);
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
             headers.Authorization = `token ${token}`;
             const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
+            (0, core_1.debug)(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`);
             binaryURL = binaryAssetURL;
             version = tag;
         }
@@ -38618,6 +38620,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
 const github_1 = __nccwpck_require__(4292);
+const core_1 = __nccwpck_require__(6071);
 exports.DEFAULT_CONFIG = 'DefaultConfig';
 exports.STAGE_CONFIG = 'StageConfig';
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
@@ -38638,21 +38641,28 @@ function onGitHubEnterprise() {
 exports.onGitHubEnterprise = onGitHubEnterprise;
 function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.debug)('Getting enterprise config URL');
         if (configType !== exports.DEFAULT_CONFIG && configType !== exports.STAGE_CONFIG) {
             return '';
         }
+        (0, core_1.debug)('initiating assetName and filename');
         let assetName = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE;
         let filename = exports.ENTERPRISE_DEFAULTS_FILENAME;
         if (configType === exports.STAGE_CONFIG) {
+            (0, core_1.debug)('configType is STAGE_CONFIG');
             assetName = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
             filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
         }
+        (0, core_1.debug)('Getting enterprise config URL');
         // get URL of defaults from the release (gh api, authenticated)
         const [url] = yield (0, github_1.getReleaseAssetUrl)(assetName, version, apiURL, token, owner, repository);
-        if (url !== '')
-            return url;
-        // fallback to get URL of defaults in the repository (unauthenticated)
-        return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`;
+        if (url === '') {
+            // fallback to get URL of defaults in the repository (unauthenticated)
+            (0, core_1.debug)(`Fallback to get URL of defaults in the repository: ${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`);
+            return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`;
+        }
+        (0, core_1.debug)(`Returning enterprise config URL ${url}`);
+        return url;
     });
 }
 exports.getEnterpriseConfigUrl = getEnterpriseConfigUrl;
