@@ -21,7 +21,7 @@ export async function getReleaseAssetUrl (
   assetName: string, version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<[string, string]> {
   const getReleaseResponse = await getPiperReleases(version, apiURL, token, owner, repo)
-  debug(`Found assets: ${getReleaseResponse.data.assets}`)
+  debug(`Found assets: ${JSON.stringify(getReleaseResponse.data.assets)}`)
   debug(`Found tag: ${getReleaseResponse.data.tag_name}`)
 
   const tag = getReleaseResponse.data.tag_name // version of release

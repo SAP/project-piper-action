@@ -124,7 +124,7 @@ async function downloadZip (url: string, zipPath: string, token?: string): Promi
   return zipPath
 }
 
-function listFilesAndFolders (dirPath: string): void {
+export function listFilesAndFolders (dirPath: string): void {
   const items = fs.readdirSync(dirPath)
   items.forEach(item => {
     const fullPath = join(dirPath, item)

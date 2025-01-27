@@ -1,5 +1,6 @@
 import { GITHUB_COM_SERVER_URL, getReleaseAssetUrl } from './github'
 import { debug } from '@actions/core'
+import { listFilesAndFolders } from './build'
 
 export const DEFAULT_CONFIG = 'DefaultConfig'
 export const STAGE_CONFIG = 'StageConfig'
@@ -37,6 +38,12 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   }
 
   debug('Getting enterprise config URL')
+  // if version starts with devel: then it should use inner source Piper
+  if (version.startsWith('devel:')) {
+    debug(`version starts with "devel:" => ${version}`)
+    listFilesAndFolders(process.cwd())
+    return ''
+  }
   // get URL of defaults from the release (gh api, authenticated)
   const [url] = await getReleaseAssetUrl(assetName, version, apiURL, token, owner, repository)
   if (url === '') {

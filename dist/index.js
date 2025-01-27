@@ -37878,7 +37878,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.buildPiperInnerSource = exports.GITHUB_WDF_SAP_SERVER_URL = void 0;
+exports.listFilesAndFolders = exports.buildPiperInnerSource = exports.GITHUB_WDF_SAP_SERVER_URL = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const github_1 = __nccwpck_require__(4292);
 const core_1 = __nccwpck_require__(6071);
@@ -37998,6 +37998,7 @@ function listFilesAndFolders(dirPath) {
         (0, core_1.info)(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`);
     });
 }
+exports.listFilesAndFolders = listFilesAndFolders;
 function getVersionName(commitISH) {
     if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
         throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
@@ -38621,6 +38622,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
 const github_1 = __nccwpck_require__(4292);
 const core_1 = __nccwpck_require__(6071);
+const build_1 = __nccwpck_require__(210);
 exports.DEFAULT_CONFIG = 'DefaultConfig';
 exports.STAGE_CONFIG = 'StageConfig';
 exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
@@ -38654,6 +38656,12 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
         }
         (0, core_1.debug)('Getting enterprise config URL');
+        // if version starts with devel: then it should use inner source Piper
+        if (version.startsWith('devel:')) {
+            (0, core_1.debug)(`version starts with "devel:" => ${version}`);
+            (0, build_1.listFilesAndFolders)(process.cwd());
+            return '';
+        }
         // get URL of defaults from the release (gh api, authenticated)
         const [url] = yield (0, github_1.getReleaseAssetUrl)(assetName, version, apiURL, token, owner, repository);
         if (url === '') {
@@ -38870,7 +38878,7 @@ exports.getHost = getHost;
 function getReleaseAssetUrl(assetName, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         const getReleaseResponse = yield getPiperReleases(version, apiURL, token, owner, repo);
-        (0, core_2.debug)(`Found assets: ${getReleaseResponse.data.assets}`);
+        (0, core_2.debug)(`Found assets: ${JSON.stringify(getReleaseResponse.data.assets)}`);
         (0, core_2.debug)(`Found tag: ${getReleaseResponse.data.tag_name}`);
         const tag = getReleaseResponse.data.tag_name; // version of release
         const asset = getReleaseResponse.data.assets.find((asset) => {
