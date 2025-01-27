@@ -43,8 +43,7 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
     debug(`version starts with "devel:" => ${version}`)
     debug(`params: ${owner}, ${repository}, ${version}, ${filename}`)
     listFilesAndFolders(process.cwd())
-    // TODO: implement inner source Piper
-    return ''
+    version = ''
   }
   // get URL of defaults from the release (gh api, authenticated)
   const [url] = await getReleaseAssetUrl(assetName, version, apiURL, token, owner, repository)

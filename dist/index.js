@@ -38662,8 +38662,7 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             (0, core_1.debug)(`version starts with "devel:" => ${version}`);
             (0, core_1.debug)(`params: ${owner}, ${repository}, ${version}, ${filename}`);
             (0, build_1.listFilesAndFolders)(process.cwd());
-            // TODO: implement inner source Piper
-            return '';
+            version = '';
         }
         // get URL of defaults from the release (gh api, authenticated)
         const [url] = yield (0, github_1.getReleaseAssetUrl)(assetName, version, apiURL, token, owner, repository);
