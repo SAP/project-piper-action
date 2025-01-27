@@ -41,7 +41,9 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   // if version starts with devel: then it should use inner source Piper
   if (version.startsWith('devel:')) {
     debug(`version starts with "devel:" => ${version}`)
+    debug(`params: ${owner}, ${repository}, ${version}, ${filename}`)
     listFilesAndFolders(process.cwd())
+    // TODO: implement inner source Piper
     return ''
   }
   // get URL of defaults from the release (gh api, authenticated)

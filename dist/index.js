@@ -38221,6 +38221,7 @@ function downloadStageConfig(actionCfg) {
         }
         else {
             (0, core_1.info)('using default stage conditions');
+            // TODO: maybe get it from stage-config.json ?
             stageConfigPath = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
             if (stageConfigPath === '') {
                 throw new Error('Can\'t download stage config: failed to get URL!');
@@ -38659,7 +38660,9 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
         // if version starts with devel: then it should use inner source Piper
         if (version.startsWith('devel:')) {
             (0, core_1.debug)(`version starts with "devel:" => ${version}`);
+            (0, core_1.debug)(`params: ${owner}, ${repository}, ${version}, ${filename}`);
             (0, build_1.listFilesAndFolders)(process.cwd());
+            // TODO: implement inner source Piper
             return '';
         }
         // get URL of defaults from the release (gh api, authenticated)

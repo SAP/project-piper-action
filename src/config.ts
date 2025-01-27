@@ -218,6 +218,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
     stageConfigPath = actionCfg.customStageConditionsPath
   } else {
     info('using default stage conditions')
+    // TODO: maybe get it from stage-config.json ?
     stageConfigPath = await getEnterpriseConfigUrl(
       STAGE_CONFIG,
       actionCfg.gitHubEnterpriseApi,
