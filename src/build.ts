@@ -1,6 +1,6 @@
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 import { parseDevVersion } from './github'
-import { info, setFailed } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
@@ -71,8 +71,9 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
 }
 
 async function downloadWithAuth (url: string, destination: string, wdfGithubToken: string): Promise<string> {
-  info('GH Token is: ' + wdfGithubToken)
-  if (wdfGithubToken === '') {
+  if (wdfGithubToken.length !== 0) {
+    info('WDF Github Token is set. ')
+  } else {
     setFailed('WDF GitHub Token is not provided, please set the PIPER_WDF_GITHUB_TOKEN environment variable in Settings')
   }
   try {
@@ -129,7 +130,7 @@ export function listFilesAndFolders (dirPath: string): void {
   items.forEach(item => {
     const fullPath = join(dirPath, item)
     const stats = fs.statSync(fullPath)
-    info(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
+    debug(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
   })
 }
 

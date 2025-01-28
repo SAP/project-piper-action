@@ -27,6 +27,7 @@ describe('Piper', () => {
       'sap-piper-repository': '',
       'github-token': '',
       'github-enterprise-token': '',
+      'wdf-github-enterprise-token': '',
       'docker-image': '',
       'docker-options': '',
       'docker-env-vars': '',
@@ -79,6 +80,7 @@ describe('Piper', () => {
     inputs['step-name'] = 'sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
     inputs['sap-piper-owner'] = 'project-piper'
     inputs['sap-piper-repository'] = 'testRepo'
     inputs['create-check-if-step-active-maps'] = 'true'
@@ -92,6 +94,7 @@ describe('Piper', () => {
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
+      // inputs['wdf-github-enterprise-token'],
       inputs['sap-piper-owner'],
       inputs['sap-piper-repository']
     )
