@@ -281,7 +281,7 @@ describe('Config', () => {
       '--defaultsFile',
       'http://mock.test/asset/piper-defaults.yml',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/pipeline/custom-defaults.yml?ref=main',
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/.pipeline/custom-defaults.yml?ref=main',
       '--defaultsFile',
       'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/shared/config.yaml?ref=main',
       '--defaultsFile',

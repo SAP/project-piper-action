@@ -19400,22 +19400,19 @@ function processCustomDefaultsPath(path, currentBranch) {
     const branchMatch = path.match(/^([^@]+)@(.+)$/);
     if (branchMatch) {
         const [, filePath, branch] = branchMatch;
-        // Don't include repo in filePath if it's already a full path
-        const cleanPath = filePath.startsWith(repo) ? filePath : `${repo}/${filePath}`;
-        return `${apiUrl}/repos/${cleanPath}?ref=${branch}`;
+        return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`;
     }
-    // For simple file paths, don't add server URL or branch
+    // Handle relative paths starting with ./ or ../
     if (path.startsWith('./') || path.startsWith('../')) {
         const normalizedPath = path.replace(/^[.\/]+/, '');
         return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`;
     }
-    // Handle absolute paths in repository
+    // Handle local files (no slashes)
     if (!path.includes('/')) {
-        return path; // Keep local files as-is
+        return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`;
     }
-    // Handle organization/repository paths
-    const cleanPath = path.startsWith(repo) ? path : `${repo}/${path}`;
-    return `${apiUrl}/repos/${cleanPath}?ref=${defaultBranch}`;
+    // Handle absolute paths in repository
+    return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`;
 }
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
