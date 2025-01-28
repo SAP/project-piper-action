@@ -38067,12 +38067,8 @@ function getActionConfig(options) {
                 // EnVs should be provided like this
                 // PIPER_ACTION_DOWNLOAD_URL
                 value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
-                if (value === '') {
-                    if (defaultValue !== undefined) {
-                        return defaultValue;
-                    }
-                    return '';
-                }
+                if (value === '')
+                    return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
             }
             (0, core_1.debug)(`${param}: ${value}`);
             return value;
