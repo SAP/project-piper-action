@@ -50,11 +50,16 @@ function processCustomDefaultsPath(path: string, currentBranch?: string): string
     return url.toString()
   }
 
+  const baseUrl = process.env.GITHUB_SERVER_URL
+  const repo = process.env.GITHUB_REPOSITORY
+  const defaultBranch = currentBranch ?? process.env.GITHUB_REF_NAME ?? 'main'
+
+
   // Handle relative paths with branch references (org/repo/path@branch)
   const branchMatch = path.match(/^([^@]+)@(.+)$/)
   if (branchMatch) {
     const [, filePath, branch] = branchMatch
-    return `${process.env.GITHUB_SERVER_URL}/${filePath}?ref=${branch}`
+    return `${baseUrl}/raw/${filePath}/${branch}`
   }
 
   // For simple file paths, don't add server URL or branch
@@ -63,8 +68,7 @@ function processCustomDefaultsPath(path: string, currentBranch?: string): string
   }
 
   // Handle organization/repository paths (without branch reference)
-  const branch = currentBranch ?? process.env.GITHUB_REF_NAME ?? 'main'
-  return `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/${path}?ref=${branch}`
+  return `${baseUrl}/raw/${repo}/${path}/${defaultBranch}`
 }
 
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {

@@ -280,13 +280,13 @@ describe('Config', () => {
       '--defaultsFile',
       'http://mock.test/asset/piper-defaults.yml',
       '--defaultsFile',
-      'https://github.com/org/repo/config.yaml?ref=feature',
+      'https://github.com/raw/org/repo/config.yaml/feature',
       '--defaultsFile',
-      'https://github.com/org/repo/local/config.yaml?ref=main',
-      '--defaultsFile', 
+      'https://github.com/raw/org/repo/local/config.yaml/main',
+      '--defaultsFile',
       'https://github.com/org/repo/config.yaml?ref=develop',
       '--defaultsFile',
-      'https://github.com/org/repo/shared/config.yaml?ref=main'
+      'https://github.com/raw/org/repo/shared/config.yaml/main'
     ]))
   })
 
@@ -295,7 +295,7 @@ describe('Config', () => {
       'https://github.com/org/repo/config.yaml?ref=feature',
       'local/config.yaml'
     ]
-    
+
     piperExecResultMock = generatePiperGetDefaultsOutput(paths)
 
     const result = await config.downloadDefaultConfig(
