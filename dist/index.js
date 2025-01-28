@@ -19388,24 +19388,34 @@ function processCustomDefaultsPath(path, currentBranch) {
     var _a;
     // Handle absolute GitHub URLs
     if (path.startsWith('http')) {
-        const url = new URL(path);
-        return url.toString();
+        return path;
     }
-    const baseUrl = process.env.GITHUB_SERVER_URL;
+    const apiUrl = process.env.GITHUB_API_URL;
     const repo = process.env.GITHUB_REPOSITORY;
     const defaultBranch = (_a = currentBranch !== null && currentBranch !== void 0 ? currentBranch : process.env.GITHUB_REF_NAME) !== null && _a !== void 0 ? _a : 'main';
+    if (!apiUrl || !repo) {
+        // For local development or when GitHub context is not available
+        return path;
+    }
     // Handle relative paths with branch references (org/repo/path@branch)
     const branchMatch = path.match(/^([^@]+)@(.+)$/);
     if (branchMatch) {
         const [, filePath, branch] = branchMatch;
-        return `${baseUrl}/raw/${filePath}/${branch}`;
+        // Use GitHub API v3 format
+        return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`;
     }
     // For simple file paths, don't add server URL or branch
-    if (path.startsWith('./') || path.startsWith('../') || !path.includes('/')) {
-        return path;
+    if (path.startsWith('./') || path.startsWith('../')) {
+        // Convert relative paths to absolute repo paths
+        const normalizedPath = path.replace(/^[.\/]+/, '');
+        return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`;
     }
-    // Handle organization/repository paths (without branch reference)
-    return `${baseUrl}/raw/${repo}/${path}/${defaultBranch}`;
+    // Handle absolute paths in repository
+    if (!path.includes('/')) {
+        return path; // Keep local files as-is
+    }
+    // Handle organization/repository paths
+    return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`;
 }
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -19568,7 +19578,7 @@ function generateDefaultConfigFlags(paths) {
 exports.generateDefaultConfigFlags = generateDefaultConfigFlags;
 function readContextConfig(stepName, flags) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (['version', 'help', 'getConfig', 'getDefaults', 'writePipelineEnv'].includes(stepName)) {
+        if (['version', 'help', 'getConfig', 'getDefaults'].includes(stepName)) {
             return {};
         }
         const stageName = process.env.GITHUB_JOB;

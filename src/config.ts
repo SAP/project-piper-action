@@ -46,29 +46,40 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 function processCustomDefaultsPath(path: string, currentBranch?: string): string {
   // Handle absolute GitHub URLs
   if (path.startsWith('http')) {
-    const url = new URL(path)
-    return url.toString()
+    return path
   }
 
-  const baseUrl = process.env.GITHUB_SERVER_URL
+  const apiUrl = process.env.GITHUB_API_URL
   const repo = process.env.GITHUB_REPOSITORY
   const defaultBranch = currentBranch ?? process.env.GITHUB_REF_NAME ?? 'main'
 
+  if (!apiUrl || !repo) {
+    // For local development or when GitHub context is not available
+    return path
+  }
 
   // Handle relative paths with branch references (org/repo/path@branch)
   const branchMatch = path.match(/^([^@]+)@(.+)$/)
   if (branchMatch) {
     const [, filePath, branch] = branchMatch
-    return `${baseUrl}/raw/${filePath}/${branch}`
+    // Use GitHub API v3 format
+    return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`
   }
 
   // For simple file paths, don't add server URL or branch
-  if (path.startsWith('./') || path.startsWith('../') || !path.includes('/')) {
-    return path
+  if (path.startsWith('./') || path.startsWith('../')) {
+    // Convert relative paths to absolute repo paths
+    const normalizedPath = path.replace(/^[.\/]+/, '')
+    return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`
   }
 
-  // Handle organization/repository paths (without branch reference)
-  return `${baseUrl}/raw/${repo}/${path}/${defaultBranch}`
+  // Handle absolute paths in repository
+  if (!path.includes('/')) {
+    return path // Keep local files as-is
+  }
+
+  // Handle organization/repository paths
+  return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`
 }
 
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
@@ -247,7 +258,7 @@ export function generateDefaultConfigFlags (paths: string[]): string[] {
 }
 
 export async function readContextConfig (stepName: string, flags: string[]): Promise<any> {
-  if (['version', 'help', 'getConfig', 'getDefaults', 'writePipelineEnv'].includes(stepName)) {
+  if (['version', 'help', 'getConfig', 'getDefaults'].includes(stepName)) {
     return {}
   }
 

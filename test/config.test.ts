@@ -250,14 +250,15 @@ describe('Config', () => {
   })
 
   test('Process URLs with branch references', async () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.com'
-    process.env.GITHUB_REPOSITORY = 'org/repo'
+    process.env.GITHUB_SERVER_URL = 'https://github.tools.sap'
+    process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
+    process.env.GITHUB_REPOSITORY = 'piper-test/gha-demo-k8s-node'
     process.env.GITHUB_REF_NAME = 'main'
 
     const customPaths = [
       'org/repo/config.yaml@feature',
       'local/config.yaml',
-      'https://github.com/org/repo/config.yaml?ref=develop',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
       'shared/config.yaml'
     ].join(',')
 
@@ -266,12 +267,12 @@ describe('Config', () => {
     ])
 
     const errorCode = await config.downloadDefaultConfig(
-      'https://github.com',
-      'https://api.github.com',
+      'https://github.tools.sap',
+      'https://github.tools.sap/api/v3',
       'v1.0.0',
       'token',
-      'org',
-      'repo',
+      'piper-test',
+      'gha-demo-k8s-node',
       customPaths
     )
 
@@ -280,19 +281,19 @@ describe('Config', () => {
       '--defaultsFile',
       'http://mock.test/asset/piper-defaults.yml',
       '--defaultsFile',
-      'https://github.com/raw/org/repo/config.yaml/feature',
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/org/repo/config.yaml?ref=feature',
       '--defaultsFile',
-      'https://github.com/raw/org/repo/local/config.yaml/main',
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/local/config.yaml?ref=main',
       '--defaultsFile',
-      'https://github.com/org/repo/config.yaml?ref=develop',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
       '--defaultsFile',
-      'https://github.com/raw/org/repo/shared/config.yaml/main'
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/shared/config.yaml?ref=main'
     ]))
   })
 
   test('Sanitizes filenames when saving', async () => {
     const paths = [
-      'https://github.com/org/repo/config.yaml?ref=feature',
+      'https://github.tools.sap/api/v3/repos/org/repo/contents/config.yaml?ref=feature',
       'local/config.yaml'
     ]
 
