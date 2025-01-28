@@ -39131,13 +39131,15 @@ function preparePiperPath(actionCfg) {
                 (0, core_1.info)('Building Piper from inner source');
                 return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
-            (0, core_1.info)('Downloading Piper binary');
+            (0, core_1.info)('Downloading Piper Inner source binary');
             return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-        if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
+        if (actionCfg.piperVersion.startsWith('devel:')) {
+            (0, core_1.info)('Building OS Piper from source');
             return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
+        (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }

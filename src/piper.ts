@@ -89,12 +89,14 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
       info('Building Piper from inner source')
       return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
     }
-    info('Downloading Piper binary')
+    info('Downloading Piper Inner source binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-  if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
+  if (actionCfg.piperVersion.startsWith('devel:')) {
+    info('Building OS Piper from source')
     return await buildPiperFromSource(actionCfg.piperVersion)
   }
+  info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
