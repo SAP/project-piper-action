@@ -93,7 +93,7 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-  if (actionCfg.piperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
+  if (actionCfg.piperVersion.startsWith('devel:') && actionCfg.stepName !== '') {
     return await buildPiperFromSource(actionCfg.piperVersion)
   }
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
