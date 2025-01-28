@@ -37942,8 +37942,10 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
 exports.buildPiperInnerSource = buildPiperInnerSource;
 function downloadWithAuth(url, destination, wdfGithubToken) {
     return __awaiter(this, void 0, void 0, function* () {
-        (0, core_1.info)('GH Token is: ' + wdfGithubToken);
-        if (wdfGithubToken === '') {
+        if (wdfGithubToken.length !== 0) {
+            (0, core_1.info)('WDF Github Token is set. ');
+        }
+        else {
             (0, core_1.setFailed)('WDF GitHub Token is not provided, please set the PIPER_WDF_GITHUB_TOKEN environment variable in Settings');
         }
         try {
@@ -37995,7 +37997,7 @@ function listFilesAndFolders(dirPath) {
     items.forEach(item => {
         const fullPath = (0, path_1.join)(dirPath, item);
         const stats = fs_1.default.statSync(fullPath);
-        (0, core_1.info)(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`);
+        (0, core_1.debug)(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`);
     });
 }
 exports.listFilesAndFolders = listFilesAndFolders;
