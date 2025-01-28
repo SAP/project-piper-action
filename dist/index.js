@@ -19530,7 +19530,7 @@ function generateDefaultConfigFlags(paths) {
 exports.generateDefaultConfigFlags = generateDefaultConfigFlags;
 function readContextConfig(stepName, flags) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (['version', 'help', 'getConfig', 'getDefaults'].includes(stepName)) {
+        if (['version', 'help', 'getConfig', 'getDefaults', 'writePipelineEnv'].includes(stepName)) {
             return {};
         }
         const stageName = process.env.GITHUB_JOB;
