@@ -60,13 +60,9 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
       // EnVs should be provided like this
       // PIPER_ACTION_DOWNLOAD_URL
       value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
-      if (value === '') {
-        if (defaultValue !== undefined) {
-          return defaultValue
-        }
-        return ''
-      }
+      if (value === '') return defaultValue ?? ''
     }
+
     debug(`${param}: ${value}`)
     return value
   }
