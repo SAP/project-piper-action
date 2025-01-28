@@ -54,7 +54,6 @@ function processCustomDefaultsPath(path: string, currentBranch?: string): string
   const defaultBranch = currentBranch ?? process.env.GITHUB_REF_NAME ?? 'main'
 
   if (!apiUrl || !repo) {
-    // For local development or when GitHub context is not available
     return path
   }
 
@@ -62,13 +61,13 @@ function processCustomDefaultsPath(path: string, currentBranch?: string): string
   const branchMatch = path.match(/^([^@]+)@(.+)$/)
   if (branchMatch) {
     const [, filePath, branch] = branchMatch
-    // Use GitHub API v3 format
-    return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`
+    // Don't include repo in filePath if it's already a full path
+    const cleanPath = filePath.startsWith(repo) ? filePath : `${repo}/${filePath}`
+    return `${apiUrl}/repos/${cleanPath}?ref=${branch}`
   }
 
   // For simple file paths, don't add server URL or branch
   if (path.startsWith('./') || path.startsWith('../')) {
-    // Convert relative paths to absolute repo paths
     const normalizedPath = path.replace(/^[.\/]+/, '')
     return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`
   }
@@ -79,7 +78,8 @@ function processCustomDefaultsPath(path: string, currentBranch?: string): string
   }
 
   // Handle organization/repository paths
-  return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`
+  const cleanPath = path.startsWith(repo) ? path : `${repo}/${path}`
+  return `${apiUrl}/repos/${cleanPath}?ref=${defaultBranch}`
 }
 
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {

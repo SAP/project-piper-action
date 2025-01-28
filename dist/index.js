@@ -19394,19 +19394,18 @@ function processCustomDefaultsPath(path, currentBranch) {
     const repo = process.env.GITHUB_REPOSITORY;
     const defaultBranch = (_a = currentBranch !== null && currentBranch !== void 0 ? currentBranch : process.env.GITHUB_REF_NAME) !== null && _a !== void 0 ? _a : 'main';
     if (!apiUrl || !repo) {
-        // For local development or when GitHub context is not available
         return path;
     }
     // Handle relative paths with branch references (org/repo/path@branch)
     const branchMatch = path.match(/^([^@]+)@(.+)$/);
     if (branchMatch) {
         const [, filePath, branch] = branchMatch;
-        // Use GitHub API v3 format
-        return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`;
+        // Don't include repo in filePath if it's already a full path
+        const cleanPath = filePath.startsWith(repo) ? filePath : `${repo}/${filePath}`;
+        return `${apiUrl}/repos/${cleanPath}?ref=${branch}`;
     }
     // For simple file paths, don't add server URL or branch
     if (path.startsWith('./') || path.startsWith('../')) {
-        // Convert relative paths to absolute repo paths
         const normalizedPath = path.replace(/^[.\/]+/, '');
         return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`;
     }
@@ -19415,7 +19414,8 @@ function processCustomDefaultsPath(path, currentBranch) {
         return path; // Keep local files as-is
     }
     // Handle organization/repository paths
-    return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`;
+    const cleanPath = path.startsWith(repo) ? path : `${repo}/${path}`;
+    return `${apiUrl}/repos/${cleanPath}?ref=${defaultBranch}`;
 }
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {

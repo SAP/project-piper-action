@@ -256,10 +256,10 @@ describe('Config', () => {
     process.env.GITHUB_REF_NAME = 'main'
 
     const customPaths = [
-      'org/repo/config.yaml@feature',
-      'local/config.yaml',
+      '.pipeline/custom-defaults.yml',
+      '../shared/config.yaml',
       'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
-      'shared/config.yaml'
+      'custom/path/config.yaml@feature'
     ].join(',')
 
     piperExecResultMock = generatePiperGetDefaultsOutput([
@@ -281,20 +281,20 @@ describe('Config', () => {
       '--defaultsFile',
       'http://mock.test/asset/piper-defaults.yml',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/org/repo/config.yaml?ref=feature',
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/pipeline/custom-defaults.yml?ref=main',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/local/config.yaml?ref=main',
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/shared/config.yaml?ref=main',
       '--defaultsFile',
       'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/shared/config.yaml?ref=main'
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/custom/path/config.yaml?ref=feature'
     ]))
   })
 
   test('Sanitizes filenames when saving', async () => {
     const paths = [
-      'https://github.tools.sap/api/v3/repos/org/repo/contents/config.yaml?ref=feature',
-      'local/config.yaml'
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/config.yaml?ref=feature',
+      '.pipeline/custom.yml'
     ]
 
     piperExecResultMock = generatePiperGetDefaultsOutput(paths)
