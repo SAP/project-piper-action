@@ -60,7 +60,7 @@ async function getPiperDownloadURL (piper: string, version: string): Promise<str
   return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version?: string): Promise<string> {
+async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<string> {
   if (version === 'master') {
     info('using _master binaries is deprecated. Using latest release version instead.')
   }
