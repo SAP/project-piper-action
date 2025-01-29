@@ -23,9 +23,7 @@ export function onGitHubEnterprise (): boolean {
 
 export async function getEnterpriseConfigUrl (configType: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
   debug('Getting enterprise config URL')
-  if (configType !== DEFAULT_CONFIG && configType !== STAGE_CONFIG) {
-    return ''
-  }
+  if (configType !== DEFAULT_CONFIG && configType !== STAGE_CONFIG) return ''
 
   debug('initiating assetName and filename')
   let assetName: string = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
@@ -37,7 +35,6 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
     filename = ENTERPRISE_STAGE_CONFIG_FILENAME
   }
 
-  debug('Getting enterprise config URL')
   // if version starts with devel: then it should use inner source Piper
   if (version.startsWith('devel:')) {
     debug(`version starts with "devel:" => ${version}`)

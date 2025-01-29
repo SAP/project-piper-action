@@ -38219,7 +38219,6 @@ function downloadStageConfig(actionCfg) {
         }
         else {
             (0, core_1.info)('using default stage conditions');
-            // TODO: maybe get it from stage-config.json ?
             stageConfigPath = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
             if (stageConfigPath === '') {
                 throw new Error('Can\'t download stage config: failed to get URL!');
@@ -38362,9 +38361,8 @@ function startContainer(actionCfg, ctxConfig) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
-        if (dockerImage === undefined || dockerImage === '') {
+        if (dockerImage === undefined || dockerImage === '')
             return;
-        }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
         const cwd = process.cwd();
@@ -38643,9 +38641,8 @@ exports.onGitHubEnterprise = onGitHubEnterprise;
 function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repository) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Getting enterprise config URL');
-        if (configType !== exports.DEFAULT_CONFIG && configType !== exports.STAGE_CONFIG) {
+        if (configType !== exports.DEFAULT_CONFIG && configType !== exports.STAGE_CONFIG)
             return '';
-        }
         (0, core_1.debug)('initiating assetName and filename');
         let assetName = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE;
         let filename = exports.ENTERPRISE_DEFAULTS_FILENAME;
@@ -38654,7 +38651,6 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             assetName = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
             filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
         }
-        (0, core_1.debug)('Getting enterprise config URL');
         // if version starts with devel: then it should use inner source Piper
         if (version.startsWith('devel:')) {
             (0, core_1.debug)(`version starts with "devel:" => ${version}`);
@@ -38738,23 +38734,21 @@ function executePiper(stepName, flags, ignoreDefaults, execOptions) {
                 throw new Error(`Piper execution error: ${err}: ${piperError}`);
             });
         }
-        else {
-            return yield (0, exec_1.exec)('docker', [
-                'exec',
-                containerID,
-                `/piper/${path_1.default.basename(piperPath)}`,
-                stepName,
-                ...flags
-            ], options).then(exitCode => {
-                return {
-                    output: piperOutput,
-                    error: piperError,
-                    exitCode
-                };
-            }).catch(err => {
-                throw new Error(`Piper execution error: ${err}: ${piperError}`);
-            });
-        }
+        return yield (0, exec_1.exec)('docker', [
+            'exec',
+            containerID,
+            `/piper/${path_1.default.basename(piperPath)}`,
+            stepName,
+            ...flags
+        ], options).then(exitCode => {
+            return {
+                output: piperOutput,
+                error: piperError,
+                exitCode
+            };
+        }).catch(err => {
+            throw new Error(`Piper execution error: ${err}: ${piperError}`);
+        });
     });
 }
 exports.executePiper = executePiper;
@@ -38805,7 +38799,7 @@ function fetchRetry(url, method = 'GET', tries = 5, baseDelayMS = 1000) {
                 yield wait(delayTime);
             }
         }
-        return yield Promise.reject(new Error(`Error fetching ${url}`));
+        throw new Error(`Error fetching ${url}`);
     });
 }
 exports.fetchRetry = fetchRetry;

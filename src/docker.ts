@@ -18,9 +18,7 @@ export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: 
 
 export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
-  if (dockerImage === undefined || dockerImage === '') {
-    return
-  }
+  if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = uuidv4()
