@@ -113,34 +113,31 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
   }
 }
 
-export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<number> {
+export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<void> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
     debug(process.env.defaultsFlags !== undefined
       ? `Defaults flags: ${process.env.defaultsFlags}`
       : 'But no defaults flags available in the environment!')
-    return 0
   }
 
   try {
     info('Trying to restore defaults from artifact')
     await restoreDefaultConfig() // this fails
     info('Defaults restored from artifact')
-    return 0
   } catch (err: unknown) {
     // throws an error with message containing 'Unable to find' if artifact does not exist
     if (err instanceof Error && !err.message.includes('Unable to find')) throw err
     // continue with downloading defaults and upload as artifact
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
-    return 0
   }
 }
 
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  // version: devel:.....
+  // Since defaults file is located in release assets, we will take it from latest release
   if (version.startsWith('devel:')) {
     version = 'latest'
   }
@@ -252,7 +249,6 @@ export async function checkIfStepActive (stepName: string, stageName: string, ou
   return result.exitCode
 }
 
-// ?
 export async function restoreDefaultConfig (): Promise<void> {
   const artifactClient = artifact.create()
   const tempDir = path.join(CONFIG_DIR, 'defaults_temp')

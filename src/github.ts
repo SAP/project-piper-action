@@ -110,21 +110,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   return piperPath
 }
 
-export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
-  const versionComponents = version.split(':')
-  if (versionComponents.length !== 4) {
-    throw new Error('broken version: ' + version)
-  }
-  if (versionComponents[0] !== 'devel') {
-    throw new Error('devel source version expected')
-  }
-  const [, owner, repository, commitISH] = versionComponents
-  return { owner, repository, commitISH }
-}
-
-export function getTag (version: string | undefined, forAPICall: boolean): string {
-  if (version === undefined) return 'latest'
-
+export function getTag (version: string, forAPICall: boolean): string {
   version = version.toLowerCase()
   if (version === '' || version === 'master' || version === 'latest') return 'latest'
   return `${forAPICall ? 'tags' : 'tag'}/${version}`

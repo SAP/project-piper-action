@@ -51,7 +51,7 @@ export async function downloadPiperBinary (
 
   return piperPath
 }
-async function getPiperDownloadURL (piper: string, version?: string): Promise<string> {
+async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
   const response = await fetchRetry(tagURL, 'HEAD')
     .catch(async (err) => {

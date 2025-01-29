@@ -1,5 +1,4 @@
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-import { parseDevVersion } from './github'
 import { debug, info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
@@ -32,12 +31,6 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
     .catch((err) => {
       throw new Error(`Can't download Inner Source Piper: ${err}`)
     })
-
-  info(`Listing cwd: ${cwd()}`)
-  listFilesAndFolders(cwd())
-
-  info(`Listing $path: ${path}`)
-  listFilesAndFolders(path)
 
   info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
   await extractZip(zipFile, `${path}`).catch((err) => {
@@ -125,13 +118,16 @@ async function downloadZip (url: string, zipPath: string, token?: string): Promi
   return zipPath
 }
 
-export function listFilesAndFolders (dirPath: string): void {
-  const items = fs.readdirSync(dirPath)
-  items.forEach(item => {
-    const fullPath = join(dirPath, item)
-    const stats = fs.statSync(fullPath)
-    debug(stats.isDirectory() ? `📁 ${item}` : `📄 ${item} - ${stats.size} bytes`)
-  })
+export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4) {
+    throw new Error('broken version: ' + version)
+  }
+  if (versionComponents[0] !== 'devel') {
+    throw new Error('devel source version expected')
+  }
+  const [, owner, repository, commitISH] = versionComponents
+  return { owner, repository, commitISH }
 }
 
 function getVersionName (commitISH: string): string {
