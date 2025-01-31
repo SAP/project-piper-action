@@ -1,7 +1,7 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error, info } from '@actions/core'
+import { debug, error } from '@actions/core'
 
 export interface piperExecResult {
   output: string
@@ -20,22 +20,20 @@ export async function executePiper (
         debug('about to print some data from options.listeners.stdout')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
-          // TODO: This is a temporary fix to highlight errors in red
-          // test if ::error:: should be appended to the piperOutput
           if (line.toLowerCase().includes('fatal')) {
-            error(`::error::${line}`) // GitHub Actions highlights this in red
+            error(`${line}`) // GitHub Actions highlights this in red
           } else {
-            info(line)
+            piperOutput += `${line}\n`
           }
-          piperOutput += line + '\n'
         })
       },
       stderr: (data: Buffer) => {
         debug('about to print some data from options.listeners.stderr')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
-          error(`::error::${line}`) // Treat stderr as errors
-          piperError += line + '\n'
+          // error(`${line}`) // Treat stderr as errors
+          // TODO: what to do with piperError ?
+          piperError += `${line}\n`
         })
       }
     }
@@ -87,8 +85,4 @@ export async function executePiper (
       }
     })
     .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
-}
-
-function toRedConsole (message: string): string {
-  return `\x1b[31m${message}\x1b[0m`
 }
