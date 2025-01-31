@@ -1,7 +1,7 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error } from '@actions/core'
+import { error, notice } from '@actions/core'
 
 export interface piperExecResult {
   output: string
@@ -12,12 +12,24 @@ export interface piperExecResult {
 export async function executePiper (
   stepName: string, flags?: string[], ignoreDefaults?: boolean, execOptions?: ExecOptions
 ): Promise<piperExecResult> {
+  flags = flags ?? []
+  ignoreDefaults = ignoreDefaults ?? false
+
+  if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
+
+  flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
+    ? flags.concat(JSON.parse(process.env.defaultsFlags))
+    : flags
+
+  const piperPath = internalActionVariables.piperBinPath
+  const containerID = internalActionVariables.dockerContainerID
+
   let piperOutput = ''
   const piperError = ''
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
-        debug('about to print some data from options.listeners.stdout')
+        notice('about to print some data from options.listeners.stdout')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
           if (line.toLowerCase().includes('fatal')) {
@@ -26,34 +38,22 @@ export async function executePiper (
             piperOutput += `${line}\n`
           }
         })
+        notice('end printing data from options.listeners.stdout')
       },
       stderr: (data: Buffer) => {
-        debug('about to print some data from options.listeners.stderr')
+        notice('about to print some data from options.listeners.stderr')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
           error(`${line}`) // Treat stderr as errors
           // TODO: what to do with piperError ?
           // piperError += `${line}\n`
         })
+        notice('end printing data from options.listeners.stderr')
       }
     }
   }
   options = Object.assign({}, options, execOptions)
 
-  flags = flags ?? []
-
-  const stageName = process.env.GITHUB_JOB
-  if (stageName !== undefined) {
-    flags.push('--stageName', stageName)
-  }
-
-  const defaultsFlags = process.env.defaultsFlags
-  if (ignoreDefaults !== false && defaultsFlags !== undefined) {
-    flags = flags.concat(JSON.parse(defaultsFlags))
-  }
-
-  const piperPath = internalActionVariables.piperBinPath
-  const containerID = internalActionVariables.dockerContainerID
   if (containerID !== '') { // Running in a container
     const args: string[] = [
       'exec',
