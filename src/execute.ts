@@ -16,10 +16,12 @@ export async function executePiper (
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
-        piperOutput += data.toString()
+        const outString = data.toString()
+        piperOutput += outString.includes('fatal') ? toRedConsole(outString) : outString
       },
       stderr: (data: Buffer) => {
-        piperError += data.toString()
+        const outString = data.toString()
+        piperError += outString.includes('fatal') ? toRedConsole(outString) : outString
       }
     }
   }
@@ -39,32 +41,39 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
-  if (containerID === '') {
-    return await exec(piperPath, [
-      stepName,
-      ...flags
-    ],
-    options)
-      .then(exitCode => {
-        return { output: piperOutput, error: piperError, exitCode }
-      })
-      .catch(err => {
-        throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
-      })
-  }
-  return await exec('docker', [
-    'exec',
-    containerID,
+  if (containerID !== '') { // Running in a container
+    const args: string[] = [
+      'exec',
+      containerID,
       `/piper/${path.basename(piperPath)}`,
       stepName,
       ...flags
-  ], options).then(exitCode => {
-    return {
-      output: piperOutput,
-      error: piperError,
-      exitCode
-    }
-  }).catch(err => {
-    throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
-  })
+
+    ]
+    return await exec('docker', args, options)
+      .then(exitCode => {
+        return {
+          output: piperOutput,
+          error: piperError,
+          exitCode
+        }
+      })
+      .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
+  }
+
+  const args: string[] = [stepName, ...flags]
+
+  return await exec(piperPath, args, options)
+    .then(exitCode => {
+      return {
+        output: piperOutput,
+        error: piperError,
+        exitCode
+      }
+    })
+    .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
+}
+
+function toRedConsole (message: string): string {
+  return `\x1b[31m${message}\x1b[0m`
 }
