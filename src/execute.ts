@@ -1,6 +1,7 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
+import { debug, error, info } from '@actions/core'
 
 export interface piperExecResult {
   output: string
@@ -16,12 +17,26 @@ export async function executePiper (
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
+        debug('about to print some data from options.listeners.stdout')
         const outString = data.toString()
-        piperOutput += outString.includes('fatal') ? toRedConsole(outString) : outString
+        outString.split('\n').forEach(line => {
+          // TODO: This is a temporary fix to highlight errors in red
+          // test if ::error:: should be appended to the piperOutput
+          if (line.toLowerCase().includes('fatal')) {
+            error(`::error::${line}`) // GitHub Actions highlights this in red
+          } else {
+            info(line)
+          }
+          piperOutput += line + '\n'
+        })
       },
       stderr: (data: Buffer) => {
+        debug('about to print some data from options.listeners.stderr')
         const outString = data.toString()
-        piperError += outString.includes('fatal') ? toRedConsole(outString) : outString
+        outString.split('\n').forEach(line => {
+          error(`::error::${line}`) // Treat stderr as errors
+          piperError += line + '\n'
+        })
       }
     }
   }
