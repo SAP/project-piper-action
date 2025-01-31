@@ -13,7 +13,7 @@ export async function executePiper (
   stepName: string, flags?: string[], ignoreDefaults?: boolean, execOptions?: ExecOptions
 ): Promise<piperExecResult> {
   let piperOutput = ''
-  let piperError = ''
+  const piperError = ''
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
@@ -31,9 +31,9 @@ export async function executePiper (
         debug('about to print some data from options.listeners.stderr')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
-          // error(`${line}`) // Treat stderr as errors
+          error(`${line}`) // Treat stderr as errors
           // TODO: what to do with piperError ?
-          piperError += `${line}\n`
+          // piperError += `${line}\n`
         })
       }
     }
