@@ -10,11 +10,8 @@ export interface piperExecResult {
 }
 
 export async function executePiper (
-  stepName: string, flags?: string[], ignoreDefaults?: boolean, execOptions?: ExecOptions
+  stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
 ): Promise<piperExecResult> {
-  flags = flags ?? []
-  ignoreDefaults = ignoreDefaults ?? false
-
   if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
 
   flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
@@ -31,13 +28,9 @@ export async function executePiper (
       stdout: (data: Buffer) => {
         notice('about to print some data from options.listeners.stdout')
         const outString = data.toString()
-        outString.split('\n').forEach(line => {
-          if (line.toLowerCase().includes('fatal')) {
-            error(`${line}`) // GitHub Actions highlights this in red
-          } else {
-            piperOutput += `${line}\n`
-          }
-        })
+        piperOutput += outString.toLowerCase().includes('fatal')
+          ? `::error::${outString}\n`
+          : `${outString}\n`
         notice('end printing data from options.listeners.stdout')
       },
       stderr: (data: Buffer) => {
@@ -64,25 +57,21 @@ export async function executePiper (
 
     ]
     return await exec('docker', args, options)
-      .then(exitCode => {
-        return {
-          output: piperOutput,
-          error: piperError,
-          exitCode
-        }
-      })
+      .then(exitCode => ({
+        output: piperOutput.trim(),
+        error: piperError.trim(),
+        exitCode
+      }))
       .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
   }
 
   const args: string[] = [stepName, ...flags]
 
   return await exec(piperPath, args, options)
-    .then(exitCode => {
-      return {
-        output: piperOutput,
-        error: piperError,
-        exitCode
-      }
-    })
+    .then(exitCode => ({
+      output: piperOutput,
+      error: piperError,
+      exitCode
+    }))
     .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
 }
