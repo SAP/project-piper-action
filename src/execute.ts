@@ -30,7 +30,7 @@ export async function executePiper (
         outString.split('\n').forEach(line => {
           // piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
           if (line.includes('fatal')) {
-            notice(`line contains fatal: ${line}`)
+            notice(`stdout line contains fatal: ${line}`)
             piperOutput += `::error::${line}\n`
           } else {
             piperOutput += `${line}\n`
@@ -41,7 +41,7 @@ export async function executePiper (
         const outString = data.toString()
         outString.split('\n').forEach(line => {
           if (line.includes('fatal')) {
-            notice(`line contains fatal: ${line}`)
+            notice(` stderr line contains fatal: ${line}`)
             piperError += `::error::${line}\n`
           } else {
             piperError += `${line}\n`
