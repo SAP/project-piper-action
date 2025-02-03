@@ -1,5 +1,5 @@
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-import { debug, info, setFailed } from '@actions/core'
+import { info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
