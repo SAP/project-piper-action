@@ -16139,11 +16139,10 @@ function startContainer(actionCfg, ctxConfig) {
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
-        if (dockerOptions !== undefined && Array.isArray(dockerOptions)) {
-            dockerOptionsArray = dockerOptions.map(option => option.split(' ')).flat();
-        }
-        else if (dockerOptions !== undefined) {
-            dockerOptionsArray = dockerOptions.split(' ');
+        if (dockerOptions !== undefined) {
+            dockerOptionsArray = Array.isArray(dockerOptions)
+                ? dockerOptions.map(option => option.split(' ')).flat()
+                : dockerOptionsArray = dockerOptions.split(' ');
         }
         const dockerRunArgs = [
             'run',
@@ -16461,59 +16460,73 @@ exports.executePiper = void 0;
 const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
-function executePiper(stepName, flags, ignoreDefaults, execOptions) {
+const core_1 = __nccwpck_require__(2186);
+function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (process.env.GITHUB_JOB !== undefined)
+            flags.push('--stageName', process.env.GITHUB_JOB);
+        flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
+            ? flags.concat(JSON.parse(process.env.defaultsFlags))
+            : flags;
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        const containerID = piper_1.internalActionVariables.dockerContainerID;
         let piperOutput = '';
         let piperError = '';
         let options = {
             listeners: {
                 stdout: (data) => {
-                    piperOutput += data.toString();
+                    const outString = data.toString();
+                    outString.split('\n').forEach(line => {
+                        // piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+                        if (line.includes('fatal')) {
+                            (0, core_1.notice)(`stdout line contains fatal: ${line}`);
+                            piperOutput += `::error::${line}\n`;
+                        }
+                        else {
+                            piperOutput += `${line}\n`;
+                        }
+                    });
                 },
                 stderr: (data) => {
-                    piperError += data.toString();
+                    const outString = data.toString();
+                    outString.split('\n').forEach(line => {
+                        if (line.includes('fatal')) {
+                            (0, core_1.notice)(` stderr line contains fatal: ${line}`);
+                            piperError += `::error::${line}\n`;
+                        }
+                        else {
+                            piperError += `${line}\n`;
+                        }
+                        // piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+                    });
                 }
             }
         };
         options = Object.assign({}, options, execOptions);
-        flags = flags !== null && flags !== void 0 ? flags : [];
-        const stageName = process.env.GITHUB_JOB;
-        if (stageName !== undefined) {
-            flags.push('--stageName', stageName);
-        }
-        const defaultsFlags = process.env.defaultsFlags;
-        if (ignoreDefaults !== false && defaultsFlags !== undefined) {
-            flags = flags.concat(JSON.parse(defaultsFlags));
-        }
-        const piperPath = piper_1.internalActionVariables.piperBinPath;
-        const containerID = piper_1.internalActionVariables.dockerContainerID;
-        if (containerID === '') {
-            return yield (0, exec_1.exec)(piperPath, [
+        if (containerID !== '') { // Running in a container
+            const args = [
+                'exec',
+                containerID,
+                `/piper/${path_1.default.basename(piperPath)}`,
                 stepName,
                 ...flags
-            ], options)
-                .then(exitCode => {
-                return { output: piperOutput, error: piperError, exitCode };
-            })
-                .catch(err => {
-                throw new Error(`Piper execution error: ${err}: ${piperError}`);
-            });
-        }
-        return yield (0, exec_1.exec)('docker', [
-            'exec',
-            containerID,
-            `/piper/${path_1.default.basename(piperPath)}`,
-            stepName,
-            ...flags
-        ], options).then(exitCode => {
-            return {
-                output: piperOutput,
-                error: piperError,
+            ];
+            return yield (0, exec_1.exec)('docker', args, options)
+                .then(exitCode => ({
+                output: piperOutput.trim(),
+                error: piperError.trim(),
                 exitCode
-            };
-        }).catch(err => {
-            throw new Error(`Piper execution error: ${err}: ${piperError}`);
-        });
+            }))
+                .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
+        }
+        const args = [stepName, ...flags];
+        return yield (0, exec_1.exec)(piperPath, args, options)
+            .then(exitCode => ({
+            output: piperOutput,
+            error: piperError,
+            exitCode
+        }))
+            .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
     });
 }
 exports.executePiper = executePiper;
