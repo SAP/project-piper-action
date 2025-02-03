@@ -323,7 +323,7 @@ describe('Config', () => {
 
     piperExecResultMock = generatePiperGetDefaultsOutput(paths)
 
-    const result = await config.downloadDefaultConfig(
+    await config.downloadDefaultConfig(
       'https://github.com',
       'https://api.github.com',
       'v1.0.0',

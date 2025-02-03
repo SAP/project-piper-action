@@ -135,7 +135,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   }
 }
 
-function processCustomDefaultsPath(path: string): string {
+function processCustomDefaultsPath (path: string): string {
   // Handle HTTP URLs
   if (path.startsWith('http')) {
     return path
@@ -144,7 +144,7 @@ function processCustomDefaultsPath(path: string): string {
   // Handle paths with org+repo and branch references (org/repo/some/path/to/config.yml@branch)
   const apiUrl = process.env.GITHUB_API_URL
   const branchMatch = path.match(/^(.+?)\/(.+?)\/(.+?)@(.+)$/)
-  if (branchMatch) {
+  if (branchMatch !== null) {
     const [, org, repo, filePath, branch] = branchMatch
     return `${apiUrl}/repos/${org}/${repo}/contents/${filePath}?ref=${branch}`
   }
@@ -200,8 +200,8 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   }
 
   interface DefaultConfig {
-    filepath: string;
-    content: string;
+    filepath: string
+    content: string
   }
 
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config: DefaultConfig) => ({
