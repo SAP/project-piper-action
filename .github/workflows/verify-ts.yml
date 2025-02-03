@@ -103,7 +103,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm install --ignore-scripts
-      - run: git diff --name-only --exit-code
+      - run: git diff --exit-code
+#      - run: git diff --name-only --exit-code
 
   dist-is-up-to-date:
     runs-on: ubuntu-latest
