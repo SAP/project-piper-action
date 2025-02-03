@@ -6,6 +6,7 @@ import * as piper from '../src/piper'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
+import * as download from '../src/download'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
 import { GITHUB_COM_API_URL } from '../src/github'
@@ -26,6 +27,7 @@ describe('Piper', () => {
       'sap-piper-repository': '',
       'github-token': '',
       'github-enterprise-token': '',
+      'wdf-github-enterprise-token': '',
       'docker-image': '',
       'docker-options': '',
       'docker-env-vars': '',
@@ -40,7 +42,7 @@ describe('Piper', () => {
     }
 
     fs.chmodSync = jest.fn()
-    jest.spyOn(github, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
+    jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
@@ -78,6 +80,7 @@ describe('Piper', () => {
     inputs['step-name'] = 'sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
     inputs['sap-piper-owner'] = 'project-piper'
     inputs['sap-piper-repository'] = 'testRepo'
     inputs['create-check-if-step-active-maps'] = 'true'
@@ -86,11 +89,12 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(github.downloadPiperBinary).toHaveBeenCalledWith(
+    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
+      // inputs['wdf-github-enterprise-token'],
       inputs['sap-piper-owner'],
       inputs['sap-piper-repository']
     )
@@ -117,7 +121,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(github.downloadPiperBinary).toHaveBeenCalledWith(
+    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
       inputs['piper-version'],
       GITHUB_COM_API_URL,
@@ -134,10 +138,10 @@ describe('Piper', () => {
     inputs['github-token'] = 'testGithubToken'
     inputs['piper-owner'] = 'SAP'
     inputs['piper-repository'] = 'jenkins-library'
-    jest.spyOn(github, 'downloadPiperBinary').mockReturnValue(Promise.resolve(''))
+    jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve(''))
 
     await piper.run()
-    expect(core.setFailed).toBeCalledWith('Piper binary path is empty. Please check your action inputs.')
+    expect(core.setFailed).toHaveBeenCalledWith('Piper binary path is empty. Please check your action inputs.')
     expect(internalActionVariables.piperBinPath).toEqual('')
     expect(execute.executePiper).not.toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()

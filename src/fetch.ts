@@ -27,7 +27,7 @@ export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDe
       await wait(delayTime)
     }
   }
-  return await Promise.reject(new Error(`Error fetching ${url}`))
+  throw new Error(`Error fetching ${url}`)
 }
 
 function isRetryable (code: number): boolean {
