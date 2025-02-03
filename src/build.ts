@@ -38,9 +38,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   })
   const wd = cwd()
 
-  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
-    return name.includes(repository)
-  }) ?? '')
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
   info(`repositoryPath: ${repositoryPath}`)
   chdir(repositoryPath)
 

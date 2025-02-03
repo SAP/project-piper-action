@@ -15687,9 +15687,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             throw new Error(`Can't extract Inner Source Piper: ${err}`);
         });
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => {
-            return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
+        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => name.includes(repository))) !== null && _a !== void 0 ? _a : '');
         (0, core_1.info)(`repositoryPath: ${repositoryPath}`);
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
