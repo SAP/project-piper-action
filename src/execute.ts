@@ -22,17 +22,21 @@ export async function executePiper (
   const containerID = internalActionVariables.dockerContainerID
 
   let piperOutput = ''
-  const piperError = ''
+  let piperError = ''
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
         notice('about to print some data from options.listeners.stdout')
         const outString = data.toString()
-        if (outString.toLowerCase().includes('fatal')) {
-          error(outString)
-        } else {
-          piperOutput += `${outString}\n`
-        }
+        outString.split('\n').forEach(line => {
+          piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+        })
+        // if (outString.toLowerCase().includes('fatal')) {
+        //   // error(outString)
+        //   piperOutput += `::error::${outString}\n`
+        // } else {
+        //   piperOutput += `${outString}\n`
+        // }
         // piperOutput += outString.toLowerCase().includes('fatal')
         //   ? `::error::${outString}\n`
         //   : `${outString}\n`
@@ -41,11 +45,11 @@ export async function executePiper (
       stderr: (data: Buffer) => {
         notice('about to print some data from options.listeners.stderr')
         const outString = data.toString()
-        outString.split('\n').forEach(line => {
-          error(`${line}`) // Treat stderr as errors
-          // TODO: what to do with piperError ?
-          // piperError += `${line}\n`
-        })
+        // outString.split('\n').forEach(line => {
+        //   error(`${line}`) // Treat stderr as errors
+        // TODO: what to do with piperError ?
+        piperError += `::error::${outString}\n`
+        // })
         notice('end printing data from options.listeners.stderr')
       }
     }
