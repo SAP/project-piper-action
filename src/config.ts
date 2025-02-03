@@ -119,6 +119,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
     debug(process.env.defaultsFlags !== undefined
       ? `Defaults flags: ${process.env.defaultsFlags}`
       : 'But no defaults flags available in the environment!')
+    return
   }
 
   try {
