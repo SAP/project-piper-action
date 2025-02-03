@@ -135,40 +135,22 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   }
 }
 
-function processCustomDefaultsPath(path: string, currentBranch?: string): string {
-  // Handle absolute GitHub URLs
+function processCustomDefaultsPath(path: string): string {
+  // Handle HTTP URLs
   if (path.startsWith('http')) {
     return path
   }
 
+  // Handle paths with org+repo and branch references (org/repo/some/path/to/config.yml@branch)
   const apiUrl = process.env.GITHUB_API_URL
-  const repo = process.env.GITHUB_REPOSITORY
-  const defaultBranch = currentBranch ?? process.env.GITHUB_REF_NAME ?? 'main'
-
-  if (!apiUrl || !repo) {
-    return path
-  }
-
-  // Handle relative paths with branch references (org/repo/path@branch)
-  const branchMatch = path.match(/^([^@]+)@(.+)$/)
+  const branchMatch = path.match(/^(.+?)\/(.+?)\/(.+?)@(.+)$/)
   if (branchMatch) {
-    const [, filePath, branch] = branchMatch
-    return `${apiUrl}/repos/${repo}/contents/${filePath}?ref=${branch}`
+    const [, org, repo, filePath, branch] = branchMatch
+    return `${apiUrl}/repos/${org}/${repo}/contents/${filePath}?ref=${branch}`
   }
 
-  // Handle relative paths starting with ./ or ../
-  if (path.startsWith('./') || path.startsWith('../')) {
-    const normalizedPath = path.replace(/^[.\/]+/, '')
-    return `${apiUrl}/repos/${repo}/contents/${normalizedPath}?ref=${defaultBranch}`
-  }
-
-  // Handle local files (no slashes)
-  if (!path.includes('/')) {
-    return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`
-  }
-
-  // Handle absolute paths in repository
-  return `${apiUrl}/repos/${repo}/contents/${path}?ref=${defaultBranch}`
+  // Others treated as paths to local files
+  return path
 }
 
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
@@ -183,10 +165,9 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
   }
 
-  const currentBranch = process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME
   const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
   defaultsPaths = defaultsPaths.concat(
-    customDefaultsPathsArray.map(path => processCustomDefaultsPath(path.trim(), currentBranch))
+    customDefaultsPathsArray.map(path => processCustomDefaultsPath(path.trim()))
   )
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
 

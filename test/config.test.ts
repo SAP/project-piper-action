@@ -277,16 +277,13 @@ describe('Config', () => {
   })
 
   test('Process URLs with branch references', async () => {
-    process.env.GITHUB_SERVER_URL = 'https://github.tools.sap'
     process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
-    process.env.GITHUB_REPOSITORY = 'piper-test/gha-demo-k8s-node'
-    process.env.GITHUB_HEAD_REF = 'main'
 
     const customPaths = [
       '.pipeline/custom-defaults.yml',
       '../shared/config.yaml',
       'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
-      'custom/path/config.yaml@feature'
+      'piper-test/demo-repo/custom/path/config.yaml@feature'
     ].join(',')
 
     piperExecResultMock = generatePiperGetDefaultsOutput([
@@ -308,13 +305,13 @@ describe('Config', () => {
       '--defaultsFile',
       'http://mock.test/asset/piper-defaults.yml',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/.pipeline/custom-defaults.yml?ref=main',
+      '.pipeline/custom-defaults.yml',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/shared/config.yaml?ref=main',
+      '../shared/config.yaml',
       '--defaultsFile',
       'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
       '--defaultsFile',
-      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/custom/path/config.yaml?ref=feature'
+      'https://github.tools.sap/api/v3/repos/piper-test/demo-repo/contents/custom/path/config.yaml?ref=feature'
     ]))
   })
 
