@@ -1,7 +1,6 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { error, notice } from '@actions/core'
 
 export interface piperExecResult {
   output: string
