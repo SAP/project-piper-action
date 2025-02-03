@@ -16468,39 +16468,45 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             : flags;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
-        let piperError = '';
+        const piperError = '';
         let options = {
             listeners: {
-                stdout: (data) => {
-                    let outString = '';
-                    const inString = data.toString();
-                    inString.split('\n').forEach(line => {
-                        if (line.includes('fatal')) {
-                            (0, core_1.notice)(`stdout line contains fatal: ${line}`);
-                            outString += `::error::${line}\n`;
-                        }
-                        else {
-                            outString += `${line}\n`;
-                        }
-                    });
-                    data = Buffer.from(outString);
+                stdline: (data) => {
+                    if (data.includes('fatal'))
+                        (0, core_1.error)(`${data.toString()}`);
                 },
-                stderr: (data) => {
-                    let outString = '';
-                    const inString = data.toString();
-                    inString.split('\n').forEach(line => {
-                        if (line.includes('fatal')) {
-                            (0, core_1.notice)(` stderr line contains fatal: ${line}`);
-                            outString += `::error::${line}\n`;
-                            piperError += `::error::${line}\n`;
-                        }
-                        else {
-                            outString += `${line}\n`;
-                            piperError += `${line}\n`;
-                        }
-                    });
-                    data = Buffer.from(outString);
+                errline: (data) => {
+                    if (data.includes('fatal'))
+                        (0, core_1.error)(`${data.toString()}`);
                 }
+                // stdout: (data: Buffer) => {
+                //   let outString: string = ''
+                //   const inString: string = data.toString()
+                //   inString.split('\n').forEach(line => {
+                //     if (line.includes('fatal')) {
+                //       notice(`stdout line contains fatal: ${line}`)
+                //       outString += `::error::${line}\n`
+                //     } else {
+                //       outString += `${line}\n`
+                //     }
+                //   })
+                //   data = Buffer.from(outString)
+                // },
+                // stderr: (data: Buffer) => {
+                //   let outString: string = ''
+                //   const inString = data.toString()
+                //   inString.split('\n').forEach(line => {
+                //     if (line.includes('fatal')) {
+                //       notice(` stderr line contains fatal: ${line}`)
+                //       outString += `::error::${line}\n`
+                //       piperError += `::error::${line}\n`
+                //     } else {
+                //       outString += `${line}\n`
+                //       piperError += `${line}\n`
+                //     }
+                //   })
+                //   data = Buffer.from(outString)
+                // }
             }
         };
         options = Object.assign({}, options, execOptions);
