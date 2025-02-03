@@ -3,7 +3,8 @@ import path from 'path'
 import * as exec from '@actions/exec'
 import * as core from '@actions/core'
 import * as sidecar from '../src/sidecar'
-import { type ActionConfiguration, internalActionVariables } from '../src/piper'
+import { internalActionVariables } from '../src/piper'
+import type { ActionConfiguration } from '../src/config'
 import {
   cleanupContainers,
   getOrchestratorEnvVars,
@@ -34,6 +35,7 @@ describe('Docker', () => {
     gitHubEnterpriseServer: '',
     gitHubEnterpriseApi: '',
     gitHubEnterpriseToken: '',
+    wdfGithubEnterpriseToken: '',
     dockerImage: '',
     dockerOptions: '',
     dockerEnvVars: '',
