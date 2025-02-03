@@ -280,7 +280,7 @@ describe('Config', () => {
     process.env.GITHUB_SERVER_URL = 'https://github.tools.sap'
     process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
     process.env.GITHUB_REPOSITORY = 'piper-test/gha-demo-k8s-node'
-    process.env.GITHUB_REF_NAME = 'main'
+    process.env.GITHUB_HEAD_REF = 'main'
 
     const customPaths = [
       '.pipeline/custom-defaults.yml',
