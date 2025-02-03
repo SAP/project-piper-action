@@ -16468,35 +16468,38 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             : flags;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
-        let piperOutput = '';
         let piperError = '';
         let options = {
             listeners: {
                 stdout: (data) => {
-                    const outString = data.toString();
-                    outString.split('\n').forEach(line => {
-                        // piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+                    let outString = '';
+                    const inString = data.toString();
+                    inString.split('\n').forEach(line => {
                         if (line.includes('fatal')) {
                             (0, core_1.notice)(`stdout line contains fatal: ${line}`);
-                            piperOutput += `::error::${line}\n`;
+                            outString += `::error::${line}\n`;
                         }
                         else {
-                            piperOutput += `${line}\n`;
+                            outString += `${line}\n`;
                         }
                     });
+                    data = Buffer.from(outString);
                 },
                 stderr: (data) => {
-                    const outString = data.toString();
-                    outString.split('\n').forEach(line => {
+                    let outString = '';
+                    const inString = data.toString();
+                    inString.split('\n').forEach(line => {
                         if (line.includes('fatal')) {
                             (0, core_1.notice)(` stderr line contains fatal: ${line}`);
+                            outString += `::error::${line}\n`;
                             piperError += `::error::${line}\n`;
                         }
                         else {
+                            outString += `${line}\n`;
                             piperError += `${line}\n`;
                         }
-                        // piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
                     });
+                    data = Buffer.from(outString);
                 }
             }
         };
@@ -16509,19 +16512,19 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 stepName,
                 ...flags
             ];
-            return yield (0, exec_1.exec)('docker', args, options)
-                .then(exitCode => ({
-                output: piperOutput.trim(),
-                error: piperError.trim(),
+            return yield (0, exec_1.getExecOutput)('docker', args, options)
+                .then(({ stdout, stderr, exitCode }) => ({
+                output: stdout,
+                error: stderr,
                 exitCode
             }))
                 .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
         }
         const args = [stepName, ...flags];
-        return yield (0, exec_1.exec)(piperPath, args, options)
-            .then(exitCode => ({
-            output: piperOutput,
-            error: piperError,
+        return yield (0, exec_1.getExecOutput)(piperPath, args, options)
+            .then(({ stdout, stderr, exitCode }) => ({
+            output: stdout,
+            error: stderr,
             exitCode
         }))
             .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });

@@ -1,4 +1,4 @@
-import { exec, type ExecOptions } from '@actions/exec'
+import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
 import { notice } from '@actions/core'
@@ -21,33 +21,36 @@ export async function executePiper (
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
 
-  let piperOutput = ''
   let piperError = ''
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
-        const outString = data.toString()
-        outString.split('\n').forEach(line => {
-          // piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+        let outString: string = ''
+        const inString: string = data.toString()
+        inString.split('\n').forEach(line => {
           if (line.includes('fatal')) {
             notice(`stdout line contains fatal: ${line}`)
-            piperOutput += `::error::${line}\n`
+            outString += `::error::${line}\n`
           } else {
-            piperOutput += `${line}\n`
+            outString += `${line}\n`
           }
         })
+        data = Buffer.from(outString)
       },
       stderr: (data: Buffer) => {
-        const outString = data.toString()
-        outString.split('\n').forEach(line => {
+        let outString: string = ''
+        const inString = data.toString()
+        inString.split('\n').forEach(line => {
           if (line.includes('fatal')) {
             notice(` stderr line contains fatal: ${line}`)
+            outString += `::error::${line}\n`
             piperError += `::error::${line}\n`
           } else {
+            outString += `${line}\n`
             piperError += `${line}\n`
           }
-          // piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
         })
+        data = Buffer.from(outString)
       }
     }
   }
@@ -61,10 +64,10 @@ export async function executePiper (
       stepName,
       ...flags
     ]
-    return await exec('docker', args, options)
-      .then(exitCode => ({
-        output: piperOutput.trim(),
-        error: piperError.trim(),
+    return await getExecOutput('docker', args, options)
+      .then(({ stdout, stderr, exitCode }: ExecOutput) => ({
+        output: stdout,
+        error: stderr,
         exitCode
       }))
       .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
@@ -72,10 +75,10 @@ export async function executePiper (
 
   const args: string[] = [stepName, ...flags]
 
-  return await exec(piperPath, args, options)
-    .then(exitCode => ({
-      output: piperOutput,
-      error: piperError,
+  return await getExecOutput(piperPath, args, options)
+    .then(({ stdout, stderr, exitCode }: ExecOutput) => ({
+      output: stdout,
+      error: stderr,
       exitCode
     }))
     .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
