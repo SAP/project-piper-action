@@ -28,9 +28,14 @@ export async function executePiper (
       stdout: (data: Buffer) => {
         notice('about to print some data from options.listeners.stdout')
         const outString = data.toString()
-        piperOutput += outString.toLowerCase().includes('fatal')
-          ? `::error::${outString}\n`
-          : `${outString}\n`
+        if (outString.toLowerCase().includes('fatal')) {
+          error(outString)
+        } else {
+          piperOutput += `${outString}\n`
+        }
+        // piperOutput += outString.toLowerCase().includes('fatal')
+        //   ? `::error::${outString}\n`
+        //   : `${outString}\n`
         notice('end printing data from options.listeners.stdout')
       },
       stderr: (data: Buffer) => {
@@ -54,7 +59,6 @@ export async function executePiper (
       `/piper/${path.basename(piperPath)}`,
       stepName,
       ...flags
-
     ]
     return await exec('docker', args, options)
       .then(exitCode => ({
