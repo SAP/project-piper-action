@@ -1,7 +1,7 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { error, notice } from '@actions/core'
+import { error } from '@actions/core'
 
 export interface piperExecResult {
   output: string
@@ -20,44 +20,21 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
-
-  const piperError = ''
+  let piperError = ''
   let options = {
     listeners: {
       stdline: (data: string) => {
-        if (data.includes('fatal')) error(`${data.toString()}`)
+        if (data.includes('fatal')) {
+          error(data)
+          piperError += data
+        }
       },
       errline: (data: string) => {
-        if (data.includes('fatal')) error(`${data.toString()}`)
+        if (data.includes('fatal')) {
+          error(data)
+          piperError += data
+        }
       }
-      // stdout: (data: Buffer) => {
-      //   let outString: string = ''
-      //   const inString: string = data.toString()
-      //   inString.split('\n').forEach(line => {
-      //     if (line.includes('fatal')) {
-      //       notice(`stdout line contains fatal: ${line}`)
-      //       outString += `::error::${line}\n`
-      //     } else {
-      //       outString += `${line}\n`
-      //     }
-      //   })
-      //   data = Buffer.from(outString)
-      // },
-      // stderr: (data: Buffer) => {
-      //   let outString: string = ''
-      //   const inString = data.toString()
-      //   inString.split('\n').forEach(line => {
-      //     if (line.includes('fatal')) {
-      //       notice(` stderr line contains fatal: ${line}`)
-      //       outString += `::error::${line}\n`
-      //       piperError += `::error::${line}\n`
-      //     } else {
-      //       outString += `${line}\n`
-      //       piperError += `${line}\n`
-      //     }
-      //   })
-      //   data = Buffer.from(outString)
-      // }
     }
   }
   options = Object.assign({}, options, execOptions)
