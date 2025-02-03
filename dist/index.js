@@ -19576,7 +19576,7 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
         }
         try {
             (0, core_1.info)('Trying to restore defaults from artifact');
-            yield restoreDefaultConfig(); // this fails
+            yield restoreDefaultConfig();
             (0, core_1.info)('Defaults restored from artifact');
         }
         catch (err) {

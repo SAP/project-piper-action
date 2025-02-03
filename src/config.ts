@@ -124,7 +124,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 
   try {
     info('Trying to restore defaults from artifact')
-    await restoreDefaultConfig() // this fails
+    await restoreDefaultConfig()
     info('Defaults restored from artifact')
   } catch (err: unknown) {
     // throws an error with message containing 'Unable to find' if artifact does not exist
