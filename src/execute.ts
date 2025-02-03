@@ -1,6 +1,7 @@
 import { exec, type ExecOptions } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
+import { notice } from '@actions/core'
 
 export interface piperExecResult {
   output: string
@@ -27,13 +28,25 @@ export async function executePiper (
       stdout: (data: Buffer) => {
         const outString = data.toString()
         outString.split('\n').forEach(line => {
-          piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+          // piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+          if (line.includes('fatal')) {
+            notice(`line contains fatal: ${line}`)
+            piperOutput += `::error::${line}\n`
+          } else {
+            piperOutput += `${line}\n`
+          }
         })
       },
       stderr: (data: Buffer) => {
         const outString = data.toString()
         outString.split('\n').forEach(line => {
-          piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+          if (line.includes('fatal')) {
+            notice(`line contains fatal: ${line}`)
+            piperError += `::error::${line}\n`
+          } else {
+            piperError += `${line}\n`
+          }
+          // piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
         })
       }
     }
