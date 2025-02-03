@@ -26,31 +26,16 @@ export async function executePiper (
   let options = {
     listeners: {
       stdout: (data: Buffer) => {
-        notice('about to print some data from options.listeners.stdout')
         const outString = data.toString()
         outString.split('\n').forEach(line => {
           piperOutput += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
         })
-        // if (outString.toLowerCase().includes('fatal')) {
-        //   // error(outString)
-        //   piperOutput += `::error::${outString}\n`
-        // } else {
-        //   piperOutput += `${outString}\n`
-        // }
-        // piperOutput += outString.toLowerCase().includes('fatal')
-        //   ? `::error::${outString}\n`
-        //   : `${outString}\n`
-        notice('end printing data from options.listeners.stdout')
       },
       stderr: (data: Buffer) => {
-        notice('about to print some data from options.listeners.stderr')
         const outString = data.toString()
-        // outString.split('\n').forEach(line => {
-        //   error(`${line}`) // Treat stderr as errors
-        // TODO: what to do with piperError ?
-        piperError += `::error::${outString}\n`
-        // })
-        notice('end printing data from options.listeners.stderr')
+        outString.split('\n').forEach(line => {
+          piperError += line.includes('fatal') ? `::error::${line}\n` : `${line}\n`
+        })
       }
     }
   }
