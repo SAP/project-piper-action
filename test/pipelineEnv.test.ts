@@ -4,6 +4,7 @@ import * as core from '@actions/core'
 
 import * as execute from '../src/execute'
 import { exportPipelineEnv, loadPipelineEnv } from '../src/pipelineEnv'
+import { type ExecOutput } from '@actions/exec'
 
 describe('Config', () => {
   // since environment variables are used in tests, we reset them for every test in afterEach()
@@ -14,10 +15,10 @@ describe('Config', () => {
     process.env.piperPath = './piper'
 
     jest.spyOn(execute, 'executePiper').mockResolvedValue({
-      output: '',
-      error: '',
+      stdout: '',
+      stderr: '',
       exitCode: 0
-    } as unknown as execute.piperExecResult)
+    } as unknown as ExecOutput)
 
     jest.spyOn(core, 'setOutput')
   })
@@ -56,10 +57,10 @@ describe('Config', () => {
 
   test('Export pipelineEnv - success', async () => {
     jest.spyOn(execute, 'executePiper').mockResolvedValueOnce({
-      output: testPipelineEnv,
-      error: '',
+      stdout: testPipelineEnv,
+      stderr: '',
       exitCode: 0
-    } as unknown as execute.piperExecResult)
+    } as unknown as ExecOutput)
 
     await exportPipelineEnv(true)
 

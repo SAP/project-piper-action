@@ -3,15 +3,9 @@ import path from 'path'
 import { internalActionVariables } from './piper'
 import { error } from '@actions/core'
 
-export interface piperExecResult {
-  output: string
-  error: string
-  exitCode: number
-}
-
 export async function executePiper (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
-): Promise<piperExecResult> {
+): Promise<ExecOutput> {
   if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
 
   flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
@@ -48,21 +42,13 @@ export async function executePiper (
       ...flags
     ]
     return await getExecOutput('docker', args, options)
-      .then(({ stdout, stderr, exitCode }: ExecOutput) => ({
-        output: stdout,
-        error: stderr,
-        exitCode
-      }))
+      .then((execOutput: ExecOutput) => (execOutput))
       .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
   }
 
   const args: string[] = [stepName, ...flags]
 
   return await getExecOutput(piperPath, args, options)
-    .then(({ stdout, stderr, exitCode }: ExecOutput) => ({
-      output: stdout,
-      error: stderr,
-      exitCode
-    }))
+    .then((execOutput: ExecOutput) => (execOutput))
     .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
 }

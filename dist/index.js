@@ -15937,8 +15937,8 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         const flags = [];
         flags.push(...defaultsPathsArgs);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
-        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        let defaultConfigs = JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
+        let defaultConfigs = JSON.parse(stdout);
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
@@ -15999,8 +15999,8 @@ function downloadStageConfig(actionCfg) {
         const flags = ['--useV1'];
         flags.push('--defaultsFile', stageConfigPath);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`);
-        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        const config = JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
+        const config = JSON.parse(stdout);
         fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), config.content);
     });
 }
@@ -16082,8 +16082,8 @@ function readContextConfig(stepName, flags) {
             const customConfigFlagValue = flags[flagIdx + 1];
             getConfigFlags.push('--customConfig', customConfigFlagValue);
         }
-        const piperExec = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
-        return JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
+        return JSON.parse(stdout);
     });
 }
 exports.readContextConfig = readContextConfig;
@@ -16472,9 +16472,10 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         let options = {
             listeners: {
                 stdline: (data) => {
-                    if (data.includes('fatal'))
+                    if (data.includes('fatal')) {
                         (0, core_1.error)(data);
-                    piperError += data;
+                        piperError += data;
+                    }
                 },
                 errline: (data) => {
                     if (data.includes('fatal')) {
@@ -16494,20 +16495,12 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
             return yield (0, exec_1.getExecOutput)('docker', args, options)
-                .then(({ stdout, stderr, exitCode }) => ({
-                output: stdout,
-                error: stderr,
-                exitCode
-            }))
+                .then((execOutput) => (execOutput))
                 .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
         }
         const args = [stepName, ...flags];
         return yield (0, exec_1.getExecOutput)(piperPath, args, options)
-            .then(({ stdout, stderr, exitCode }) => ({
-            output: stdout,
-            error: stderr,
-            exitCode
-        }))
+            .then((execOutput) => (execOutput))
             .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
     });
 }
@@ -16769,7 +16762,7 @@ function exportPipelineEnv(exportPipelineEnvironment) {
             throw new Error(`Can't export pipeline environment: ${err}`);
         });
         try {
-            const pipelineEnv = JSON.stringify(JSON.parse((piperExec.output)));
+            const pipelineEnv = JSON.stringify(JSON.parse((piperExec.stdout)));
             (0, core_1.setOutput)('pipelineEnv', pipelineEnv);
         }
         catch (err) {

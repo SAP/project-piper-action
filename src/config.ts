@@ -158,9 +158,8 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   const flags: string[] = []
   flags.push(...defaultsPathsArgs)
   flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
-  const piperExec = await executePiper('getDefaults', flags)
-
-  let defaultConfigs = JSON.parse(piperExec.output)
+  const { stdout } = await executePiper('getDefaults', flags)
+  let defaultConfigs = JSON.parse(stdout)
   if (customDefaultsPathsArray.length === 0) {
     defaultConfigs = [defaultConfigs]
   }
@@ -231,8 +230,8 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   const flags: string[] = ['--useV1']
   flags.push('--defaultsFile', stageConfigPath)
   flags.push('--gitHubTokens', `${getHost(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`)
-  const piperExec = await executePiper('getDefaults', flags)
-  const config = JSON.parse(piperExec.output)
+  const { stdout } = await executePiper('getDefaults', flags)
+  const config = JSON.parse(stdout)
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
 }
 
@@ -315,6 +314,6 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
     getConfigFlags.push('--customConfig', customConfigFlagValue)
   }
 
-  const piperExec = await executePiper('getConfig', getConfigFlags)
-  return JSON.parse(piperExec.output)
+  const { stdout } = await executePiper('getConfig', getConfigFlags)
+  return JSON.parse(stdout)
 }
