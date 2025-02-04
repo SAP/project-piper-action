@@ -1,4 +1,5 @@
 import { GITHUB_COM_SERVER_URL, getReleaseAssetUrl } from './github'
+import { debug } from '@actions/core'
 
 export const DEFAULT_CONFIG = 'DefaultConfig'
 export const STAGE_CONFIG = 'StageConfig'
@@ -20,22 +21,30 @@ export function onGitHubEnterprise (): boolean {
 }
 
 export async function getEnterpriseConfigUrl (configType: string, apiURL: string, version: string, token: string, owner: string, repository: string): Promise<string> {
-  let assetname: string = ''
-  let filename: string = ''
+  debug('Getting enterprise config URL')
+  if (configType !== DEFAULT_CONFIG && configType !== STAGE_CONFIG) return ''
 
-  if (configType === DEFAULT_CONFIG) {
-    assetname = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
-    filename = ENTERPRISE_DEFAULTS_FILENAME
-  } else if (configType === STAGE_CONFIG) {
-    assetname = ENTERPRISE_STAGE_CONFIG_FILENAME
+  debug('initiating assetName and filename')
+  let assetName: string = ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE
+  let filename: string = ENTERPRISE_DEFAULTS_FILENAME
+
+  if (configType === STAGE_CONFIG) {
+    debug('configType is STAGE_CONFIG')
+    assetName = ENTERPRISE_STAGE_CONFIG_FILENAME
     filename = ENTERPRISE_STAGE_CONFIG_FILENAME
-  } else {
-    return ''
   }
 
+  // if version starts with devel: then it should use inner source Piper
+  if (version.startsWith('devel:')) {
+    version = 'latest'
+  }
   // get URL of defaults from the release (gh api, authenticated)
-  const [url] = await getReleaseAssetUrl(assetname, version, apiURL, token, owner, repository)
-  if (url !== '') return url
-  // fallback to get URL of defaults in the repository (unauthenticated)
-  return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`
+  const [url] = await getReleaseAssetUrl(assetName, version, apiURL, token, owner, repository)
+  if (url === '') {
+    // fallback to get URL of defaults in the repository (unauthenticated)
+    debug(`Fallback to get URL of defaults in the repository: ${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`)
+    return `${process.env.GITHUB_API_URL}/repos/${owner}/${repository}/contents/resources/${filename}`
+  }
+  debug(`Returning enterprise config URL ${url}`)
+  return url
 }
