@@ -16486,20 +16486,21 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             }
         };
         options = Object.assign({}, options, execOptions);
+        // Default to Piper
+        let binaryPath = piperPath;
+        let args = [stepName, ...flags];
         if (containerID !== '') { // Running in a container
-            const args = [
+            (0, core_1.debug)(`containerID: ${containerID}, running in docker`);
+            binaryPath = 'docker';
+            args = [
                 'exec',
                 containerID,
                 `/piper/${path_1.default.basename(piperPath)}`,
                 stepName,
                 ...flags
             ];
-            return yield (0, exec_1.getExecOutput)('docker', args, options)
-                .then((execOutput) => (execOutput))
-                .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
         }
-        const args = [stepName, ...flags];
-        return yield (0, exec_1.getExecOutput)(piperPath, args, options)
+        return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
             .then((execOutput) => (execOutput))
             .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
     });
