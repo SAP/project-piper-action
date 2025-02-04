@@ -19598,7 +19598,7 @@ function processCustomDefaultsPath(path) {
     // Handle paths with org+repo and branch references (org/repo/some/path/to/config.yml@branch)
     const apiUrl = process.env.GITHUB_API_URL;
     const branchMatch = path.match(/^(.+?)\/(.+?)\/(.+?)@(.+)$/);
-    if (branchMatch) {
+    if (branchMatch !== null) {
         const [, org, repo, filePath, branch] = branchMatch;
         return `${apiUrl}/repos/${org}/${repo}/contents/${filePath}?ref=${branch}`;
     }
