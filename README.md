@@ -40,12 +40,14 @@ See [Piper's docs section about configuration](https://www.project-piper.io/conf
 You can specify custom defaults configuration files using the `custom-defaults-paths` parameter in various ways:
 
 1. Using a single custom defaults file:
+
 ```yaml
 with:
   custom-defaults-paths: 'path/to/custom-defaults.yml'
 ```
 
 2. Using multiple custom defaults files:
+
 ```yaml
 with:
   custom-defaults-paths: |
@@ -54,6 +56,7 @@ with:
 ```
 
 3. Using custom defaults files from other repositories:
+
 ```yaml
 with:
   custom-defaults-paths: |
