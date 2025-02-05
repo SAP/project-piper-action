@@ -135,6 +135,24 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   }
 }
 
+function processCustomDefaultsPath (path: string): string {
+  // Handle HTTP URLs
+  if (path.startsWith('http')) {
+    return path
+  }
+
+  // Handle paths with org+repo and branch references (org/repo/some/path/to/config.yml@branch)
+  const apiUrl = process.env.GITHUB_API_URL
+  const branchMatch = path.match(/^(.+?)\/(.+?)\/(.+?)@(.+)$/)
+  if (branchMatch !== null) {
+    const [, org, repo, filePath, branch] = branchMatch
+    return `${apiUrl}/repos/${org}/${repo}/contents/${filePath}?ref=${branch}`
+  }
+
+  // Others treated as paths to local files
+  return path
+}
+
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
@@ -148,7 +166,9 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   }
 
   const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : []
-  defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray)
+  defaultsPaths = defaultsPaths.concat(
+    customDefaultsPathsArray.map(path => processCustomDefaultsPath(path.trim()))
+  )
   const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat()
 
   const piperPath = internalActionVariables.piperBinPath
@@ -164,8 +184,25 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   if (customDefaultsPathsArray.length === 0) {
     defaultConfigs = [defaultConfigs]
   }
+  // Ensure defaultConfigs is always an array
+  if (!Array.isArray(defaultConfigs)) {
+    defaultConfigs = [defaultConfigs]
+  }
 
-  const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs)
+  // When saving files, sanitize filenames by removing query parameters
+  const sanitizeFilename = (url: string): string => {
+    try {
+      const parsed = new URL(url)
+      return path.basename(parsed.pathname)
+    } catch {
+      return path.basename(url)
+    }
+  }
+
+  const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config: DefaultConfig) => ({
+    ...config,
+    filepath: sanitizeFilename(config.filepath)
+  })))
   const uploadResponse = await uploadDefaultConfigArtifact(savedDefaultsPaths)
   exportVariable('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths))
   return uploadResponse
