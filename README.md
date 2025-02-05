@@ -60,8 +60,8 @@ with:
 ```yaml
 with:
   custom-defaults-paths: |
-    repo1/path/to/custom-defaults.yml@v1.0.0
-    repo2/path/to/custom-defaults.yml@v2.0.0
+    orgName1/repo1/path/to/custom-defaults.yml@v1.0.0
+    orgName2/repo2/path/to/custom-defaults.yml@v2.0.0
 ```
 
 ### Secrets
