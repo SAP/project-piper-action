@@ -18,4 +18,4 @@ jobs:
         run: npm install
 
       - name: Check for unused dependencies
-        run: npx depcheck --ignores="@types/*,eslint*,babel*" --skip-missing true
+        run: npx depcheck --ignores="@types/*,eslint*,babel*,jest*" --skip-missing true
