@@ -54,13 +54,13 @@ jobs:
         with:
           files: reports/TEST-jest.xml
           comment_mode: off
-      # action does not support GH Enterprise
-      #- uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
-      #  if: always() && github.event_name == 'pull_request'
-      #  env:
-      #    GITHUB_API_URL:
-      #  with:
-      #    lcov-file: reports/lcov.info
+  # action does not support GH Enterprise
+  # - uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
+  #  if: always() && github.event_name == 'pull_request'
+  #  env:
+  #    GITHUB_API_URL:
+  #  with:
+  #    lcov-file: reports/lcov.info
 
   sonar:
     name: Sonar
@@ -71,15 +71,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: lint report
           path: reports
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: test report
           path: reports
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: coverage report
           path: reports

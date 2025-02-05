@@ -15918,6 +15918,21 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
     });
 }
 exports.getDefaultConfig = getDefaultConfig;
+function processCustomDefaultsPath(path) {
+    // Handle HTTP URLs
+    if (path.startsWith('http')) {
+        return path;
+    }
+    // Handle paths with org+repo and branch references (org/repo/some/path/to/config.yml@branch)
+    const apiUrl = process.env.GITHUB_API_URL;
+    const branchMatch = path.match(/^(.+?)\/(.+?)\/(.+?)@(.+)$/);
+    if (branchMatch !== null) {
+        const [, org, repo, filePath, branch] = branchMatch;
+        return `${apiUrl}/repos/${org}/${repo}/contents/${filePath}?ref=${branch}`;
+    }
+    // Others treated as paths to local files
+    return path;
+}
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
@@ -15930,7 +15945,7 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
         }
         const customDefaultsPathsArray = customDefaultsPaths !== '' ? customDefaultsPaths.split(',') : [];
-        defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray);
+        defaultsPaths = defaultsPaths.concat(customDefaultsPathsArray.map(path => processCustomDefaultsPath(path.trim())));
         const defaultsPathsArgs = defaultsPaths.map((url) => ['--defaultsFile', url]).flat();
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         if (piperPath === undefined) {
@@ -15944,7 +15959,21 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
-        const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs);
+        // Ensure defaultConfigs is always an array
+        if (!Array.isArray(defaultConfigs)) {
+            defaultConfigs = [defaultConfigs];
+        }
+        // When saving files, sanitize filenames by removing query parameters
+        const sanitizeFilename = (url) => {
+            try {
+                const parsed = new URL(url);
+                return path.basename(parsed.pathname);
+            }
+            catch (_a) {
+                return path.basename(url);
+            }
+        };
+        const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config) => (Object.assign(Object.assign({}, config), { filepath: sanitizeFilename(config.filepath) }))));
         const uploadResponse = yield uploadDefaultConfigArtifact(savedDefaultsPaths);
         (0, core_1.exportVariable)('defaultsFlags', generateDefaultConfigFlags(savedDefaultsPaths));
         return uploadResponse;
