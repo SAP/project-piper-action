@@ -270,4 +270,71 @@ describe('Config', () => {
     }
     expect(savedPaths).toEqual(expectedPaths)
   })
+
+  test('Process URLs with branch references', async () => {
+    process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
+
+    const customPaths = [
+      '.pipeline/custom-defaults.yml',
+      '../shared/config.yaml',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
+      'piper-test/demo-repo/custom/path/config.yaml@feature'
+    ].join(',')
+
+    piperExecResultMock = generatePiperGetDefaultsOutput([
+      'http://mock.test/asset/piper-defaults.yml'
+    ])
+
+    const errorCode = await config.downloadDefaultConfig(
+      'https://github.tools.sap',
+      'https://github.tools.sap/api/v3',
+      'v1.0.0',
+      'token',
+      'piper-test',
+      'gha-demo-k8s-node',
+      customPaths
+    )
+
+    expect(errorCode).toBe(0)
+    expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+      '--defaultsFile',
+      'http://mock.test/asset/piper-defaults.yml',
+      '--defaultsFile',
+      '.pipeline/custom-defaults.yml',
+      '--defaultsFile',
+      '../shared/config.yaml',
+      '--defaultsFile',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
+      '--defaultsFile',
+      'https://github.tools.sap/api/v3/repos/piper-test/demo-repo/contents/custom/path/config.yaml?ref=feature'
+    ]))
+  })
+
+  test('Sanitizes filenames when saving', async () => {
+    const paths = [
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/config.yaml?ref=feature',
+      '.pipeline/custom.yml'
+    ]
+
+    piperExecResultMock = generatePiperGetDefaultsOutput(paths)
+
+    await config.downloadDefaultConfig(
+      'https://github.com',
+      'https://api.github.com',
+      'v1.0.0',
+      'token',
+      'org',
+      'repo',
+      paths.join(',')
+    )
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('config.yaml'),
+      expect.anything()
+    )
+    expect(fs.writeFileSync).not.toHaveBeenCalledWith(
+      expect.stringContaining('?ref='),
+      expect.anything()
+    )
+  })
 })
