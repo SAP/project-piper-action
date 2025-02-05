@@ -199,11 +199,6 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
     }
   }
 
-  interface DefaultConfig {
-    filepath: string
-    content: string
-  }
-
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config: DefaultConfig) => ({
     ...config,
     filepath: sanitizeFilename(config.filepath)
