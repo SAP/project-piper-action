@@ -114,4 +114,4 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm clean-install
       - run: npm run dist:build
-      - run: git diff --exit-code --ignore-cr-at-eol
+      - run: git diff --name-only --exit-code
