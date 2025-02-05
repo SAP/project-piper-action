@@ -55,7 +55,7 @@ jobs:
           files: reports/TEST-jest.xml
           comment_mode: off
   # action does not support GH Enterprise
-  #- uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
+  # - uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
   #  if: always() && github.event_name == 'pull_request'
   #  env:
   #    GITHUB_API_URL:
