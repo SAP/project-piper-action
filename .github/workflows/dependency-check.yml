@@ -14,8 +14,5 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install dependencies # TODO: do we need this before check ?
-        run: npm install
-
       - name: Check for unused dependencies
         run: npx depcheck --ignores="@types/*,eslint*,babel*,jest*" --skip-missing true
