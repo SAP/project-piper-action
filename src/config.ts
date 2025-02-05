@@ -53,7 +53,7 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
-export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
+export async function getActionConfig(options: InputOptions): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
     let value: string = getInput(param, options)
     if (value === '') {
@@ -113,7 +113,7 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
   }
 }
 
-export async function getDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<void> {
+export async function getDefaultConfig(server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<void> {
   if (fs.existsSync(path.join(CONFIG_DIR, ENTERPRISE_DEFAULTS_FILENAME))) {
     info('Defaults are present')
     debug(process.env.defaultsFlags !== undefined
@@ -135,7 +135,7 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   }
 }
 
-function processCustomDefaultsPath (path: string): string {
+function processCustomDefaultsPath(path: string): string {
   // Handle HTTP URLs
   if (path.startsWith('http')) {
     return path
@@ -153,7 +153,7 @@ function processCustomDefaultsPath (path: string): string {
   return path
 }
 
-export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
+export async function downloadDefaultConfig(server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
   // Since defaults file is located in release assets, we will take it from latest release
@@ -199,11 +199,6 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
     }
   }
 
-  interface DefaultConfig {
-    filepath: string
-    content: string
-  }
-
   const savedDefaultsPaths = saveDefaultConfigs(defaultConfigs.map((config: DefaultConfig) => ({
     ...config,
     filepath: sanitizeFilename(config.filepath)
@@ -218,7 +213,7 @@ interface DefaultConfig {
   content: string
 }
 
-export function saveDefaultConfigs (defaultConfigs: DefaultConfig[]): string[] {
+export function saveDefaultConfigs(defaultConfigs: DefaultConfig[]): string[] {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true })
   }
@@ -237,7 +232,7 @@ export function saveDefaultConfigs (defaultConfigs: DefaultConfig[]): string[] {
   }
 }
 
-export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguration): Promise<void> {
+export async function createCheckIfStepActiveMaps(actionCfg: ActionConfiguration): Promise<void> {
   info('creating maps with active stages and steps with checkIfStepActive')
 
   await downloadStageConfig(actionCfg)
@@ -247,7 +242,7 @@ export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguratio
     })
 }
 
-export async function downloadStageConfig (actionCfg: ActionConfiguration): Promise<void> {
+export async function downloadStageConfig(actionCfg: ActionConfiguration): Promise<void> {
   let stageConfigPath = ''
   if (actionCfg.customStageConditionsPath !== '') {
     info(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`)
@@ -278,7 +273,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
 }
 
-export async function checkIfStepActive (stepName: string, stageName: string, outputMaps: boolean): Promise<number> {
+export async function checkIfStepActive(stepName: string, stageName: string, outputMaps: boolean): Promise<number> {
   const flags: string[] = []
   flags.push('--stageConfig', path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME))
   if (outputMaps) {
@@ -292,7 +287,7 @@ export async function checkIfStepActive (stepName: string, stageName: string, ou
   return result.exitCode
 }
 
-export async function restoreDefaultConfig (): Promise<void> {
+export async function restoreDefaultConfig(): Promise<void> {
   const artifactClient = artifact.create()
   const tempDir = path.join(CONFIG_DIR, 'defaults_temp')
   // throws an error with message containing 'Unable to find' if artifact does not exist
@@ -316,7 +311,7 @@ export async function restoreDefaultConfig (): Promise<void> {
   await Promise.resolve()
 }
 
-export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Promise<UploadResponse> {
+export async function uploadDefaultConfigArtifact(defaultsPaths: string[]): Promise<UploadResponse> {
   debug('uploading defaults as artifact')
 
   // order of (custom) defaults is important, so preserve it for when artifact is downloaded in another stage
@@ -331,11 +326,11 @@ export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Pro
   return await artifactClient.uploadArtifact(ARTIFACT_NAME, artifactFiles, CONFIG_DIR)
 }
 
-export function generateDefaultConfigFlags (paths: string[]): string[] {
+export function generateDefaultConfigFlags(paths: string[]): string[] {
   return paths.map((path) => ['--defaultConfig', path]).flat()
 }
 
-export async function readContextConfig (stepName: string, flags: string[]): Promise<any> {
+export async function readContextConfig(stepName: string, flags: string[]): Promise<any> {
   if (['version', 'help', 'getConfig', 'getDefaults', 'writePipelineEnv'].includes(stepName)) {
     return {}
   }
