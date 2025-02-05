@@ -54,13 +54,13 @@ jobs:
         with:
           files: reports/TEST-jest.xml
           comment_mode: off
-      # action does not support GH Enterprise
-      #- uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
-      #  if: always() && github.event_name == 'pull_request'
-      #  env:
-      #    GITHUB_API_URL:
-      #  with:
-      #    lcov-file: reports/lcov.info
+  # action does not support GH Enterprise
+  #- uses: ghcom-actions/romeovs-lcov-reporter-action@v0.2.16
+  #  if: always() && github.event_name == 'pull_request'
+  #  env:
+  #    GITHUB_API_URL:
+  #  with:
+  #    lcov-file: reports/lcov.info
 
   sonar:
     name: Sonar
@@ -114,4 +114,4 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
       - run: npm clean-install
       - run: npm run dist:build
-      - run: git diff --exit-code --ignore-cr-at-eol
+      - run: git diff --name-only --exit-code
