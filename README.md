@@ -39,29 +39,25 @@ See [Piper's docs section about configuration](https://www.project-piper.io/conf
 
 You can specify custom defaults configuration files using the `custom-defaults-paths` parameter in various ways:
 
-1. Using a single custom defaults file:
+* Using a single custom defaults file:
 
 ```yaml
 with:
   custom-defaults-paths: 'path/to/custom-defaults.yml'
 ```
 
-2. Using multiple custom defaults files:
+* Using multiple custom defaults files:
 
 ```yaml
 with:
-  custom-defaults-paths: |
-    path/to/custom-defaults1.yml
-    path/to/custom-defaults2.yml
+  custom-defaults-paths: "path/to/custom-defaults1.yml,path/to/custom-defaults2.yml"
 ```
 
-3. Using custom defaults files from other repositories:
+* Using custom defaults files from other repositories:
 
 ```yaml
 with:
-  custom-defaults-paths: |
-    orgName1/repo1/path/to/custom-defaults.yml@v1.0.0
-    orgName2/repo2/path/to/custom-defaults.yml@v2.0.0
+  custom-defaults-paths: "orgName1/repo1/path/to/custom-defaults.yml@v1.0.0,orgName2/repo2/path/to/custom-defaults.yml@v2.0.0"
 ```
 
 ### Secrets
