@@ -51,21 +51,20 @@ export async function executePiper (
       .catch(err => {
         throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
       })
-  } else {
-    return await exec('docker', [
-      'exec',
-      containerID,
+  }
+  return await exec('docker', [
+    'exec',
+    containerID,
       `/piper/${path.basename(piperPath)}`,
       stepName,
       ...flags
-    ], options).then(exitCode => {
-      return {
-        output: piperOutput,
-        error: piperError,
-        exitCode
-      }
-    }).catch(err => {
-      throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
-    })
-  }
+  ], options).then(exitCode => {
+    return {
+      output: piperOutput,
+      error: piperError,
+      exitCode
+    }
+  }).catch(err => {
+    throw new Error(`Piper execution error: ${err as string}: ${piperError}`)
+  })
 }

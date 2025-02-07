@@ -7,7 +7,7 @@ import {
 } from './docker'
 import { v4 as uuidv4 } from 'uuid'
 import { debug, info, warning } from '@actions/core'
-import type { ActionConfiguration } from './piper'
+import type { ActionConfiguration } from './config'
 import { internalActionVariables } from './piper'
 
 const NETWORK_PREFIX = 'sidecar-'

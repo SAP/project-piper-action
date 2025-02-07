@@ -10,7 +10,6 @@ import * as artifact from '@actions/artifact'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
-import type { ActionConfiguration } from '../src/piper'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -27,6 +26,9 @@ interface piperExecResult {
 }
 
 describe('Config', () => {
+  // beforeEach(() => {
+  //   jest.resetAllMocks()
+  // })
   // piperExecResultMock is set as mock return value for the executePiper function before every test
   // it can be altered in individual tests, as the mock object is passed by reference
   // after every test, it gets reset to the default result object
@@ -59,15 +61,15 @@ describe('Config', () => {
     process.env.piperPath = './piper'
 
     jest.spyOn(execute, 'executePiper').mockImplementation(async () => {
-      return await Promise.resolve(piperExecResultMock)
+      return piperExecResultMock
     })
 
     jest.spyOn(artifact, 'create').mockReturnValue({
       uploadArtifact: async () => {
-        return await Promise.resolve(0)
+        return 0
       },
       downloadArtifact: async () => {
-        return await Promise.resolve(0)
+        return 0
       }
     } as unknown as artifact.ArtifactClient)
 
@@ -127,7 +129,9 @@ describe('Config', () => {
     expect(errorCode).toBe(0)
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     expect(core.exportVariable).toHaveBeenCalledWith('defaultsFlags', expectedExportedFilepaths)
-    for (const filepath of expectedWrittenFilepaths) { expect(fs.writeFileSync).toHaveBeenCalledWith(filepath, expect.anything()) }
+    for (const filepath of expectedWrittenFilepaths) {
+      expect(fs.writeFileSync).toHaveBeenCalledWith(filepath, expect.anything())
+    }
   })
 
   test('Get defaults and 2 custom defaults files', async () => {
@@ -152,7 +156,9 @@ describe('Config', () => {
     expect(errorCode).toBe(0)
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     expect(core.exportVariable).toHaveBeenCalledWith('defaultsFlags', expectedExportedFilepaths)
-    for (const filepath of expectedWrittenFilepaths) { expect(fs.writeFileSync).toHaveBeenCalledWith(filepath, expect.anything()) }
+    for (const filepath of expectedWrittenFilepaths) {
+      expect(fs.writeFileSync).toHaveBeenCalledWith(filepath, expect.anything())
+    }
   })
 
   test('Read context config', async () => {
@@ -207,7 +213,7 @@ describe('Config', () => {
       customStageConditionsPath: '',
       sapPiperOwner: 'something',
       sapPiperRepo: 'nothing'
-    } as ActionConfiguration
+    } as config.ActionConfiguration
     await config.downloadStageConfig(actionCfg)
 
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
@@ -240,12 +246,100 @@ describe('Config', () => {
       gitHubEnterpriseToken: 'testToken',
       sapPiperOwner: 'something',
       sapPiperRepo: 'nothing'
-    } as ActionConfiguration
+    } as config.ActionConfiguration
     await config.createCheckIfStepActiveMaps(actionCfg)
 
     expect(config.downloadStageConfig).toHaveBeenCalled()
     expect(config.checkIfStepActive).toHaveBeenCalled()
 
     delete process.env.GITHUB_JOB
+  })
+
+  test('Save default configs', () => {
+    const defaultConfigs = [
+      { content: 'config content 1', filepath: 'config1.yml' },
+      { content: 'config content 2', filepath: 'config2.yml' }
+    ]
+    const expectedPaths = defaultConfigs.map(cfg => path.join(config.CONFIG_DIR, path.basename(cfg.filepath)))
+
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false)
+    jest.spyOn(fs, 'mkdirSync')
+    jest.spyOn(fs, 'writeFileSync')
+
+    const savedPaths = config.saveDefaultConfigs(defaultConfigs)
+
+    expect(fs.existsSync).toHaveBeenCalledWith(config.CONFIG_DIR)
+    expect(fs.mkdirSync).toHaveBeenCalledWith(config.CONFIG_DIR, { recursive: true })
+    for (const [index, configPath] of expectedPaths.entries()) {
+      expect(fs.writeFileSync).toHaveBeenCalledWith(configPath, defaultConfigs[index].content)
+    }
+    expect(savedPaths).toEqual(expectedPaths)
+  })
+
+  test('Process URLs with branch references', async () => {
+    process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
+
+    const customPaths = [
+      '.pipeline/custom-defaults.yml',
+      '../shared/config.yaml',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
+      'piper-test/demo-repo/custom/path/config.yaml@feature'
+    ].join(',')
+
+    piperExecResultMock = generatePiperGetDefaultsOutput([
+      'http://mock.test/asset/piper-defaults.yml'
+    ])
+
+    const errorCode = await config.downloadDefaultConfig(
+      'https://github.tools.sap',
+      'https://github.tools.sap/api/v3',
+      'v1.0.0',
+      'token',
+      'piper-test',
+      'gha-demo-k8s-node',
+      customPaths
+    )
+
+    expect(errorCode).toBe(0)
+    expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+      '--defaultsFile',
+      'http://mock.test/asset/piper-defaults.yml',
+      '--defaultsFile',
+      '.pipeline/custom-defaults.yml',
+      '--defaultsFile',
+      '../shared/config.yaml',
+      '--defaultsFile',
+      'https://github.tools.sap/api/v3/repos/org/repo/config.yaml?ref=develop',
+      '--defaultsFile',
+      'https://github.tools.sap/api/v3/repos/piper-test/demo-repo/contents/custom/path/config.yaml?ref=feature'
+    ]))
+  })
+
+  test('Sanitizes filenames when saving', async () => {
+    const paths = [
+      'https://github.tools.sap/api/v3/repos/piper-test/gha-demo-k8s-node/contents/config.yaml?ref=feature',
+      '.pipeline/custom.yml'
+    ]
+
+    piperExecResultMock = generatePiperGetDefaultsOutput(paths)
+
+    await config.downloadDefaultConfig(
+      'https://github.com',
+      'https://api.github.com',
+      'v1.0.0',
+      'token',
+      'org',
+      'repo',
+      paths.join(',')
+    )
+
+    expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('config.yaml'),
+      expect.anything()
+    )
+    expect(fs.writeFileSync).not.toHaveBeenCalledWith(
+      expect.stringContaining('?ref='),
+      expect.anything()
+    )
   })
 })

@@ -2,7 +2,7 @@ import { dirname } from 'path'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { v4 as uuidv4 } from 'uuid'
-import type { ActionConfiguration } from './piper'
+import type { ActionConfiguration } from './config'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
 
@@ -18,9 +18,7 @@ export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: 
 
 export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
-  if (dockerImage === undefined || dockerImage === '') {
-    return
-  }
+  if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = uuidv4()

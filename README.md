@@ -35,6 +35,31 @@ Piper step configuration is either done via Piper's configuration file in your p
 
 See [Piper's docs section about configuration](https://www.project-piper.io/configuration/) for more information.
 
+### Custom Defaults
+
+You can specify custom defaults configuration files using the `custom-defaults-paths` parameter in various ways:
+
+* Using a single custom defaults file:
+
+```yaml
+with:
+  custom-defaults-paths: 'path/to/custom-defaults.yml'
+```
+
+* Using multiple custom defaults files:
+
+```yaml
+with:
+  custom-defaults-paths: "path/to/custom-defaults1.yml,path/to/custom-defaults2.yml"
+```
+
+* Using custom defaults files from other repositories:
+
+```yaml
+with:
+  custom-defaults-paths: "orgName1/repo1/path/to/custom-defaults.yml@v1.0.0,orgName2/repo2/path/to/custom-defaults.yml@v2.0.0"
+```
+
 ### Secrets
 
 Piper can load secrets directly from Vault if Vault approle roleID and secretID are provided via environment variables.
