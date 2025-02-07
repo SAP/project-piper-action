@@ -15723,11 +15723,9 @@ function downloadWithAuth(url, destination, wdfGithubToken) {
                 fs_1.default.mkdirSync(dir, { recursive: true });
                 (0, core_1.info)(`📂 Created directory: ${dir}`);
             }
-            const zipFile = yield downloadZip(url, destination, wdfGithubToken).catch((err) => {
+            return yield downloadZip(url, destination, wdfGithubToken).catch((err) => {
                 throw new Error(`Can't download with auth: ${err}`);
             });
-            (0, core_1.info)(`✅ Downloaded successfully to ${zipFile}`);
-            return zipFile;
         }
         catch (error) {
             (0, core_1.setFailed)(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`);
