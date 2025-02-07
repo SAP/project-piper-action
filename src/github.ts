@@ -8,7 +8,7 @@ import { downloadTool, extractZip } from '@actions/tool-cache'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 
-export const GITHUB_COM_SERVER_URL = 'https://github.com'
+export const GITHUB_COM_SERVER_URL = 'https://sap.com'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
 export const PIPER_OWNER = 'SAP'
 export const PIPER_REPOSITORY = 'jenkins-library'
