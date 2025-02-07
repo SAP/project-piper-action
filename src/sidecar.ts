@@ -5,7 +5,7 @@ import {
   getProxyEnvVars,
   getVaultEnvVars
 } from './docker'
-import { v4 as uuidv4 } from 'uuid'
+import { v7 as uuidv7 } from 'uuid'
 import { debug, info, warning } from '@actions/core'
 import type { ActionConfiguration } from './config'
 import { internalActionVariables } from './piper'
@@ -13,7 +13,7 @@ import { internalActionVariables } from './piper'
 const NETWORK_PREFIX = 'sidecar-'
 
 export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: any, sidecarImage: string): Promise<void> {
-  const containerID = uuidv4()
+  const containerID = uuidv7()
   internalActionVariables.sidecarContainerID = containerID
   info(`Starting image ${sidecarImage} as sidecar ${containerID}`)
 
@@ -55,7 +55,7 @@ export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: a
 }
 
 export async function createNetwork (): Promise<void> {
-  const networkName = NETWORK_PREFIX + uuidv4()
+  const networkName = NETWORK_PREFIX + uuidv7()
 
   info(`Creating network ${networkName}`)
   const result = await dockerExecReadOutput(['network', 'create', networkName])
