@@ -79,11 +79,9 @@ async function downloadWithAuth (url: string, destination: string, wdfGithubToke
       info(`📂 Created directory: ${dir}`)
     }
 
-    const zipFile = await downloadZip(url, destination, wdfGithubToken).catch((err) => {
+    return await downloadZip(url, destination, wdfGithubToken).catch((err) => {
       throw new Error(`Can't download with auth: ${err}`)
     })
-    info(`✅ Downloaded successfully to ${zipFile}`)
-    return zipFile
   } catch (error) {
     setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
     return ''
