@@ -3,7 +3,7 @@ name: Dependency Check
 on: [push, pull_request]
 
 env:
-  NODE_VERSION: 18
+  NODE_VERSION: 20
 
 jobs:
   check-unused-dependencies:
