@@ -15687,9 +15687,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             throw new Error(`Can't extract Inner Source Piper: ${err}`);
         });
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => {
-            return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
+        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => name.includes(repository))) !== null && _a !== void 0 ? _a : '');
         (0, core_1.info)(`repositoryPath: ${repositoryPath}`);
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
@@ -15952,8 +15950,8 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         const flags = [];
         flags.push(...defaultsPathsArgs);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
-        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        let defaultConfigs = JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
+        let defaultConfigs = JSON.parse(stdout);
         if (customDefaultsPathsArray.length === 0) {
             defaultConfigs = [defaultConfigs];
         }
@@ -16028,8 +16026,8 @@ function downloadStageConfig(actionCfg) {
         const flags = ['--useV1'];
         flags.push('--defaultsFile', stageConfigPath);
         flags.push('--gitHubTokens', `${(0, github_1.getHost)(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`);
-        const piperExec = yield (0, execute_1.executePiper)('getDefaults', flags);
-        const config = JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
+        const config = JSON.parse(stdout);
         fs.writeFileSync(path.join(exports.CONFIG_DIR, enterprise_1.ENTERPRISE_STAGE_CONFIG_FILENAME), config.content);
     });
 }
@@ -16111,8 +16109,8 @@ function readContextConfig(stepName, flags) {
             const customConfigFlagValue = flags[flagIdx + 1];
             getConfigFlags.push('--customConfig', customConfigFlagValue);
         }
-        const piperExec = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
-        return JSON.parse(piperExec.output);
+        const { stdout } = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
+        return JSON.parse(stdout);
     });
 }
 exports.readContextConfig = readContextConfig;
@@ -16166,11 +16164,10 @@ function startContainer(actionCfg, ctxConfig) {
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
-        if (dockerOptions !== undefined && Array.isArray(dockerOptions)) {
-            dockerOptionsArray = dockerOptions.map(option => option.split(' ')).flat();
-        }
-        else if (dockerOptions !== undefined) {
-            dockerOptionsArray = dockerOptions.split(' ');
+        if (dockerOptions !== undefined) {
+            dockerOptionsArray = Array.isArray(dockerOptions)
+                ? dockerOptions.map(option => option.split(' ')).flat()
+                : dockerOptionsArray = dockerOptions.split(' ');
         }
         const dockerRunArgs = [
             'run',
@@ -16488,59 +16485,51 @@ exports.executePiper = void 0;
 const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
-function executePiper(stepName, flags, ignoreDefaults, execOptions) {
+const core_1 = __nccwpck_require__(2186);
+function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
-        let piperOutput = '';
+        if (process.env.GITHUB_JOB !== undefined)
+            flags.push('--stageName', process.env.GITHUB_JOB);
+        flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
+            ? flags.concat(JSON.parse(process.env.defaultsFlags))
+            : flags;
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        const containerID = piper_1.internalActionVariables.dockerContainerID;
         let piperError = '';
         let options = {
             listeners: {
-                stdout: (data) => {
-                    piperOutput += data.toString();
+                stdline: (data) => {
+                    if (data.includes('fatal')) {
+                        (0, core_1.error)(data);
+                        piperError += data;
+                    }
                 },
-                stderr: (data) => {
-                    piperError += data.toString();
+                errline: (data) => {
+                    if (data.includes('fatal')) {
+                        (0, core_1.error)(data);
+                        piperError += data;
+                    }
                 }
             }
         };
         options = Object.assign({}, options, execOptions);
-        flags = flags !== null && flags !== void 0 ? flags : [];
-        const stageName = process.env.GITHUB_JOB;
-        if (stageName !== undefined) {
-            flags.push('--stageName', stageName);
-        }
-        const defaultsFlags = process.env.defaultsFlags;
-        if (ignoreDefaults !== false && defaultsFlags !== undefined) {
-            flags = flags.concat(JSON.parse(defaultsFlags));
-        }
-        const piperPath = piper_1.internalActionVariables.piperBinPath;
-        const containerID = piper_1.internalActionVariables.dockerContainerID;
-        if (containerID === '') {
-            return yield (0, exec_1.exec)(piperPath, [
+        // Default to Piper
+        let binaryPath = piperPath;
+        let args = [stepName, ...flags];
+        if (containerID !== '') { // Running in a container
+            (0, core_1.debug)(`containerID: ${containerID}, running in docker`);
+            binaryPath = 'docker';
+            args = [
+                'exec',
+                containerID,
+                `/piper/${path_1.default.basename(piperPath)}`,
                 stepName,
                 ...flags
-            ], options)
-                .then(exitCode => {
-                return { output: piperOutput, error: piperError, exitCode };
-            })
-                .catch(err => {
-                throw new Error(`Piper execution error: ${err}: ${piperError}`);
-            });
+            ];
         }
-        return yield (0, exec_1.exec)('docker', [
-            'exec',
-            containerID,
-            `/piper/${path_1.default.basename(piperPath)}`,
-            stepName,
-            ...flags
-        ], options).then(exitCode => {
-            return {
-                output: piperOutput,
-                error: piperError,
-                exitCode
-            };
-        }).catch(err => {
-            throw new Error(`Piper execution error: ${err}: ${piperError}`);
-        });
+        return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
+            .then((execOutput) => (execOutput))
+            .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
     });
 }
 exports.executePiper = executePiper;
@@ -16801,7 +16790,7 @@ function exportPipelineEnv(exportPipelineEnvironment) {
             throw new Error(`Can't export pipeline environment: ${err}`);
         });
         try {
-            const pipelineEnv = JSON.stringify(JSON.parse((piperExec.output)));
+            const pipelineEnv = JSON.stringify(JSON.parse((piperExec.stdout)));
             (0, core_1.setOutput)('pipelineEnv', pipelineEnv);
         }
         catch (err) {

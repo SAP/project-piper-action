@@ -14,7 +14,7 @@ describe('Execute', () => {
   const stageNameArg = ['--stageName', 'units']
 
   beforeEach(() => {
-    jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(0))
+    jest.spyOn(exec, 'getExecOutput').mockReturnValue(Promise.resolve({ stdout: 'testout', stderr: 'testerr', exitCode: 0 }))
 
     process.env.GITHUB_JOB = stageNameArg[1]
 
@@ -36,7 +36,7 @@ describe('Execute', () => {
     const stepName = 'version'
 
     const piperExec = await executePiper(stepName)
-    expect(exec.exec).toHaveBeenCalledWith(piperPath, [stepName, ...stageNameArg], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith(piperPath, [stepName, ...stageNameArg], expectedOptions)
     expect(piperExec.exitCode).toBe(0)
   })
 
@@ -45,7 +45,7 @@ describe('Execute', () => {
     const piperFlags = ['--verbose']
 
     const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith(piperPath, [stepName, ...piperFlags], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith(piperPath, [stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
@@ -55,7 +55,7 @@ describe('Execute', () => {
     const piperFlags = ['--createBOM', '--globalSettingsFile', 'global_settings.xml']
 
     const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith(piperPath, [stepName, ...piperFlags], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith(piperPath, [stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
@@ -66,7 +66,7 @@ describe('Execute', () => {
     internalActionVariables.dockerContainerID = dockerContainerID
 
     const piperExec = await executePiper(stepName, undefined)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...stageNameArg], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...stageNameArg], expectedOptions)
     expect(piperExec.exitCode).toBe(0)
   })
 
@@ -77,7 +77,7 @@ describe('Execute', () => {
     internalActionVariables.dockerContainerID = dockerContainerID
 
     const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
@@ -89,7 +89,7 @@ describe('Execute', () => {
     internalActionVariables.dockerContainerID = dockerContainerID
 
     const piperExec = await executePiper(stepName, piperFlags)
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
+    expect(exec.getExecOutput).toHaveBeenCalledWith('docker', ['exec', dockerContainerID, '/piper/piper', stepName, ...piperFlags], expectedOptions)
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
