@@ -27,7 +27,7 @@ export async function exportPipelineEnv (exportPipelineEnvironment: boolean): Pr
   })
 
   try {
-    const pipelineEnv = JSON.stringify(JSON.parse((piperExec.output)))
+    const pipelineEnv = JSON.stringify(JSON.parse((piperExec.stdout)))
     setOutput('pipelineEnv', pipelineEnv)
   } catch (err) {
     throw new Error(`Could not export pipeline environment: ${err as string}`)
