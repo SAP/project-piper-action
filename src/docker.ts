@@ -155,10 +155,10 @@ export function getSystemTrustToken (): string[] {
     // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
     '--env',
     'PIPER_trustEngineToken',
-	'--env',
-	'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
-	'--env',
-	'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL',
+    '--env',
+    'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
+    '--env',
+    'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL',
   ]
 }
 
