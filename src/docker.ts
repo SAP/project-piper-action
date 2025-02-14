@@ -28,10 +28,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 
   let dockerOptionsArray: string[] = []
   const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions
-  if (dockerOptions !== undefined && Array.isArray(dockerOptions)) {
-    dockerOptionsArray = dockerOptions.map(option => option.split(' ')).flat()
-  } else if (dockerOptions !== undefined) {
-    dockerOptionsArray = dockerOptions.split(' ')
+  if (dockerOptions !== undefined) {
+    dockerOptionsArray = Array.isArray(dockerOptions)
+      ? dockerOptions.map(option => option.split(' ')).flat()
+      : dockerOptionsArray = dockerOptions.split(' ')
   }
 
   const dockerRunArgs: string[] = [
