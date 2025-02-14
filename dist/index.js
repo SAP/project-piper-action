@@ -16285,7 +16285,7 @@ function getSystemTrustToken() {
         '--env',
         'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
         '--env',
-        'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL',
+        'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
     ];
 }
 exports.getSystemTrustToken = getSystemTrustToken;
