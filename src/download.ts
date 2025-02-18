@@ -19,7 +19,7 @@ export async function downloadPiperBinary (
 
   let binaryURL
   const headers: any = {}
-  const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
   if (token !== '') {
     debug('Fetching binary from GitHub API')
@@ -53,14 +53,15 @@ export async function downloadPiperBinary (
 }
 async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
-  const response = await fetchRetry(tagURL, 'HEAD')
-    .catch(async (err) => {
-      throw new Error(`Can't get the tag: ${err}`)
-    })
-  return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
+  try {
+    const response = await fetchRetry(tagURL, 'HEAD')
+    return response.url.replace(/tag/, 'download') + `/${piper}`
+  } catch (err) {
+    throw new Error(`Can't get the tag: ${(err as Error).message}`)
+  }
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<string> {
+async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'sap-piper' | 'piper'> {
   if (version === 'master') {
     info('using _master binaries is deprecated. Using latest release version instead.')
   }

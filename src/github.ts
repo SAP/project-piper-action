@@ -112,6 +112,10 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 
 export function getTag (version: string, forAPICall: boolean): string {
   version = version.toLowerCase()
-  if (version === '' || version === 'master' || version === 'latest') return 'latest'
+  if (version === '' || version === 'master' || version === 'latest') {
+    debug('Using latest tag')
+    return 'latest'
+  }
+  debug(`getTag returns: ${forAPICall ? 'tags' : 'tag'}/${version}`)
   return `${forAPICall ? 'tags' : 'tag'}/${version}`
 }
