@@ -17,7 +17,7 @@ export async function downloadPiperBinary (
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')
 
-  let binaryURL
+  let binaryURL: string
   const headers: any = {}
   const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
@@ -51,7 +51,8 @@ export async function downloadPiperBinary (
 
   return piperPath
 }
-async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
+
+export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
   try {
     const response = await fetchRetry(tagURL, 'HEAD')
@@ -62,8 +63,7 @@ async function getPiperDownloadURL (piper: string, version: string): Promise<str
 }
 
 async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'sap-piper' | 'piper'> {
-  if (version === 'master') {
-    info('using _master binaries is deprecated. Using latest release version instead.')
-  }
+  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
+
   return isEnterpriseStep ? 'sap-piper' : 'piper'
 }
