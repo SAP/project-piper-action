@@ -21,9 +21,9 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   }
 
   info(`Building Inner Source Piper from ${version}`)
-  const innerServerUrl = process.env.GITHUB_ENTERPRISE_SERVER_URL ?? ''
+  const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
   if (innerServerUrl === '') {
-    error('GITHUB_ENTERPRISE_SERVER_URL is not set')
+    error('PIPER_ENTERPRISE_SERVER_URL is not set')
   }
   const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
