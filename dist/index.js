@@ -15674,9 +15674,9 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             return piperPath;
         }
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        const innerServerUrl = (_a = process.env.GITHUB_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
         if (innerServerUrl === '') {
-            (0, core_1.error)('GITHUB_ENTERPRISE_SERVER_URL is not set');
+            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
         }
         const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_1.info)(`URL: ${url}`);
