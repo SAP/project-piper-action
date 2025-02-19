@@ -16334,7 +16334,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.downloadPiperBinary = void 0;
+exports.getPiperDownloadURL = exports.downloadPiperBinary = void 0;
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(2186);
 const tool_cache_1 = __nccwpck_require__(7784);
@@ -16367,6 +16367,7 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             (0, core_1.debug)('Fetching binary from URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
             version = binaryURL.split('/').slice(-2)[0];
+            (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
         }
         version = version.replace(/\./g, '_');
         const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
@@ -16381,19 +16382,20 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
 exports.downloadPiperBinary = downloadPiperBinary;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        const tagURL = `${github_1.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${(0, github_1.getTag)(version, false)}`;
-        const response = yield (0, fetch_1.fetchRetry)(tagURL, 'HEAD')
-            .catch((err) => __awaiter(this, void 0, void 0, function* () {
-            throw new Error(`Can't get the tag: ${err}`);
-        }));
-        return yield Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`);
+        try {
+            const response = yield (0, fetch_1.fetchRetry)((0, github_1.getDownloadUrlByTag)(version), 'HEAD');
+            return response.url.replace(/tag/, 'download') + `/${piper}`;
+        }
+        catch (err) {
+            throw new Error(`Can't get the tag: ${err.message}`);
+        }
     });
 }
+exports.getPiperDownloadURL = getPiperDownloadURL;
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master') {
+        if (version === 'master')
             (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
-        }
         return isEnterpriseStep ? 'sap-piper' : 'piper';
     });
 }
@@ -16570,16 +16572,37 @@ exports.wait = wait;
 function fetchRetry(url, method = 'GET', tries = 5, baseDelayMS = 1000) {
     return __awaiter(this, void 0, void 0, function* () {
         let attempt = 0;
+        // Validate url
+        let validatedUrl;
+        try {
+            validatedUrl = new URL(url);
+        }
+        catch (error) {
+            throw new Error(`Invalid URL: ${url}`);
+        }
         while (tries > attempt) {
-            const response = yield fetch(url, { method });
-            if (response.status === 200) {
-                return response;
+            try {
+                const response = yield fetch(validatedUrl, { method });
+                if (response.status === 200) {
+                    return response;
+                }
+                (0, core_1.info)(`Error while fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`);
+                if (!isRetryable(response.status)) {
+                    (0, core_1.debug)(`Non-retryable status code: ${response.status}`);
+                    break;
+                }
+                attempt += 1;
             }
-            (0, core_1.info)(`Error while fetching ${url}: ${response.statusText}`);
-            if (!isRetryable(response.status)) {
-                break;
+            catch (error) {
+                if (error instanceof TypeError) {
+                    (0, core_1.debug)(`TypeError while fetching ${url}: ${error.message}, params: ${JSON.stringify({ url, method })}`);
+                    (0, core_1.info)(`TypeError while fetching ${url}: ${error.message}`);
+                }
+                else {
+                    (0, core_1.debug)(`Error (non TypeError while fetching ${url}: ${error.message}`);
+                    throw error;
+                }
             }
-            attempt += 1;
             if (tries > attempt) {
                 const delayTime = baseDelayMS * Math.pow(2, attempt - 1);
                 (0, core_1.info)(`Retrying ${tries - attempt} more time(s)...`);
@@ -16595,6 +16618,9 @@ function isRetryable(code) {
     switch (code) {
         case 408: // Request Timeout
             return true;
+        case 404:
+            (0, core_1.info)('Non retryable status code: 404');
+            return false;
         default:
             return code >= 500 && code !== 501; // Retry for server errors except 501 (Not Implemented)
     }
@@ -16641,7 +16667,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getTag = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -16745,11 +16771,24 @@ function buildPiperFromSource(version) {
 exports.buildPiperFromSource = buildPiperFromSource;
 function getTag(version, forAPICall) {
     version = version.toLowerCase();
-    if (version === '' || version === 'master' || version === 'latest')
+    if (version === '' || version === 'master' || version === 'latest') {
+        (0, core_2.debug)('Using latest tag');
         return 'latest';
+    }
+    (0, core_2.debug)(`getTag returns: ${forAPICall ? 'tags' : 'tag'}/${version}`);
     return `${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getTag = getTag;
+function getDownloadUrlByTag(version, forAPICall = false) {
+    version = version.toLowerCase();
+    if (version === '' || version === 'master' || version === 'latest') {
+        (0, core_2.debug)('Using latest tag');
+        return `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`;
+    }
+    (0, core_2.debug)(`getDownloadUrlByTag returns: ${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`);
+    return `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+}
+exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
 
 /***/ }),
