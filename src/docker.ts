@@ -28,10 +28,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 
   let dockerOptionsArray: string[] = []
   const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions
-  if (dockerOptions !== undefined && Array.isArray(dockerOptions)) {
-    dockerOptionsArray = dockerOptions.map(option => option.split(' ')).flat()
-  } else if (dockerOptions !== undefined) {
-    dockerOptionsArray = dockerOptions.split(' ')
+  if (dockerOptions !== undefined) {
+    dockerOptionsArray = Array.isArray(dockerOptions)
+      ? dockerOptions.map(option => option.split(' ')).flat()
+      : dockerOptionsArray = dockerOptions.split(' ')
   }
 
   const dockerRunArgs: string[] = [
@@ -154,7 +154,11 @@ export function getSystemTrustToken (): string[] {
     'PIPER_systemTrustToken',
     // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
     '--env',
-    'PIPER_trustEngineToken'
+    'PIPER_trustEngineToken',
+    '--env',
+    'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
+    '--env',
+    'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
   ]
 }
 

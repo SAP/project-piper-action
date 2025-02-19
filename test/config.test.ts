@@ -10,6 +10,7 @@ import * as artifact from '@actions/artifact'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
 import * as github from '../src/github'
+import { type ExecOutput } from '@actions/exec'
 
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -19,12 +20,6 @@ jest.mock('@actions/artifact')
 // jest.mock('fs')
 jest.mock('../src/execute')
 
-interface piperExecResult {
-  output: string
-  error: string
-  exitCode: number
-}
-
 describe('Config', () => {
   // beforeEach(() => {
   //   jest.resetAllMocks()
@@ -32,9 +27,9 @@ describe('Config', () => {
   // piperExecResultMock is set as mock return value for the executePiper function before every test
   // it can be altered in individual tests, as the mock object is passed by reference
   // after every test, it gets reset to the default result object
-  const defaultPiperExecResult: piperExecResult = {
-    output: '',
-    error: '',
+  const defaultPiperExecResult: ExecOutput = {
+    stdout: '',
+    stderr: '',
     exitCode: 0
   }
   let piperExecResultMock = Object.assign({}, defaultPiperExecResult)
@@ -43,16 +38,16 @@ describe('Config', () => {
   const envClone = Object.assign({}, process.env)
 
   // helper function to generate executePiper output for 'piper getDefaults', which can be used to set the mock return value of the executePiper function
-  const generatePiperGetDefaultsOutput = function (paths: string[]): piperExecResult {
+  const generatePiperGetDefaultsOutput = function (paths: string[]): ExecOutput {
     const piperExec = Object.assign({}, defaultPiperExecResult)
     if (paths.length === 1) {
-      piperExec.output = `{"content":"general:\\n  vaultServerUrl: https://vault.acme.com\\n","filepath":"${paths[0]}"}\n`
+      piperExec.stdout = `{"content":"general:\\n  vaultServerUrl: https://vault.acme.com\\n","filepath":"${paths[0]}"}\n`
     } else {
       const output: string[] = []
       for (const path of paths) {
         output.push(JSON.parse(`{"content":"general:\\n  vaultServerUrl: https://vault.acme.com\\n","filepath":"${path}"}\n`))
       }
-      piperExec.output = JSON.stringify(output)
+      piperExec.stdout = JSON.stringify(output)
     }
     return piperExec
   }
@@ -166,7 +161,7 @@ describe('Config', () => {
     const stepName = 'mavenBuild'
 
     // 'piper getConfig --contextConfig' needs to return a JSON string
-    piperExecResultMock.output = '{}'
+    piperExecResultMock.stdout = '{}'
 
     const expectedPiperFlags = ['--contextConfig', '--stageName', process.env.GITHUB_JOB, '--stepName', stepName]
     await config.readContextConfig(stepName, [])
@@ -180,7 +175,7 @@ describe('Config', () => {
     const stepName = 'mavenBuild'
 
     // 'piper getConfig --contextConfig' needs to return a JSON string
-    piperExecResultMock.output = '{}'
+    piperExecResultMock.stdout = '{}'
 
     await config.readContextConfig(stepName, ['some', 'other', 'flags', '--customConfig', '.pipeline/custom.yml'])
     const expectedPiperFlags = ['--contextConfig', '--stageName', process.env.GITHUB_JOB, '--stepName', stepName, '--customConfig', '.pipeline/custom.yml']
@@ -222,8 +217,8 @@ describe('Config', () => {
 
   test('Check if step active', async () => {
     piperExecResultMock = {
-      output: '',
-      error: '',
+      stdout: '',
+      stderr: '',
       exitCode: 0
     }
 

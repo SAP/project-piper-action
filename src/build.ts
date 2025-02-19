@@ -1,12 +1,10 @@
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-import { info, setFailed } from '@actions/core'
+import { error, info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
 import { exec } from '@actions/exec'
 import { extractZip } from '@actions/tool-cache'
-
-export const GITHUB_WDF_SAP_SERVER_URL = 'https://github.wdf.sap.corp'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
@@ -23,7 +21,11 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   }
 
   info(`Building Inner Source Piper from ${version}`)
-  const url = `${GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+  const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
+  if (innerServerUrl === '') {
+    error('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository')
+  }
+  const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
@@ -38,9 +40,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   })
   const wd = cwd()
 
-  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
-    return name.includes(repository)
-  }) ?? '')
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => name.includes(repository)) ?? '')
   info(`repositoryPath: ${repositoryPath}`)
   chdir(repositoryPath)
 
