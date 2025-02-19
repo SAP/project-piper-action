@@ -53,7 +53,6 @@ function isRetryable (code: number): boolean {
     case 408: // Request Timeout
       return true
     case 404:
-      info('Non retryable status code: 404')
       return false
     default:
       return code >= 500 && code !== 501 // Retry for server errors except 501 (Not Implemented)
