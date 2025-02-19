@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperInnerSource = exports.GITHUB_WDF_SAP_SERVER_URL = void 0;
+exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15660,9 +15660,8 @@ const fs_1 = __importDefault(__nccwpck_require__(7147));
 const process_1 = __nccwpck_require__(7282);
 const exec_1 = __nccwpck_require__(1514);
 const tool_cache_1 = __nccwpck_require__(7784);
-exports.GITHUB_WDF_SAP_SERVER_URL = 'https://github.wdf.sap.corp';
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, commitISH } = parseDevVersion(version);
         const versionName = getVersionName(commitISH);
@@ -15675,7 +15674,11 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             return piperPath;
         }
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        const url = `${exports.GITHUB_WDF_SAP_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
+        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        if (innerServerUrl === '') {
+            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
+        }
+        const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_1.info)(`URL: ${url}`);
         (0, core_1.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
         const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
@@ -15687,7 +15690,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             throw new Error(`Can't extract Inner Source Piper: ${err}`);
         });
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => name.includes(repository))) !== null && _a !== void 0 ? _a : '');
+        const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((name) => name.includes(repository))) !== null && _b !== void 0 ? _b : '');
         (0, core_1.info)(`repositoryPath: ${repositoryPath}`);
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
