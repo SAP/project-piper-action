@@ -16383,7 +16383,9 @@ exports.downloadPiperBinary = downloadPiperBinary;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const response = yield (0, fetch_1.fetchRetry)((0, github_1.getDownloadUrlByTag)(version), 'HEAD');
+            const urlByTag = (0, github_1.getDownloadUrlByTag)(version);
+            (0, core_1.debug)(`getDownloadUrlByTag returns: ${urlByTag}`);
+            const response = yield (0, fetch_1.fetchRetry)(urlByTag, 'HEAD');
             return response.url.replace(/tag/, 'download') + `/${piper}`;
         }
         catch (err) {
@@ -16780,12 +16782,9 @@ function getTag(version, forAPICall) {
 exports.getTag = getTag;
 function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
-    if (version === '' || version === 'master' || version === 'latest') {
-        (0, core_2.debug)('Using latest tag');
-        return `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`;
-    }
-    (0, core_2.debug)(`getDownloadUrlByTag returns: ${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`);
-    return `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+    return (version === '' || version === 'master' || version === 'latest')
+        ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
+        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
