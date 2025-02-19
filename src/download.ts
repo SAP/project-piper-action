@@ -61,7 +61,7 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   }
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'sap-piper' | 'piper'> {
+async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
   if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
 
   return isEnterpriseStep ? 'sap-piper' : 'piper'
