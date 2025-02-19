@@ -4,7 +4,7 @@ import { downloadTool } from '@actions/tool-cache'
 import { isEnterpriseStep } from './enterprise'
 import {
   getDownloadUrlByTag,
-  getReleaseAssetUrl
+  getReleaseAssetUrl, GITHUB_COM_SERVER_URL
 } from './github'
 import { fetchRetry } from './fetch'
 
@@ -54,7 +54,9 @@ export async function downloadPiperBinary (
 
 export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
   try {
-    const response = await fetchRetry(getDownloadUrlByTag(version), 'HEAD')
+    const urlByTag = getDownloadUrlByTag(version)
+    debug(`getDownloadUrlByTag returns: ${urlByTag}`)
+    const response = await fetchRetry(urlByTag, 'HEAD')
     return response.url.replace(/tag/, 'download') + `/${piper}`
   } catch (err) {
     throw new Error(`Can't get the tag: ${(err as Error).message}`)

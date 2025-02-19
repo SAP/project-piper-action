@@ -122,10 +122,7 @@ export function getTag (version: string, forAPICall: boolean): string {
 
 export function getDownloadUrlByTag (version: string, forAPICall: boolean = false): string {
   version = version.toLowerCase()
-  if (version === '' || version === 'master' || version === 'latest') {
-    debug('Using latest tag')
-    return `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-  }
-  debug(`getDownloadUrlByTag returns: ${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`)
-  return `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`
+  return (version === '' || version === 'master' || version === 'latest')
+    ? `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
+    : `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`
 }
