@@ -2,7 +2,6 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { debug, exportVariable, getInput, info, type InputOptions } from '@actions/core'
 import * as artifact from '@actions/artifact'
-import { type UploadResponse } from '@actions/artifact'
 import { executePiper } from './execute'
 import {
   getHost,
@@ -124,16 +123,20 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
 
   try {
     info('Trying to restore defaults from artifact')
-    await restoreDefaultConfig()
+    await restoreDefaultConfig(uploadArtifactId)
     info('Defaults restored from artifact')
   } catch (err: unknown) {
     // throws an error with message containing 'Unable to find' if artifact does not exist
     if (err instanceof Error && !err.message.includes('Unable to find')) throw err
     // continue with downloading defaults and upload as artifact
     info('Downloading defaults')
-    await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
+    const uploadArtifactResponse = await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
+    info('Defaults downloaded' + uploadArtifactResponse.id)
+    uploadArtifactId = uploadArtifactResponse.id ?? -1
   }
 }
+
+let uploadArtifactId: number = 0
 
 function processCustomDefaultsPath (path: string): string {
   // Handle HTTP URLs
@@ -153,7 +156,7 @@ function processCustomDefaultsPath (path: string): string {
   return path
 }
 
-export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
+export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<artifact.UploadArtifactResponse> {
   let defaultsPaths: string[] = []
 
   // Since defaults file is located in release assets, we will take it from latest release
@@ -286,11 +289,11 @@ export async function checkIfStepActive (stepName: string, stageName: string, ou
   return result.exitCode
 }
 
-export async function restoreDefaultConfig (): Promise<void> {
-  const artifactClient = artifact.create()
+export async function restoreDefaultConfig (uploadArtifactId: number = -1): Promise<void> {
+  const artifactClient = new artifact.DefaultArtifactClient()
   const tempDir = path.join(CONFIG_DIR, 'defaults_temp')
   // throws an error with message containing 'Unable to find' if artifact does not exist
-  await artifactClient.downloadArtifact(ARTIFACT_NAME, tempDir)
+  await artifactClient.downloadArtifact(uploadArtifactId, { path: tempDir })
 
   const defaultsPaths: string[] = []
   try {
@@ -310,7 +313,7 @@ export async function restoreDefaultConfig (): Promise<void> {
   await Promise.resolve()
 }
 
-export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Promise<UploadResponse> {
+export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Promise<artifact.UploadArtifactResponse> {
   debug('uploading defaults as artifact')
 
   // order of (custom) defaults is important, so preserve it for when artifact is downloaded in another stage
@@ -321,7 +324,7 @@ export async function uploadDefaultConfigArtifact (defaultsPaths: string[]): Pro
   const artifactFiles = [...defaultsPaths, orderedDefaultsPath]
   debug(`uploading files ${JSON.stringify(artifactFiles)} in base directory ${CONFIG_DIR} to artifact with name ${ARTIFACT_NAME}`)
 
-  const artifactClient = artifact.create()
+  const artifactClient = new artifact.DefaultArtifactClient()
   return await artifactClient.uploadArtifact(ARTIFACT_NAME, artifactFiles, CONFIG_DIR)
 }
 

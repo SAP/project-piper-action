@@ -59,7 +59,7 @@ describe('Config', () => {
       return piperExecResultMock
     })
 
-    jest.spyOn(artifact, 'create').mockReturnValue({
+    jest.spyOn(artifact, 'DefaultArtifactClient').mockReturnValue({
       uploadArtifact: async () => {
         return 0
       },
