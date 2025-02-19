@@ -8,7 +8,7 @@ export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDe
   let attempt = 0
 
   // Validate url
-  let validatedUrl
+  let validatedUrl: URL
   try {
     validatedUrl = new URL(url)
   } catch (error) {
@@ -21,7 +21,7 @@ export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDe
         return response
       }
 
-      info(`Error while fetching ${url}: ${response.statusText}`)
+      info(`Error while fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`)
       if (!isRetryable(response.status)) {
         debug(`Non-retryable status code: ${response.status}`)
         break
@@ -30,9 +30,10 @@ export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDe
       attempt += 1
     } catch (error) {
       if (error instanceof TypeError) {
-        debug(`Error while fetching ${url}: ${error.message}, params: ${JSON.stringify({ url, method })}`)
-        info(`Error while fetching ${url}: ${error.message}`)
+        debug(`TypeError while fetching ${url}: ${error.message}, params: ${JSON.stringify({ url, method })}`)
+        info(`TypeError while fetching ${url}: ${error.message}`)
       } else {
+        debug(`Error (non TypeError while fetching ${url}: ${(error as Error).message}`)
         throw error
       }
     }
@@ -51,6 +52,9 @@ function isRetryable (code: number): boolean {
   switch (code) {
     case 408: // Request Timeout
       return true
+    case 404:
+      info('Non retryable status code: 404')
+      return false
     default:
       return code >= 500 && code !== 501 // Retry for server errors except 501 (Not Implemented)
   }

@@ -63,7 +63,7 @@ describe('GitHub package tests', () => {
     await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
     expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from URL')
-    expect(core.debug).toHaveBeenCalledTimes(3)
+    expect(core.debug).toHaveBeenCalledTimes(4)
     expect(core.info).toHaveBeenCalledWith(`Downloading 'https://github.com/SAP/jenkins-library/releases/download/v1.1.1/piper' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
     expect(core.info).toHaveBeenCalledTimes(1)
   })

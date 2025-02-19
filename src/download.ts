@@ -3,9 +3,8 @@ import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
 import { isEnterpriseStep } from './enterprise'
 import {
-  getReleaseAssetUrl,
-  getTag,
-  GITHUB_COM_SERVER_URL
+  getDownloadUrlByTag,
+  getReleaseAssetUrl
 } from './github'
 import { fetchRetry } from './fetch'
 
@@ -34,6 +33,7 @@ export async function downloadPiperBinary (
     debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
     version = binaryURL.split('/').slice(-2)[0]
+    debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
   version = version.replace(/\./g, '_')
   const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
@@ -53,9 +53,8 @@ export async function downloadPiperBinary (
 }
 
 export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
-  const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
   try {
-    const response = await fetchRetry(tagURL, 'HEAD')
+    const response = await fetchRetry(getDownloadUrlByTag(version), 'HEAD')
     return response.url.replace(/tag/, 'download') + `/${piper}`
   } catch (err) {
     throw new Error(`Can't get the tag: ${(err as Error).message}`)
