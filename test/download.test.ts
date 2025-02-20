@@ -1,40 +1,7 @@
-// import { getPiperDownloadURL } from '../src/download'
-// import { fetchRetry } from '../src/fetch'
 import { getTag } from '../src/github'
 import { debug } from '@actions/core'
 
 jest.mock('../src/fetch')
-
-// describe('getPiperDownloadURL', () => {
-//   const piper = 'piper'
-//   const version = '1.0.0'
-//   const tag = 'v1.0.0'
-//   const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${tag}`
-//   const downloadURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/download/${tag}/${piper}`
-//
-//   beforeEach(() => {
-//     jest.clearAllMocks()
-//   })
-//
-//   it('should return the correct download URL', async () => {
-//     (fetchRetry as jest.Mock).mockResolvedValue({
-//       url: tagURL
-//     })
-//
-//     const result = await getPiperDownloadURL(piper, version)
-//     expect(result).toBe(downloadURL)
-//     expect(fetchRetry).toHaveBeenCalledWith(tagURL, 'HEAD')
-//   })
-//
-//   it('should throw an error if fetchRetry fails', async () => {
-//     const errorMessage: string = 'Network error';
-//     (fetchRetry as jest.Mock).mockRejectedValue(new Error(errorMessage))
-//
-//     await expect(getPiperDownloadURL(piper, version)).rejects.toThrow(`Can't get the tag: ${errorMessage}`)
-//     expect(fetchRetry).toHaveBeenCalledWith(tagURL, 'HEAD')
-//   })
-// })
-
 jest.mock('@actions/core')
 
 describe('getTag', () => {
