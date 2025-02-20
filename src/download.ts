@@ -1,10 +1,10 @@
-import fs from 'fs'
+import * as fs from 'fs'
 import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
 import { isEnterpriseStep } from './enterprise'
 import {
   getDownloadUrlByTag,
-  getReleaseAssetUrl, GITHUB_COM_SERVER_URL
+  getReleaseAssetUrl
 } from './github'
 import { fetchRetry } from './fetch'
 
