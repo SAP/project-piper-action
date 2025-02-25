@@ -30,6 +30,6 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: .log4brains/out
-          TARGET_FOLDER: log4brains
+          branch: gh-pages
+          folder: .log4brains/out
+          target-folder: log4brains

@@ -12,6 +12,10 @@ describe('Fetch package tests', () => {
     status: 500,
     statusText: 'Internal Server Error'
   } as unknown as Response
+  const mockResponse404 = {
+    status: 404,
+    statusText: 'Not Found'
+  } as unknown as Response
   const mockResponse200 = {
     status: 200,
     statusText: 'OK'
@@ -41,9 +45,19 @@ describe('Fetch package tests', () => {
 
     await fetchRetry(testURL, undefined, tries, delay)
 
-    expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
+    expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Status: Internal Server Error\nCode: 500`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')
     expect(info).not.toHaveBeenCalledWith('Retrying 1 more time(s)...')
+  })
+
+  test('fetchRetry - No retry on 404 status', async () => {
+    jest.spyOn(global, 'fetch').mockImplementationOnce(async () => {
+      return mockResponse404
+    })
+
+    await expect(fetchRetry(testURL, undefined, tries, delay)).rejects.toThrow(`Error fetching ${testURL}`)
+
+    expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Status: ${mockResponse404.statusText}\nCode: ${mockResponse404.status}`)
   })
 
   test('fetchRetry - error after max retries', async () => {
@@ -53,7 +67,7 @@ describe('Fetch package tests', () => {
 
     await expect(fetchRetry(testURL, undefined, tries, delay)).rejects.toThrow(`Error fetching ${testURL}`)
 
-    expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Internal Server Error`)
+    expect(info).toHaveBeenCalledWith(`Error while fetching ${testURL}: Status: Internal Server Error\nCode: 500`)
     expect(info).toHaveBeenCalledWith('Retrying 2 more time(s)...')
     expect(info).toHaveBeenCalledWith('Retrying 1 more time(s)...')
   })

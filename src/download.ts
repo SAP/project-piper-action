@@ -1,11 +1,10 @@
-import fs from 'fs'
+import * as fs from 'fs'
 import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
 import { isEnterpriseStep } from './enterprise'
 import {
-  getReleaseAssetUrl,
-  getTag,
-  GITHUB_COM_SERVER_URL
+  getDownloadUrlByTag,
+  getReleaseAssetUrl
 } from './github'
 import { fetchRetry } from './fetch'
 
@@ -17,9 +16,9 @@ export async function downloadPiperBinary (
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')
 
-  let binaryURL
+  let binaryURL: string
   const headers: any = {}
-  const piperBinaryName = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
   if (token !== '') {
     debug('Fetching binary from GitHub API')
@@ -34,6 +33,7 @@ export async function downloadPiperBinary (
     debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
     version = binaryURL.split('/').slice(-2)[0]
+    debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
   version = version.replace(/\./g, '_')
   const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
@@ -51,18 +51,20 @@ export async function downloadPiperBinary (
 
   return piperPath
 }
-async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
-  const tagURL = `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${getTag(version, false)}`
-  const response = await fetchRetry(tagURL, 'HEAD')
-    .catch(async (err) => {
-      throw new Error(`Can't get the tag: ${err}`)
-    })
-  return await Promise.resolve(response.url.replace(/tag/, 'download') + `/${piper}`)
+
+export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
+  try {
+    const urlByTag = getDownloadUrlByTag(version)
+    debug(`getDownloadUrlByTag returns: ${urlByTag}`)
+    const response = await fetchRetry(urlByTag, 'HEAD')
+    return response.url.replace(/tag/, 'download') + `/${piper}`
+  } catch (err) {
+    throw new Error(`Can't get the tag: ${(err as Error).message}`)
+  }
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<string> {
-  if (version === 'master') {
-    info('using _master binaries is deprecated. Using latest release version instead.')
-  }
+async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
+  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
+
   return isEnterpriseStep ? 'sap-piper' : 'piper'
 }
