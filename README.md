@@ -5,8 +5,6 @@
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 [![Log4brains ADRs](https://pages.github.com/SAP/project-piper-action/badge.svg)](https://pages.github.com/SAP/project-piper-action)
 
-:construction: Not available for productive usage yet!
-
 This GitHub action allows running [Piper](https://www.project-piper.io/) on GitHub Actions.
 
 ## Usage
