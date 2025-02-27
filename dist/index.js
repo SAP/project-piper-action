@@ -38750,26 +38750,39 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
             ? flags.concat(JSON.parse(process.env.defaultsFlags))
             : flags;
-        const piperPath = piper_1.internalActionVariables.piperBinPath;
-        const containerID = piper_1.internalActionVariables.dockerContainerID;
-        let piperError = '';
+        const piperError = '';
+        let stdoutBuffer = '';
+        let stderrBuffer = '';
+        let remainingStdout = '';
         let options = {
+            ignoreReturnCode: true,
             listeners: {
-                stdline: (data) => {
-                    if (data.includes('fatal')) {
-                        (0, core_1.error)(`stdline: ${data}`);
-                        piperError += data;
+                stdout: (data) => {
+                    var _a;
+                    remainingStdout += data.toString();
+                    const lines = remainingStdout.split(/\r?\n/);
+                    // Keep the last line incomplete for the next chunk
+                    remainingStdout = (_a = lines.pop()) !== null && _a !== void 0 ? _a : '';
+                    for (const line of lines) {
+                        if (line.includes('fatal')) {
+                            (0, core_1.error)(line);
+                            stderrBuffer += line + '\n';
+                        }
+                        else {
+                            process.stdout.write(line + '\n');
+                            stdoutBuffer += line + '\n';
+                        }
                     }
                 },
-                errline: (data) => {
-                    if (data.includes('fatal')) {
-                        (0, core_1.error)(`errline: ${data}`);
-                        piperError += data;
-                    }
+                stderr: (data) => {
+                    process.stderr.write(data); // Keep stderr output as is
+                    stderrBuffer += data.toString();
                 }
             }
         };
         options = Object.assign({}, options, execOptions);
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        const containerID = piper_1.internalActionVariables.dockerContainerID;
         // Default to Piper
         let binaryPath = piperPath;
         let args = [stepName, ...flags];
@@ -38784,6 +38797,8 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
+        (0, core_1.setOutput)('stdout', stdoutBuffer);
+        (0, core_1.setOutput)('stderr', stderrBuffer);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
             .then((execOutput) => (execOutput))
             .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
