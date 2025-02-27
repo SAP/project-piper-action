@@ -10,7 +10,7 @@ This GitHub action allows running [Piper](https://www.project-piper.io/) on GitH
 ## Usage
 
 This action can be used in a GitHub Actions workflow file as follows:
-
+ asd
 ```yaml
 - uses: SAP/project-piper-action@main
 # or if you want to pin specific version use @v1.0.0 instead of @main
