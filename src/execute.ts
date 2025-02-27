@@ -19,13 +19,13 @@ export async function executePiper (
     listeners: {
       stdline: (data: string) => {
         if (data.includes('fatal')) {
-          error(data)
+          error(`stdline: ${data}`)
           piperError += data
         }
       },
       errline: (data: string) => {
         if (data.includes('fatal')) {
-          error(data)
+          error(`errline: ${data}`)
           piperError += data
         }
       }
