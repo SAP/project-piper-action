@@ -1,7 +1,7 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error } from '@actions/core'
+import { debug, error, setOutput } from '@actions/core'
 
 export async function executePiper (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
@@ -12,26 +12,41 @@ export async function executePiper (
     ? flags.concat(JSON.parse(process.env.defaultsFlags))
     : flags
 
-  const piperPath = internalActionVariables.piperBinPath
-  const containerID = internalActionVariables.dockerContainerID
-  let piperError = ''
-  let options = {
+  const piperError = ''
+  let stdoutBuffer: string = ''
+  let stderrBuffer: string = ''
+  let remainingStdout = ''
+
+  let options: ExecOptions = {
+    ignoreReturnCode: true,
     listeners: {
-      stdline: (data: string) => {
-        if (data.includes('fatal')) {
-          error(`stdline: ${data}`)
-          piperError += data
+      stdout: (data: Buffer) => {
+        remainingStdout += data.toString()
+        const lines: string[] = remainingStdout.split(/\r?\n/)
+
+        // Keep the last line incomplete for the next chunk
+        remainingStdout = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (line.includes('fatal')) {
+            error(line)
+            stderrBuffer += line + '\n'
+          } else {
+            process.stdout.write(line + '\n')
+            stdoutBuffer += line + '\n'
+          }
         }
       },
-      errline: (data: string) => {
-        if (data.includes('fatal')) {
-          error(`errline: ${data}`)
-          piperError += data
-        }
+      stderr: (data: Buffer) => {
+        process.stderr.write(data) // Keep stderr output as is
+        stderrBuffer += data.toString()
       }
     }
   }
   options = Object.assign({}, options, execOptions)
+
+  const piperPath = internalActionVariables.piperBinPath
+  const containerID = internalActionVariables.dockerContainerID
 
   // Default to Piper
   let binaryPath = piperPath
@@ -48,6 +63,8 @@ export async function executePiper (
       ...flags
     ]
   }
+  setOutput('stdout', stdoutBuffer)
+  setOutput('stderr', stderrBuffer)
 
   return await getExecOutput(binaryPath, args, options)
     .then((execOutput: ExecOutput) => (execOutput))
