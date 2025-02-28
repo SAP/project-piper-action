@@ -38751,7 +38751,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             ? flags.concat(JSON.parse(process.env.defaultsFlags))
             : flags;
         const piperError = '';
-        let stdoutBuffer = '';
+        // let stdoutBuffer: string = ''
         let stderrBuffer = '';
         let remainingStdout = '';
         let options = {
@@ -38766,11 +38766,11 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                     for (const line of lines) {
                         if (line.includes('fatal')) {
                             (0, core_1.error)(line);
-                            stderrBuffer += line + '\n';
+                            stderrBuffer += `::error::${line}\n`;
                         }
                         else {
-                            process.stdout.write(line + '\n');
-                            stdoutBuffer += line + '\n';
+                            // process.stdout.write(line + '\n')
+                            // stdoutBuffer += line + '\n'
                         }
                     }
                 },
@@ -38797,7 +38797,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        (0, core_1.setOutput)('stdout', stdoutBuffer);
+        // setOutput('stdout', stdoutBuffer)
         (0, core_1.setOutput)('stderr', stderrBuffer);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
             .then((execOutput) => (execOutput))

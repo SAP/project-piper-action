@@ -13,7 +13,7 @@ export async function executePiper (
     : flags
 
   const piperError = ''
-  let stdoutBuffer: string = ''
+  // let stdoutBuffer: string = ''
   let stderrBuffer: string = ''
   let remainingStdout = ''
 
@@ -30,10 +30,10 @@ export async function executePiper (
         for (const line of lines) {
           if (line.includes('fatal')) {
             error(line)
-            stderrBuffer += line + '\n'
+            stderrBuffer += `::error::${line}\n`
           } else {
-            process.stdout.write(line + '\n')
-            stdoutBuffer += line + '\n'
+            // process.stdout.write(line + '\n')
+            // stdoutBuffer += line + '\n'
           }
         }
       },
@@ -63,7 +63,7 @@ export async function executePiper (
       ...flags
     ]
   }
-  setOutput('stdout', stdoutBuffer)
+  // setOutput('stdout', stdoutBuffer)
   setOutput('stderr', stderrBuffer)
 
   return await getExecOutput(binaryPath, args, options)
