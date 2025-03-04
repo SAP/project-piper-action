@@ -16372,7 +16372,9 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('repository is not provided');
         let binaryURL;
         const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
+        if (version === 'master')
+            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
+        const piperBinaryName = isEnterprise ? 'sap-piper' : 'piper';
         (0, core_1.debug)(`version: ${version}`);
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
@@ -16414,13 +16416,6 @@ function getPiperDownloadURL(piper, version) {
     });
 }
 exports.getPiperDownloadURL = getPiperDownloadURL;
-function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master')
-            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
-        return isEnterpriseStep ? 'sap-piper' : 'piper';
-    });
-}
 
 
 /***/ }),
@@ -16607,6 +16602,10 @@ function fetchRetry(url, method = 'GET', tries = 5, baseDelayMS = 1000) {
                 const response = yield fetch(validatedUrl, { method });
                 if (response.status === 200) {
                     return response;
+                }
+                if (process.env.PIPER_DISABLE_RETRY !== undefined && process.env.PIPER_DISABLE_RETRY === 'true') {
+                    (0, core_1.info)('Retry disabled');
+                    (0, core_1.setFailed)(`Error fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`);
                 }
                 (0, core_1.info)(`Error while fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`);
                 if (!isRetryable(response.status)) {
@@ -16804,7 +16803,7 @@ function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${forAPICall ? `${exports.GITHUB_COM_API_URL}/repos` : exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
