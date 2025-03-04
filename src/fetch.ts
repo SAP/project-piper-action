@@ -1,4 +1,4 @@
-import { debug, info } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
 
 export async function wait (delay: number): Promise<string> {
   return await new Promise((resolve) => setTimeout(resolve, delay))
@@ -21,6 +21,10 @@ export async function fetchRetry (url: string, method = 'GET', tries = 5, baseDe
         return response
       }
 
+      if (process.env.PIPER_DISABLE_RETRY !== undefined && process.env.PIPER_DISABLE_RETRY === 'true') {
+        info('Retry disabled')
+        setFailed(`Error fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`)
+      }
       info(`Error while fetching ${url}: Status: ${response.statusText}\nCode: ${response.status}`)
       if (!isRetryable(response.status)) {
         debug(`Non-retryable status code: ${response.status}`)
