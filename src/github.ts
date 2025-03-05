@@ -124,5 +124,5 @@ export function getDownloadUrlByTag (version: string, forAPICall: boolean = fals
   version = version.toLowerCase()
   return (version === '' || version === 'master' || version === 'latest')
     ? `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-    : `${GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`
+    : `${forAPICall ? `${GITHUB_COM_API_URL}/repos` : GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`
 }

@@ -18,8 +18,10 @@ export async function downloadPiperBinary (
 
   let binaryURL: string
   const headers: any = {}
-  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
+  const piperBinaryName: 'sap-piper' | 'piper' = isEnterprise ? 'sap-piper' : 'piper'
   debug(`version: ${version}`)
+
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -61,10 +63,4 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   } catch (err) {
     throw new Error(`Can't get the tag: ${(err as Error).message}`)
   }
-}
-
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
-  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
-
-  return isEnterpriseStep ? 'sap-piper' : 'piper'
 }
