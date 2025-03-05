@@ -16,12 +16,23 @@ export async function downloadPiperBinary (
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')
 
-  let binaryURL: string
-  const headers: any = {}
-  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
   const piperBinaryName: 'sap-piper' | 'piper' = isEnterprise ? 'sap-piper' : 'piper'
+
+  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
+  version = (version === '' || version === 'master' || version === 'latest')
+    ? 'latest'
+    : version
   debug(`version: ${version}`)
 
+  const piperPath = `${process.cwd()}/${version.replace(/\./g, '_')}/${piperBinaryName}`
+  if (fs.existsSync(piperPath)) {
+    debug(`Piper binary exists, skipping download: ${piperPath}`)
+    return piperPath
+  }
+  info(`Piper binary does not exist, downloading: ${piperPath}`)
+
+  let binaryURL: string
+  const headers: any = {}
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -30,18 +41,12 @@ export async function downloadPiperBinary (
     const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
     debug(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`)
     binaryURL = binaryAssetURL
-    version = tag
   } else {
     debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
-    version = binaryURL.split('/').slice(-2)[0]
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
-  version = version.replace(/\./g, '_')
-  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
-  if (fs.existsSync(piperPath)) {
-    return piperPath
-  }
+  // : version.replace(/\./g, '_') // 1.0.0 -> 1_0_0, v1.0 -> v1_0
 
   info(`Downloading '${binaryURL}' as '${piperPath}'`)
   await downloadTool(
