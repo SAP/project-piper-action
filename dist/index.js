@@ -38624,7 +38624,6 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
             (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
         }
-        // : version.replace(/\./g, '_') // 1.0.0 -> 1_0_0, v1.0 -> v1_0
         (0, core_1.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
         yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
         return piperPath;
