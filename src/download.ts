@@ -46,7 +46,6 @@ export async function downloadPiperBinary (
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
-  // : version.replace(/\./g, '_') // 1.0.0 -> 1_0_0, v1.0 -> v1_0
 
   info(`Downloading '${binaryURL}' as '${piperPath}'`)
   await downloadTool(
