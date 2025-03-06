@@ -13,33 +13,22 @@ export async function executePiper (
     : flags
 
   const piperError = ''
-  // let stdoutBuffer: string = ''
-  let stderrBuffer: string = ''
-  let remainingStdout = ''
+  let stdoutBuffer: string = ''
 
   let options: ExecOptions = {
     ignoreReturnCode: true,
     listeners: {
-      stdout: (data: Buffer) => {
-        remainingStdout += data.toString()
-        const lines: string[] = remainingStdout.split(/\r?\n/)
-
-        // Keep the last line incomplete for the next chunk
-        remainingStdout = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (line.includes('fatal')) {
-            error(line)
-            stderrBuffer += `::error::${line}\n`
-          } else {
-            // process.stdout.write(line + '\n')
-            // stdoutBuffer += line + '\n'
-          }
+      stdline: (data: string) => {
+        if (data.includes('fatal')) {
+          error(data)
+          stdoutBuffer += data
         }
       },
-      stderr: (data: Buffer) => {
-        process.stderr.write(data) // Keep stderr output as is
-        stderrBuffer += data.toString()
+      errline: (data: string) => {
+        if (data.includes('fatal')) {
+          error(data)
+          stdoutBuffer += data
+        }
       }
     }
   }
@@ -63,8 +52,7 @@ export async function executePiper (
       ...flags
     ]
   }
-  // setOutput('stdout', stdoutBuffer)
-  setOutput('stderr', stderrBuffer)
+  setOutput('stdout', stdoutBuffer)
 
   return await getExecOutput(binaryPath, args, options)
     .then((execOutput: ExecOutput) => (execOutput))
