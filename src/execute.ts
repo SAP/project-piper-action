@@ -19,16 +19,14 @@ export async function executePiper (
     ? flags.concat(JSON.parse(process.env.defaultsFlags))
     : flags
 
-  let piperError = ''
+  const handleFatalLog = (data: string): void => { data.includes('fatal') ? setFailed(data) : info(data) }
+
   let options: ExecOptions = {
     outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
     errStream: nullWriter, // it will be printed to the console regardless of the listeners.
     listeners: {
-      stdline: (data: string) => { data.includes('fatal') ? setFailed(data) : info(data) },
-      errline: (data: string) => {
-        if (data.includes('fatal')) piperError += data // panics, stack traces or errors are written to stderr
-        data.includes('fatal') ? setFailed(data) : info(data)
-      }
+      stdline: handleFatalLog,
+      errline: handleFatalLog
     }
   }
   options = Object.assign({}, options, execOptions)
@@ -53,6 +51,4 @@ export async function executePiper (
   }
 
   return await getExecOutput(binaryPath, args, options)
-    .then((execOutput: ExecOutput) => (execOutput))
-    .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
 }
