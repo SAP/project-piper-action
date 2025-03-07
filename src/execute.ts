@@ -26,7 +26,7 @@ export async function executePiper (
     listeners: {
       stdline: (data: string) => { data.includes('fatal') ? setFailed(data) : info(data) },
       errline: (data: string) => {
-        piperError += data // panics, stack traces or errors are written to stderr
+        if (data.includes('fatal')) piperError += data // panics, stack traces or errors are written to stderr
         data.includes('fatal') ? setFailed(data) : info(data)
       }
     }

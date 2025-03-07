@@ -38763,7 +38763,8 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             listeners: {
                 stdline: (data) => { data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data); },
                 errline: (data) => {
-                    piperError += data; // panics, stack traces or errors are written to stderr
+                    if (data.includes('fatal'))
+                        piperError += data; // panics, stack traces or errors are written to stderr
                     data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data);
                 }
             }
