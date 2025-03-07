@@ -38743,6 +38743,12 @@ const exec_1 = __nccwpck_require__(8445);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(6914);
 const core_1 = __nccwpck_require__(6071);
+const stream_1 = __nccwpck_require__(2781);
+class NullWriter extends stream_1.Writable {
+    _write(chunk, encoding, callback) { }
+}
+// Used to suppress output from 'exec' and 'getExecOutput'
+const nullWriter = new NullWriter();
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
@@ -38750,21 +38756,28 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
             ? flags.concat(JSON.parse(process.env.defaultsFlags))
             : flags;
-        const piperError = '';
-        let stdoutBuffer = '';
+        let piperError = '';
         let options = {
+            outStream: nullWriter,
+            errStream: nullWriter,
             ignoreReturnCode: true,
             listeners: {
                 stdline: (data) => {
                     if (data.includes('fatal')) {
+                        piperError += data;
                         (0, core_1.error)(data);
-                        stdoutBuffer += data;
+                    }
+                    else {
+                        (0, core_1.info)(data);
                     }
                 },
                 errline: (data) => {
                     if (data.includes('fatal')) {
+                        piperError += data;
                         (0, core_1.error)(data);
-                        stdoutBuffer += data;
+                    }
+                    else {
+                        (0, core_1.info)(data);
                     }
                 }
             }
@@ -38786,7 +38799,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        (0, core_1.setOutput)('stdout', stdoutBuffer);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
             .then((execOutput) => (execOutput))
             .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
