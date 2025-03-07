@@ -1,7 +1,7 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, info, error } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
 import { Writable } from 'stream'
 
 class NullWriter extends Writable {
@@ -24,10 +24,10 @@ export async function executePiper (
     outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
     errStream: nullWriter, // it will be printed to the console regardless of the listeners.
     listeners: {
-      stdline: (data: string) => { data.includes('fatal') ? error(data) : info(data) },
+      stdline: (data: string) => { data.includes('fatal') ? setFailed(data) : info(data) },
       errline: (data: string) => {
         piperError += data // panics, stack traces or errors are written to stderr
-        data.includes('fatal') ? error(data) : info(data)
+        data.includes('fatal') ? setFailed(data) : info(data)
       }
     }
   }
