@@ -1,7 +1,14 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error, setOutput } from '@actions/core'
+import { debug, error, info } from '@actions/core'
+import { Writable } from 'stream'
+
+class NullWriter extends Writable {
+  _write (chunk: any, encoding: string, callback: any): void {}
+}
+// Used to suppress output from 'exec' and 'getExecOutput'
+const nullWriter = new NullWriter()
 
 export async function executePiper (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
@@ -12,23 +19,24 @@ export async function executePiper (
     ? flags.concat(JSON.parse(process.env.defaultsFlags))
     : flags
 
-  const piperError = ''
-  let stdoutBuffer: string = ''
+  let piperError = ''
 
   let options: ExecOptions = {
+    outStream: nullWriter,
+    errStream: nullWriter,
     ignoreReturnCode: true,
     listeners: {
       stdline: (data: string) => {
         if (data.includes('fatal')) {
+          piperError += data
           error(data)
-          stdoutBuffer += data
-        }
+        } else { info(data) }
       },
       errline: (data: string) => {
         if (data.includes('fatal')) {
+          piperError += data
           error(data)
-          stdoutBuffer += data
-        }
+        } else { info(data) }
       }
     }
   }
@@ -52,7 +60,6 @@ export async function executePiper (
       ...flags
     ]
   }
-  setOutput('stdout', stdoutBuffer)
 
   return await getExecOutput(binaryPath, args, options)
     .then((execOutput: ExecOutput) => (execOutput))
