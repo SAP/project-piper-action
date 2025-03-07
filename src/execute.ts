@@ -1,7 +1,7 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error, info } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
 import { Writable } from 'stream'
 
 class NullWriter extends Writable {
@@ -29,13 +29,13 @@ export async function executePiper (
       stdline: (data: string) => {
         if (data.includes('fatal')) {
           piperError += data
-          error(data)
+          setFailed(data)
         } else { info(data) }
       },
       errline: (data: string) => {
         if (data.includes('fatal')) {
           piperError += data
-          error(data)
+          setFailed(data)
         } else { info(data) }
       }
     }

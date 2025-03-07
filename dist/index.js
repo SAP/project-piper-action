@@ -38765,7 +38765,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 stdline: (data) => {
                     if (data.includes('fatal')) {
                         piperError += data;
-                        (0, core_1.error)(data);
+                        (0, core_1.setFailed)(data);
                     }
                     else {
                         (0, core_1.info)(data);
@@ -38774,7 +38774,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 errline: (data) => {
                     if (data.includes('fatal')) {
                         piperError += data;
-                        (0, core_1.error)(data);
+                        (0, core_1.setFailed)(data);
                     }
                     else {
                         (0, core_1.info)(data);
