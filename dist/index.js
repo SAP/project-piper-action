@@ -16530,16 +16530,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
             ? flags.concat(JSON.parse(process.env.defaultsFlags))
             : flags;
-        const handleFatalLog = (data) => { data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data); };
-        let options = {
-            outStream: nullWriter,
-            errStream: nullWriter,
-            listeners: {
-                stdline: handleFatalLog,
-                errline: handleFatalLog
-            }
-        };
-        options = Object.assign({}, options, execOptions);
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
         // Default to Piper
@@ -16556,6 +16546,16 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
+        const handleFatalLog = (data) => { data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data); };
+        let options = {
+            outStream: nullWriter,
+            errStream: nullWriter,
+            listeners: {
+                stdline: handleFatalLog,
+                errline: handleFatalLog
+            }
+        };
+        options = Object.assign({}, options, execOptions);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
 }
