@@ -16517,6 +16517,12 @@ const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
+const stream_1 = __nccwpck_require__(2781);
+class NullWriter extends stream_1.Writable {
+    _write(chunk, encoding, callback) { }
+}
+// Used to suppress output from 'exec' and 'getExecOutput'
+const nullWriter = new NullWriter();
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
@@ -16526,24 +16532,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             : flags;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
-        let piperError = '';
-        let options = {
-            listeners: {
-                stdline: (data) => {
-                    if (data.includes('fatal')) {
-                        (0, core_1.error)(data);
-                        piperError += data;
-                    }
-                },
-                errline: (data) => {
-                    if (data.includes('fatal')) {
-                        (0, core_1.error)(data);
-                        piperError += data;
-                    }
-                }
-            }
-        };
-        options = Object.assign({}, options, execOptions);
         // Default to Piper
         let binaryPath = piperPath;
         let args = [stepName, ...flags];
@@ -16558,9 +16546,17 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        return yield (0, exec_1.getExecOutput)(binaryPath, args, options)
-            .then((execOutput) => (execOutput))
-            .catch(err => { throw new Error(`Piper execution error: ${err}: ${piperError}`); });
+        const handleFatalLog = (data) => { data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data); };
+        let options = {
+            outStream: nullWriter,
+            errStream: nullWriter,
+            listeners: {
+                stdline: handleFatalLog,
+                errline: handleFatalLog
+            }
+        };
+        options = Object.assign({}, options, execOptions);
+        return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
 }
 exports.executePiper = executePiper;
