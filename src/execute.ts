@@ -19,18 +19,6 @@ export async function executePiper (
     ? flags.concat(JSON.parse(process.env.defaultsFlags))
     : flags
 
-  const handleFatalLog = (data: string): void => { data.includes('fatal') ? setFailed(data) : info(data) }
-
-  let options: ExecOptions = {
-    outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
-    errStream: nullWriter, // it will be printed to the console regardless of the listeners.
-    listeners: {
-      stdline: handleFatalLog,
-      errline: handleFatalLog
-    }
-  }
-  options = Object.assign({}, options, execOptions)
-
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
 
@@ -49,6 +37,17 @@ export async function executePiper (
       ...flags
     ]
   }
+
+  const handleFatalLog = (data: string): void => { data.includes('fatal') ? setFailed(data) : info(data) }
+  let options: ExecOptions = {
+    outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
+    errStream: nullWriter, // it will be printed to the console regardless of the listeners.
+    listeners: {
+      stdline: handleFatalLog,
+      errline: handleFatalLog
+    }
+  }
+  options = Object.assign({}, options, execOptions)
 
   return await getExecOutput(binaryPath, args, options)
 }
