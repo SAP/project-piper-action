@@ -1,7 +1,14 @@
 import { type ExecOptions, type ExecOutput, getExecOutput } from '@actions/exec'
 import path from 'path'
 import { internalActionVariables } from './piper'
-import { debug, error } from '@actions/core'
+import { debug, info, setFailed } from '@actions/core'
+import { Writable } from 'stream'
+
+class NullWriter extends Writable {
+  _write (chunk: any, encoding: string, callback: any): void {}
+}
+// Used to suppress output from 'exec' and 'getExecOutput'
+const nullWriter = new NullWriter()
 
 export async function executePiper (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
@@ -14,24 +21,6 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
-  let piperError = ''
-  let options = {
-    listeners: {
-      stdline: (data: string) => {
-        if (data.includes('fatal')) {
-          error(data)
-          piperError += data
-        }
-      },
-      errline: (data: string) => {
-        if (data.includes('fatal')) {
-          error(data)
-          piperError += data
-        }
-      }
-    }
-  }
-  options = Object.assign({}, options, execOptions)
 
   // Default to Piper
   let binaryPath = piperPath
@@ -49,7 +38,16 @@ export async function executePiper (
     ]
   }
 
+  const handleFatalLog = (data: string): void => { data.includes('fatal') ? setFailed(data) : info(data) }
+  let options: ExecOptions = {
+    outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
+    errStream: nullWriter, // it will be printed to the console regardless of the listeners.
+    listeners: {
+      stdline: handleFatalLog,
+      errline: handleFatalLog
+    }
+  }
+  options = Object.assign({}, options, execOptions)
+
   return await getExecOutput(binaryPath, args, options)
-    .then((execOutput: ExecOutput) => (execOutput))
-    .catch(err => { throw new Error(`Piper execution error: ${err as string}: ${piperError}`) })
 }

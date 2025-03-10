@@ -21,7 +21,7 @@ jobs:
       - name: Install Node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 22
       - name: Install and Build Log4brains
         run: |
           npm install --global log4brains
