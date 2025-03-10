@@ -15652,14 +15652,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
-// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+exports.parseDevVersion = exports.buildPiperFromSource = exports.buildPiperInnerSource = exports.buildPiper = void 0;
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const process_1 = __nccwpck_require__(7282);
 const exec_1 = __nccwpck_require__(1514);
 const tool_cache_1 = __nccwpck_require__(7784);
+const enterprise_1 = __nccwpck_require__(4340);
+const github_1 = __nccwpck_require__(978);
+function buildPiper(actionCfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+            (0, core_1.info)('Preparing Piper binary for enterprise step');
+            // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+            (0, core_1.info)('Building Piper from inner source');
+            return yield buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
+        }
+        // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+        (0, core_1.info)('Building OS Piper from source');
+        return yield buildPiperFromSource(actionCfg.piperVersion);
+    });
+}
+exports.buildPiper = buildPiper;
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
@@ -15710,6 +15726,56 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+function buildPiperFromSource(version) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        const versionComponents = version.split(':');
+        if (versionComponents.length !== 4) {
+            throw new Error('broken version');
+        }
+        const owner = versionComponents[1];
+        const repository = versionComponents[2];
+        const commitISH = versionComponents[3];
+        const versionName = (() => {
+            if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+                throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
+            }
+            return commitISH.slice(0, 7);
+        })();
+        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        const piperPath = `${path}/piper`;
+        if (fs_1.default.existsSync(piperPath)) {
+            return piperPath;
+        }
+        // TODO
+        // check if cache is available
+        (0, core_1.info)(`Building Piper from ${version}`);
+        const url = `${github_1.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
+        (0, core_1.info)(`URL: ${url}`);
+        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
+        const wd = (0, process_1.cwd)();
+        const repositoryPath = (0, path_1.join)(path, (_a = fs_1.default.readdirSync(path).find((name) => {
+            return name.includes(repository);
+        })) !== null && _a !== void 0 ? _a : '');
+        (0, process_1.chdir)(repositoryPath);
+        const cgoEnabled = process.env.CGO_ENABLED;
+        process.env.CGO_ENABLED = '0';
+        yield (0, exec_1.exec)('go build -o ../piper', [
+            '-ldflags',
+            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${github_1.GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${github_1.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+        ]);
+        process.env.CGO_ENABLED = cgoEnabled;
+        (0, process_1.chdir)(wd);
+        fs_1.default.rmSync(repositoryPath, { recursive: true, force: true });
+        // TODO
+        // await download cache
+        return piperPath;
+    });
+}
+exports.buildPiperFromSource = buildPiperFromSource;
 function downloadWithAuth(url, destination, wdfGithubToken) {
     return __awaiter(this, void 0, void 0, function* () {
         if (wdfGithubToken.length !== 0) {
@@ -16370,10 +16436,21 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('owner is not provided');
         if (repo === '')
             throw new Error('repository is not provided');
+        const piperBinaryName = isEnterprise ? 'sap-piper' : 'piper';
+        if (version === 'master')
+            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
+        version = (version === '' || version === 'master' || version === 'latest')
+            ? 'latest'
+            : version;
+        (0, core_1.debug)(`version: ${version}`);
+        const piperPath = `${process.cwd()}/${version.replace(/\./g, '_')}/${piperBinaryName}`;
+        if (fs.existsSync(piperPath)) {
+            (0, core_1.debug)(`Piper binary exists, skipping download: ${piperPath}`);
+            return piperPath;
+        }
+        (0, core_1.info)(`Piper binary does not exist, downloading: ${piperPath}`);
         let binaryURL;
         const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
-        (0, core_1.debug)(`version: ${version}`);
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -16381,18 +16458,11 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
             (0, core_1.debug)(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`);
             binaryURL = binaryAssetURL;
-            version = tag;
         }
         else {
             (0, core_1.debug)('Fetching binary from URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            version = binaryURL.split('/').slice(-2)[0];
             (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
-        }
-        version = version.replace(/\./g, '_');
-        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
-        if (fs.existsSync(piperPath)) {
-            return piperPath;
         }
         (0, core_1.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
         yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
@@ -16414,13 +16484,6 @@ function getPiperDownloadURL(piper, version) {
     });
 }
 exports.getPiperDownloadURL = getPiperDownloadURL;
-function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master')
-            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
-        return isEnterpriseStep ? 'sap-piper' : 'piper';
-    });
-}
 
 
 /***/ }),
@@ -16651,29 +16714,6 @@ function isRetryable(code) {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -16684,14 +16724,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
-const fs = __importStar(__nccwpck_require__(7147));
-const path_1 = __nccwpck_require__(1017);
-const process_1 = __nccwpck_require__(7282);
+exports.getDownloadUrlByTag = exports.getTag = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const core_1 = __nccwpck_require__(6762);
-const tool_cache_1 = __nccwpck_require__(7784);
 const core_2 = __nccwpck_require__(2186);
-const exec_1 = __nccwpck_require__(1514);
 exports.GITHUB_COM_SERVER_URL = 'https://github.com';
 exports.GITHUB_COM_API_URL = 'https://api.github.com';
 exports.PIPER_OWNER = 'SAP';
@@ -16736,56 +16771,6 @@ function getPiperReleases(version, api, token, owner, repository) {
         return response;
     });
 }
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-function buildPiperFromSource(version) {
-    var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        const versionComponents = version.split(':');
-        if (versionComponents.length !== 4) {
-            throw new Error('broken version');
-        }
-        const owner = versionComponents[1];
-        const repository = versionComponents[2];
-        const commitISH = versionComponents[3];
-        const versionName = (() => {
-            if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-                throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
-            }
-            return commitISH.slice(0, 7);
-        })();
-        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
-        const piperPath = `${path}/piper`;
-        if (fs.existsSync(piperPath)) {
-            return piperPath;
-        }
-        // TODO
-        // check if cache is available
-        (0, core_2.info)(`Building Piper from ${version}`);
-        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
-        (0, core_2.info)(`URL: ${url}`);
-        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
-        const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
-            return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
-        (0, process_1.chdir)(repositoryPath);
-        const cgoEnabled = process.env.CGO_ENABLED;
-        process.env.CGO_ENABLED = '0';
-        yield (0, exec_1.exec)('go build -o ../piper', [
-            '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-        ]);
-        process.env.CGO_ENABLED = cgoEnabled;
-        (0, process_1.chdir)(wd);
-        fs.rmSync(repositoryPath, { recursive: true, force: true });
-        // TODO
-        // await download cache
-        return piperPath;
-    });
-}
-exports.buildPiperFromSource = buildPiperFromSource;
 function getTag(version, forAPICall) {
     version = version.toLowerCase();
     if (version === '' || version === 'master' || version === 'latest') {
@@ -16800,7 +16785,7 @@ function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${forAPICall ? `${exports.GITHUB_COM_API_URL}/repos` : exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
@@ -16880,7 +16865,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(2186);
-const github_1 = __nccwpck_require__(978);
 const fs_1 = __nccwpck_require__(7147);
 const execute_1 = __nccwpck_require__(5938);
 const config_1 = __nccwpck_require__(6373);
@@ -16947,20 +16931,15 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
+        // if version is a development version, build from source
+        if ((actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) || actionCfg.piperVersion.startsWith('devel:')) {
+            return yield (0, build_1.buildPiper)(actionCfg);
+        }
+        // Download Piper binary
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
-            // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-            if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
-                (0, core_1.info)('Building Piper from inner source');
-                return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
-            }
             (0, core_1.info)('Downloading Piper Inner source binary');
             return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
-        }
-        // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-        if (actionCfg.piperVersion.startsWith('devel:')) {
-            (0, core_1.info)('Building OS Piper from source');
-            return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);

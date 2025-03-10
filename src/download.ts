@@ -16,10 +16,23 @@ export async function downloadPiperBinary (
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')
 
+  const piperBinaryName: 'sap-piper' | 'piper' = isEnterprise ? 'sap-piper' : 'piper'
+
+  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
+  version = (version === '' || version === 'master' || version === 'latest')
+    ? 'latest'
+    : version
+  debug(`version: ${version}`)
+
+  const piperPath = `${process.cwd()}/${version.replace(/\./g, '_')}/${piperBinaryName}`
+  if (fs.existsSync(piperPath)) {
+    debug(`Piper binary exists, skipping download: ${piperPath}`)
+    return piperPath
+  }
+  info(`Piper binary does not exist, downloading: ${piperPath}`)
+
   let binaryURL: string
   const headers: any = {}
-  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
-  debug(`version: ${version}`)
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -28,17 +41,10 @@ export async function downloadPiperBinary (
     const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
     debug(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`)
     binaryURL = binaryAssetURL
-    version = tag
   } else {
     debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
-    version = binaryURL.split('/').slice(-2)[0]
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
-  }
-  version = version.replace(/\./g, '_')
-  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
-  if (fs.existsSync(piperPath)) {
-    return piperPath
   }
 
   info(`Downloading '${binaryURL}' as '${piperPath}'`)
@@ -61,10 +67,4 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   } catch (err) {
     throw new Error(`Can't get the tag: ${(err as Error).message}`)
   }
-}
-
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
-  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
-
-  return isEnterpriseStep ? 'sap-piper' : 'piper'
 }
