@@ -16546,7 +16546,11 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        const handleFatalLog = (data) => { data.includes('fatal') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data); };
+        const handleFatalLog = (data) => {
+            // temporary solution until logging is improved in Piper binary. It relies on:
+            // https://github.com/SAP/jenkins-library/blob/d12e283a4b316e6cf86c938d49bfa0461773b3b5/pkg/log/fatalHook.go#L46-L47
+            data.includes('fatal error: errorDetails') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data);
+        };
         let options = {
             outStream: nullWriter,
             errStream: nullWriter,
