@@ -38,7 +38,11 @@ export async function executePiper (
     ]
   }
 
-  const handleFatalLog = (data: string): void => { data.includes('fatal') ? setFailed(data) : info(data) }
+  const handleFatalLog = (data: string): void => {
+    // temporary solution until logging is improved in Piper binary. It relies on:
+    // https://github.com/SAP/jenkins-library/blob/d12e283a4b316e6cf86c938d49bfa0461773b3b5/pkg/log/fatalHook.go#L46-L47
+    data.includes('fatal error: errorDetails') ? setFailed(data) : info(data)
+  }
   let options: ExecOptions = {
     outStream: nullWriter, // Suppress output, as it is handled by the listeners, if the output is not suppressed
     errStream: nullWriter, // it will be printed to the console regardless of the listeners.
