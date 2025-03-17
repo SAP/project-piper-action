@@ -1,7 +1,6 @@
 import fs from 'fs'
 
 import * as core from '@actions/core'
-
 import * as build from '../src/build'
 import * as piper from '../src/piper'
 import * as config from '../src/config'
@@ -44,7 +43,6 @@ describe('Piper', () => {
     fs.chmodSync = jest.fn()
     jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(build, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
-    jest.spyOn(build, 'buildPiper').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -109,7 +107,6 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(build.buildPiper).toHaveBeenCalledTimes(1)
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 

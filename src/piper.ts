@@ -12,7 +12,7 @@ import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import { tokenize } from './utils'
-import { buildPiper } from './build'
+import { buildPiperFromSource, buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
 
 // Global runtime variables that is accessible within a single action execution
@@ -81,18 +81,21 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
-  // if version is a development version, build from source
-  if ((actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) || actionCfg.piperVersion.startsWith('devel:')) {
-    return await buildPiper(actionCfg)
-  }
-
-  // Download Piper binary
   if (isEnterpriseStep(actionCfg.stepName)) {
     info('Preparing Piper binary for enterprise step')
+    // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+    if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
+      info('Building Piper from inner source')
+      return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
+    }
     info('Downloading Piper Inner source binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
-
+  // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+  if (actionCfg.piperVersion.startsWith('devel:')) {
+    info('Building OS Piper from source')
+    return await buildPiperFromSource(actionCfg.piperVersion)
+  }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }

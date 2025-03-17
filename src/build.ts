@@ -1,24 +1,11 @@
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 import { error, info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
 import { exec } from '@actions/exec'
 import { downloadTool, extractZip } from '@actions/tool-cache'
-import { type ActionConfiguration } from './config'
-import { isEnterpriseStep } from './enterprise'
 import { GITHUB_COM_SERVER_URL } from './github'
-
-export async function buildPiper (actionCfg: ActionConfiguration): Promise<string> {
-  if (isEnterpriseStep(actionCfg.stepName)) {
-    info('Preparing Piper binary for enterprise step')
-    // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-    info('Building Piper from inner source')
-    return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
-  }
-  // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-  info('Building OS Piper from source')
-  return await buildPiperFromSource(actionCfg.piperVersion)
-}
 
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
