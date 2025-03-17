@@ -37878,29 +37878,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperFromSource = exports.buildPiperInnerSource = exports.buildPiper = void 0;
+exports.parseDevVersion = exports.buildPiperFromSource = exports.buildPiperInnerSource = void 0;
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const core_1 = __nccwpck_require__(6071);
 const path_1 = __nccwpck_require__(1017);
 const fs_1 = __importDefault(__nccwpck_require__(7147));
 const process_1 = __nccwpck_require__(7282);
 const exec_1 = __nccwpck_require__(8445);
 const tool_cache_1 = __nccwpck_require__(725);
-const enterprise_1 = __nccwpck_require__(8675);
 const github_1 = __nccwpck_require__(4292);
-function buildPiper(actionCfg) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
-            (0, core_1.info)('Preparing Piper binary for enterprise step');
-            // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-            (0, core_1.info)('Building Piper from inner source');
-            return yield buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
-        }
-        // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-        (0, core_1.info)('Building OS Piper from source');
-        return yield buildPiperFromSource(actionCfg.piperVersion);
-    });
-}
-exports.buildPiper = buildPiper;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
@@ -39166,15 +39152,20 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
-        // if version is a development version, build from source
-        if ((actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) || actionCfg.piperVersion.startsWith('devel:')) {
-            return yield (0, build_1.buildPiper)(actionCfg);
-        }
-        // Download Piper binary
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
+            // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+            if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
+                (0, core_1.info)('Building Piper from inner source');
+                return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
+            }
             (0, core_1.info)('Downloading Piper Inner source binary');
             return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        }
+        // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+        if (actionCfg.piperVersion.startsWith('devel:')) {
+            (0, core_1.info)('Building OS Piper from source');
+            return yield (0, build_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
