@@ -98,14 +98,19 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   if (fs.existsSync(piperPath)) {
     return piperPath
   }
-  // TODO
-  // check if cache is available
+
+  // TODO: check if cache is available
   info(`Building Piper from ${version}`)
   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
 
-  await extractZip(
-    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
+  let downloadPath = `${path}/source-code.zip`
+  if (!fs.existsSync(downloadPath)) {
+    downloadPath = await downloadTool(url, downloadPath).catch((err) => {
+      throw new Error(`Can't download: ${err}`)
+    })
+  }
+  await extractZip(downloadPath, `${path}`).catch(err => { throw new Error(`Can't extract: ${err}`) })
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
