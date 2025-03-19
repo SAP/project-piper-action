@@ -4,8 +4,10 @@ import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
 import { exec } from '@actions/exec'
-import { extractZip } from '@actions/tool-cache'
+import { downloadTool, extractZip } from '@actions/tool-cache'
+import { GITHUB_COM_SERVER_URL } from './github'
 
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
   const versionName = getVersionName(commitISH)
@@ -60,6 +62,65 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   fs.rmSync(repositoryPath, { recursive: true, force: true })
 
   info(`Returning piperPath: ${piperPath}`)
+  return piperPath
+}
+
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+export async function buildPiperFromSource (version: string): Promise<string> {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4) {
+    throw new Error('broken version')
+  }
+  const owner = versionComponents[1]
+  const repository = versionComponents[2]
+  const commitISH = versionComponents[3]
+  const versionName = (() => {
+    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+      throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
+    }
+    return commitISH.slice(0, 7)
+  })()
+  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+  const piperPath = `${path}/piper`
+  if (fs.existsSync(piperPath)) {
+    return piperPath
+  }
+
+  // TODO: check if cache is available
+  info(`Building Piper from ${version}`)
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+  info(`URL: ${url}`)
+
+  let downloadPath = `${path}/source-code.zip`
+  if (!fs.existsSync(downloadPath)) {
+    downloadPath = await downloadTool(url, downloadPath).catch((err) => {
+      throw new Error(`Can't download: ${err}`)
+    })
+  }
+  await extractZip(downloadPath, `${path}`).catch(err => { throw new Error(`Can't extract: ${err}`) })
+  const wd = cwd()
+
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
+    return name.includes(repository)
+  }) ?? '')
+  chdir(repositoryPath)
+
+  const cgoEnabled = process.env.CGO_ENABLED
+  process.env.CGO_ENABLED = '0'
+  await exec(
+    'go build -o ../piper',
+    [
+      '-ldflags',
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+    ]
+  )
+  process.env.CGO_ENABLED = cgoEnabled
+  chdir(wd)
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // TODO
+  // await download cache
   return piperPath
 }
 

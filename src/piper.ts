@@ -1,5 +1,4 @@
 import { debug, setFailed, info } from '@actions/core'
-import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -13,7 +12,7 @@ import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import { tokenize } from './utils'
-import { buildPiperInnerSource } from './build'
+import { buildPiperFromSource, buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
 
 // Global runtime variables that is accessible within a single action execution
