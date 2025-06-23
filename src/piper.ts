@@ -1,4 +1,4 @@
-import { debug, setFailed, info } from '@actions/core'
+import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -36,8 +36,11 @@ export async function run (): Promise<void> {
     info('Loading pipeline environment')
     await loadPipelineEnv()
 
+    startGroup('version')
     info('Executing action - version')
     await executePiper('version')
+    endGroup()
+    
     if (onGitHubEnterprise() && actionCfg.stepName !== 'getDefaults') {
       debug('Enterprise step detected')
       await getDefaultConfig(
@@ -56,8 +59,14 @@ export async function run (): Promise<void> {
     if (actionCfg.stepName !== '') {
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+      
+      startGroup('Docker Setup')
       await runContainers(actionCfg, contextConfig)
+      endGroup()
+      
+      startGroup(actionCfg.stepName)
       await executePiper(actionCfg.stepName, flags)
+      endGroup()
     }
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {
