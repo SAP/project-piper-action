@@ -16886,6 +16886,7 @@ exports.internalActionVariables = {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            (0, core_1.startGroup)('Setup');
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
@@ -16893,20 +16894,25 @@ function run() {
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
+            (0, core_1.endGroup)();
             (0, core_1.startGroup)('version');
             (0, core_1.info)('Getting version');
             yield (0, execute_1.executePiper)('version');
             (0, core_1.endGroup)();
             if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== 'getDefaults') {
+                (0, core_1.startGroup)('Enterprise Configuration');
                 (0, core_1.debug)('Enterprise step detected');
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
+                (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
+                (0, core_1.startGroup)('Step Configuration');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
+                (0, core_1.endGroup)();
                 (0, core_1.startGroup)('Docker Setup');
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.endGroup)();
@@ -16914,7 +16920,9 @@ function run() {
                 yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 (0, core_1.endGroup)();
             }
+            (0, core_1.startGroup)('Export Pipeline Environment');
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
+            (0, core_1.endGroup)();
         }
         catch (error) {
             (0, core_1.setFailed)(error instanceof Error ? error.message : String(error));
