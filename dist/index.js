@@ -16517,12 +16517,6 @@ const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
-const stream_1 = __nccwpck_require__(2781);
-class NullWriter extends stream_1.Writable {
-    _write(chunk, encoding, callback) { }
-}
-// Used to suppress output from 'exec' and 'getExecOutput'
-const nullWriter = new NullWriter();
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
@@ -16546,19 +16540,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        const handleFatalLog = (data) => {
-            // temporary solution until logging is improved in Piper binary. It relies on:
-            // https://github.com/SAP/jenkins-library/blob/d12e283a4b316e6cf86c938d49bfa0461773b3b5/pkg/log/fatalHook.go#L46-L47
-            data.includes('fatal error: errorDetails') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data);
-        };
-        let options = {
-            outStream: nullWriter,
-            errStream: nullWriter,
-            listeners: {
-                stdline: handleFatalLog,
-                errline: handleFatalLog
-            }
-        };
+        let options = {};
         options = Object.assign({}, options, execOptions);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
@@ -16911,8 +16893,10 @@ function run() {
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
-            (0, core_1.info)('Executing action - version');
+            (0, core_1.startGroup)('version');
+            (0, core_1.info)('Getting version');
             yield (0, execute_1.executePiper)('version');
+            (0, core_1.endGroup)();
             if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== 'getDefaults') {
                 (0, core_1.debug)('Enterprise step detected');
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
@@ -16923,8 +16907,12 @@ function run() {
             if (actionCfg.stepName !== '') {
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
+                (0, core_1.startGroup)('Docker Setup');
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
+                (0, core_1.endGroup)();
+                (0, core_1.startGroup)(actionCfg.stepName);
                 yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                (0, core_1.endGroup)();
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
