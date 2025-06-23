@@ -24,7 +24,7 @@ export const internalActionVariables = {
   sidecarContainerID: ''
 }
 
-export async function run (): Promise<void> {
+export async function run(): Promise<void> {
   try {
     info('Getting action configuration')
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
@@ -37,10 +37,10 @@ export async function run (): Promise<void> {
     await loadPipelineEnv()
 
     startGroup('version')
-    info('Executing action - version')
+    info('Getting version')
     await executePiper('version')
     endGroup()
-    
+
     if (onGitHubEnterprise() && actionCfg.stepName !== 'getDefaults') {
       debug('Enterprise step detected')
       await getDefaultConfig(
@@ -59,11 +59,11 @@ export async function run (): Promise<void> {
     if (actionCfg.stepName !== '') {
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
-      
+
       startGroup('Docker Setup')
       await runContainers(actionCfg, contextConfig)
       endGroup()
-      
+
       startGroup(actionCfg.stepName)
       await executePiper(actionCfg.stepName, flags)
       endGroup()
@@ -76,7 +76,7 @@ export async function run (): Promise<void> {
   }
 }
 
-async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
+async function preparePiperBinary(actionCfg: ActionConfiguration): Promise<void> {
   const piperPath: string = await preparePiperPath(actionCfg)
 
   if (piperPath === undefined || piperPath === '') {
@@ -88,7 +88,7 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
   chmodSync(piperPath, 0o775)
 }
 
-async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
+async function preparePiperPath(actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
   if (isEnterpriseStep(actionCfg.stepName)) {
