@@ -48,7 +48,7 @@ jobs:
 
       - name: Increment version
         id: version
-        uses: reecetech/version-increment@2024.4.4
+        uses: reecetech/version-increment@2024.10.1
         with:
           scheme: semver
           increment: minor
