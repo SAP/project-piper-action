@@ -16158,9 +16158,8 @@ function startContainer(actionCfg, ctxConfig) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
-        if (dockerImage === undefined || dockerImage === '') {
+        if (dockerImage === undefined || dockerImage === '')
             return;
-        }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
         const cwd = process.cwd();
