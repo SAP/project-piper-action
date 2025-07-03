@@ -62,7 +62,8 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
-    ...getSystemTrustToken(),
+    ...getSystemTrustEnvVars(),
+    ...getTelemetryEnvVars(),
     dockerImage,
     'cat'
   )
@@ -89,76 +90,56 @@ export async function stopContainer (containerID: string): Promise<void> {
 export function getOrchestratorEnvVars (): string[] {
   return [
     // needed for Piper orchestrator detection
-    '--env',
-    'GITHUB_ACTION',
-    '--env',
-    'GITHUB_ACTIONS',
+    '--env', 'GITHUB_ACTION',
+    '--env', 'GITHUB_ACTIONS',
     // Build Info
-    '--env',
-    'GITHUB_JOB',
-    '--env',
-    'GITHUB_RUN_ID',
-    '--env',
-    'GITHUB_REF',
-    '--env',
-    'GITHUB_REF_NAME',
-    '--env',
-    'GITHUB_SERVER_URL',
-    '--env',
-    'GITHUB_API_URL',
-    '--env',
-    'GITHUB_REPOSITORY',
-    '--env',
-    'GITHUB_SHA',
-    '--env',
-    'GITHUB_WORKFLOW_REF',
+    '--env', 'GITHUB_JOB',
+    '--env', 'GITHUB_RUN_ID',
+    '--env', 'GITHUB_REF',
+    '--env', 'GITHUB_REF_NAME',
+    '--env', 'GITHUB_SERVER_URL',
+    '--env', 'GITHUB_API_URL',
+    '--env', 'GITHUB_REPOSITORY',
+    '--env', 'GITHUB_SHA',
+    '--env', 'GITHUB_WORKFLOW_REF',
     // Pull Request Info (needed for sonarExecuteScan)
-    '--env',
-    'GITHUB_HEAD_REF',
-    '--env',
-    'GITHUB_BASE_REF',
-    '--env',
-    'GITHUB_EVENT_PULL_REQUEST_NUMBER'
+    '--env', 'GITHUB_HEAD_REF',
+    '--env', 'GITHUB_BASE_REF',
+    '--env', 'GITHUB_EVENT_PULL_REQUEST_NUMBER'
   ]
 }
 
 export function getVaultEnvVars (): string[] {
   return [
-    '--env',
-    'PIPER_vaultAppRoleID',
-    '--env',
-    'PIPER_vaultAppRoleSecretID'
+    '--env', 'PIPER_vaultAppRoleID',
+    '--env', 'PIPER_vaultAppRoleSecretID'
   ]
 }
 
 export function getProxyEnvVars (): string[] {
   return [
-    '--env',
-    'http_proxy',
-    '--env',
-    'https_proxy',
-    '--env',
-    'no_proxy',
-    '--env',
-    'HTTP_PROXY',
-    '--env',
-    'HTTPS_PROXY',
-    '--env',
-    'NO_PROXY'
+    '--env', 'http_proxy',
+    '--env', 'https_proxy',
+    '--env', 'no_proxy',
+    '--env', 'HTTP_PROXY',
+    '--env', 'HTTPS_PROXY',
+    '--env', 'NO_PROXY'
   ]
 }
 
-export function getSystemTrustToken (): string[] {
+export function getSystemTrustEnvVars (): string[] {
   return [
-    '--env',
-    'PIPER_systemTrustToken',
+    '--env', 'PIPER_systemTrustToken',
     // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
-    '--env',
-    'PIPER_trustEngineToken',
-    '--env',
-    'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
-    '--env',
-    'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
+    '--env', 'PIPER_trustEngineToken',
+    '--env', 'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
+    '--env', 'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
+  ]
+}
+
+export function getTelemetryEnvVars (): string[] {
+  return [
+    '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
   ]
 }
 
