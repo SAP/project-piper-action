@@ -1,98 +1,91 @@
-name-template: "$RESOLVED_VERSION"
-tag-template: "$RESOLVED_VERSION"
+---
+name-template: $RESOLVED_VERSION
+tag-template: $RESOLVED_VERSION
 categories:
-  - title: "🚨 Breaking Changes"
+  - title: 🚨 Breaking Changes
     labels:
-      - "breaking"
-  - title: "🚀 Features"
+      - breaking
+  - title: 🚀 Features
     labels:
-      - "enhancement"
-  - title: "🐛 Bug Fixes"
+      - enhancement
+  - title: 🐛 Bug Fixes
     labels:
-      - "bug"
-  - title: "🧰 Maintenance"
+      - bug
+  - title: 🧰 Maintenance
     labels:
-      - "maintenance"
-      - "ci"
-  - title: "📚 Documentation"
+      - maintenance
+      - ci
+  - title: 📚 Documentation
     labels:
-      - "documentation"
-  - title: "⬆️ Dependencies"
+      - documentation
+  - title: ⬆️ Dependencies
     labels:
-      - "dependencies"
-
+      - dependencies
 autolabeler:
-  - label: "documentation"
+  - label: documentation
     files:
       - "*.md"
-      - "docs/**/*"
+      - docs/**/*
     branch:
-      - '/docs{0,1}\/.+/'
+      - /docs{0,1}\/.+/
     title:
-      - "/docs/i"
-      - "/documentation/i"
-
-  - label: "bug"
+      - /docs/i
+      - /documentation/i
+  - label: bug
     branch:
-      - '/fix\/.+/'
-      - '/bugfix\/.+/'
+      - /fix\/.+/
+      - /bugfix\/.+/
     title:
-      - "/fix/i"
-      - "/bug/i"
-      - "/issue/i"
-
-  - label: "enhancement"
+      - /fix/i
+      - /bug/i
+      - /issue/i
+  - label: enhancement
     branch:
-      - '/feature\/.+/'
-      - '/enhancement\/.+/'
-      - '/improve\/.+/'
+      - /feature\/.+/
+      - /enhancement\/.+/
+      - /improve\/.+/
     title:
-      - "/feat/i"
-      - "/feature/i"
-      - "/enhance/i"
-      - "/add/i"
-
-  - label: "maintenance"
+      - /feat/i
+      - /feature/i
+      - /enhance/i
+      - /add/i
+  - label: maintenance
     title:
-      - "/chore/i"
-
-  - label: "dependencies"
+      - /chore/i
+  - label: dependencies
     files:
-      - "package.json"
-      - "package-lock.json"
-      - "yarn.lock"
-      - "npm-shrinkwrap.json"
+      - package.json
+      - package-lock.json
+      - yarn.lock
+      - npm-shrinkwrap.json
     branch:
-      - '/deps\/.+/'
+      - /deps\/.+/
     title:
-      - "/deps/i"
-      - "/dependencies/i"
-      - "/upgrade/i"
-
-  - label: "breaking"
+      - /deps/i
+      - /dependencies/i
+      - /upgrade/i
+  - label: breaking
     title:
-      - "/!:/i"
-      - "/breaking/i"
+      - /!:/i
+      - /breaking/i
     body:
-      - "/BREAKING CHANGE:/i"
-
+      - /BREAKING CHANGE:/i
 version-resolver:
   major:
     labels:
-      - "major"
-      - "breaking"
+      - major
+      - breaking
   minor:
     labels:
-      - "minor"
-      - "enhancement"
+      - minor
+      - enhancement
   patch:
     labels:
-      - "patch"
-      - "bug"
-      - "dependencies"
-      - "documentation"
+      - patch
+      - bug
+      - dependencies
+      - documentation
   default: patch
-
 template: |
   ## What's Changed
   $CHANGES
