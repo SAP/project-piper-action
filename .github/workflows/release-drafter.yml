@@ -21,6 +21,9 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: 🏗 Configure Release-Drafter
         run: |
           echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
