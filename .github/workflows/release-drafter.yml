@@ -1,0 +1,34 @@
+name: Draft Release
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  update_release_draft:
+    name: Release-Drafter
+    runs-on: self-hosted
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: 🏗 Configure Release-Drafter
+        run: |
+          echo "GHE_HOST=${GITHUB_SERVER_URL##https:\/\/}" >> $GITHUB_ENV
+      - name: 🚀 Prepare release
+        uses: release-drafter/release-drafter@v6
+        with:
+          commitish: main  # codespell:ignore commitish
+          disable-releaser: ${{ github.event_name == 'pull_request' }}
+          disable-autolabeler: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
