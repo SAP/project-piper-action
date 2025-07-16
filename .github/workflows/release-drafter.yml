@@ -27,6 +27,7 @@ jobs:
       - name: 🚀 Prepare release
         uses: release-drafter/release-drafter@v6
         with:
+          config-name: release-drafter.yml
           commitish: main  # codespell:ignore commitish
           disable-releaser: ${{ github.event_name == 'pull_request' }}
           disable-autolabeler: false
