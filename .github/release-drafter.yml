@@ -29,17 +29,14 @@ autolabeler:
     branch:
       - '/docs{0,1}\/.+/'
     title:
-      - "/docs/i"
-      - "/documentation/i"
+      - "/^docs(\(.+\))?:/i"
 
   - label: "bug"
     branch:
       - '/fix\/.+/'
       - '/bugfix\/.+/'
     title:
-      - "/fix/i"
-      - "/bug/i"
-      - "/issue/i"
+      - "/^fix(\(.+\))?:/i"
 
   - label: "enhancement"
     branch:
@@ -47,14 +44,11 @@ autolabeler:
       - '/enhancement\/.+/'
       - '/improve\/.+/'
     title:
-      - "/feat/i"
-      - "/feature/i"
-      - "/enhance/i"
-      - "/add/i"
+      - "/^feat(\(.+\))?:/i"
 
   - label: "maintenance"
     title:
-      - "/chore/i"
+      - "/^chore(\(.+\))?:/i"
 
   - label: "dependencies"
     files:
@@ -65,14 +59,11 @@ autolabeler:
     branch:
       - '/deps\/.+/'
     title:
-      - "/deps/i"
-      - "/dependencies/i"
-      - "/upgrade/i"
+      - "/^(build|deps)(\(.+\))?:/i"
 
   - label: "breaking"
     title:
       - "/!:/i"
-      - "/breaking/i"
     body:
       - "/BREAKING CHANGE:/i"
 
