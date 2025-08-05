@@ -16780,11 +16780,11 @@ function getTag(version, forAPICall) {
     return `${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getTag = getTag;
-function getDownloadUrlByTag(version, forAPICall = false) {
+function getDownloadUrlByTag(version) {
     version = version.toLowerCase();
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/tag/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
