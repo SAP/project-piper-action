@@ -16782,9 +16782,14 @@ function getTag(version, forAPICall) {
 exports.getTag = getTag;
 function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
+    if (forAPICall) {
+        return (version === '' || version === 'master' || version === 'latest')
+            ? `${exports.GITHUB_COM_API_URL}/repos/SAP/jenkins-library/releases/latest`
+            : `${exports.GITHUB_COM_API_URL}/repos/SAP/jenkins-library/releases/tags/${version}`;
+    }
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/tag/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
