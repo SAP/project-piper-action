@@ -16350,10 +16350,21 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             throw new Error('owner is not provided');
         if (repo === '')
             throw new Error('repository is not provided');
+        const piperBinaryName = isEnterprise ? 'sap-piper' : 'piper';
+        if (version === 'master')
+            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
+        version = (version === '' || version === 'master' || version === 'latest')
+            ? 'latest'
+            : version;
+        (0, core_1.debug)(`version: ${version}`);
+        const piperPath = `${process.cwd()}/${version.replace(/\./g, '_')}/${piperBinaryName}`;
+        if (fs.existsSync(piperPath)) {
+            (0, core_1.debug)(`Piper binary exists, skipping download: ${piperPath}`);
+            return piperPath;
+        }
+        (0, core_1.info)(`Piper binary does not exist, downloading: ${piperPath}`);
         let binaryURL;
         const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
-        (0, core_1.debug)(`version: ${version}`);
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -16361,18 +16372,11 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
             const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
             (0, core_1.debug)(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`);
             binaryURL = binaryAssetURL;
-            version = tag;
         }
         else {
             (0, core_1.debug)('Fetching binary from URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            version = binaryURL.split('/').slice(-2)[0];
             (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
-        }
-        version = version.replace(/\./g, '_');
-        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
-        if (fs.existsSync(piperPath)) {
-            return piperPath;
         }
         (0, core_1.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
         yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
@@ -16394,13 +16398,6 @@ function getPiperDownloadURL(piper, version) {
     });
 }
 exports.getPiperDownloadURL = getPiperDownloadURL;
-function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master')
-            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
-        return isEnterpriseStep ? 'sap-piper' : 'piper';
-    });
-}
 
 
 /***/ }),
@@ -16784,7 +16781,7 @@ function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${forAPICall ? `${exports.GITHUB_COM_API_URL}/repos` : exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 
