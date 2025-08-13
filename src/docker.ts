@@ -82,7 +82,7 @@ export async function stopContainer (containerID: string): Promise<void> {
     return
   }
 
-  await dockerExecReadOutput(['stop', '--time=1', containerID])
+  await dockerExecIgnoreFailure(['stop', '--time=1', containerID])
 }
 
 /** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
@@ -160,6 +160,14 @@ export function getSystemTrustToken (): string[] {
     '--env',
     'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
   ]
+}
+
+export async function dockerExecIgnoreFailure (dockerRunArgs: string[]): Promise<void> {
+  try {
+    await exec('docker', dockerRunArgs)
+  } catch {
+    // Silently ignore failures for cleanup operations
+  }
 }
 
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
