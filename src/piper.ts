@@ -71,7 +71,10 @@ export async function run(): Promise<void> {
       endGroup()
 
       startGroup(actionCfg.stepName)
-      await executePiper(actionCfg.stepName, flags)
+      const result = await executePiper(actionCfg.stepName, flags)
+      if (result.exitCode !== 0) {
+        throw new Error(`Step '${actionCfg.stepName}' failed with exit code ${result.exitCode}`)
+      }
       endGroup()
     }
     

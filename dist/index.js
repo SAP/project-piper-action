@@ -16904,7 +16904,10 @@ function run() {
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.endGroup)();
                 (0, core_1.startGroup)(actionCfg.stepName);
-                yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                if (result.exitCode !== 0) {
+                    throw new Error(`Step '${actionCfg.stepName}' failed with exit code ${result.exitCode}`);
+                }
                 (0, core_1.endGroup)();
             }
             (0, core_1.startGroup)('Export Pipeline Environment');
