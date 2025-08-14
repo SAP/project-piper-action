@@ -16281,7 +16281,8 @@ function dockerExecReadOutput(dockerRunArgs) {
                     dockerOutput += data.toString();
                 }
             },
-            ignoreReturnCode: true
+            ignoreReturnCode: true,
+            silent: true
         };
         dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
