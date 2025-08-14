@@ -31,7 +31,7 @@ export async function executePiper (
     ]
   }
 
-  let options: ExecOptions = {}
+  let options: ExecOptions = { ignoreReturnCode: true }
   options = Object.assign({}, options, execOptions)
 
   return await getExecOutput(binaryPath, args, options)

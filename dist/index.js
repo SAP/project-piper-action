@@ -16522,7 +16522,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        let options = {};
+        let options = { ignoreReturnCode: true };
         options = Object.assign({}, options, execOptions);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
