@@ -16136,7 +16136,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.dockerExecIgnoreFailure = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16211,7 +16211,7 @@ function stopContainer(containerID) {
             (0, core_1.debug)('no container to stop');
             return;
         }
-        yield dockerExecIgnoreFailure(['stop', '--time=1', containerID]);
+        yield dockerExecReadOutput(['stop', '--timeout=1', containerID]);
     });
 }
 exports.stopContainer = stopContainer;
@@ -16272,17 +16272,6 @@ function getTelemetryEnvVars() {
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
-function dockerExecIgnoreFailure(dockerRunArgs) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield (0, exec_1.exec)('docker', dockerRunArgs);
-        }
-        catch (_a) {
-            // Silently ignore failures for cleanup operations
-        }
-    });
-}
-exports.dockerExecIgnoreFailure = dockerExecIgnoreFailure;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
@@ -16291,7 +16280,8 @@ function dockerExecReadOutput(dockerRunArgs) {
                 stdout: (data) => {
                     dockerOutput += data.toString();
                 }
-            }
+            },
+            ignoreReturnCode: true
         };
         dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
