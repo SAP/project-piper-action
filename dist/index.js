@@ -16136,7 +16136,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getSystemTrustToken = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16192,7 +16192,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustToken(), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16219,79 +16219,59 @@ exports.stopContainer = stopContainer;
 function getOrchestratorEnvVars() {
     return [
         // needed for Piper orchestrator detection
-        '--env',
-        'GITHUB_ACTION',
-        '--env',
-        'GITHUB_ACTIONS',
+        '--env', 'GITHUB_ACTION',
+        '--env', 'GITHUB_ACTIONS',
         // Build Info
-        '--env',
-        'GITHUB_JOB',
-        '--env',
-        'GITHUB_RUN_ID',
-        '--env',
-        'GITHUB_REF',
-        '--env',
-        'GITHUB_REF_NAME',
-        '--env',
-        'GITHUB_SERVER_URL',
-        '--env',
-        'GITHUB_API_URL',
-        '--env',
-        'GITHUB_REPOSITORY',
-        '--env',
-        'GITHUB_SHA',
-        '--env',
-        'GITHUB_WORKFLOW_REF',
+        '--env', 'GITHUB_JOB',
+        '--env', 'GITHUB_RUN_ID',
+        '--env', 'GITHUB_REF',
+        '--env', 'GITHUB_REF_NAME',
+        '--env', 'GITHUB_SERVER_URL',
+        '--env', 'GITHUB_API_URL',
+        '--env', 'GITHUB_REPOSITORY',
+        '--env', 'GITHUB_SHA',
+        '--env', 'GITHUB_WORKFLOW_REF',
         // Pull Request Info (needed for sonarExecuteScan)
-        '--env',
-        'GITHUB_HEAD_REF',
-        '--env',
-        'GITHUB_BASE_REF',
-        '--env',
-        'GITHUB_EVENT_PULL_REQUEST_NUMBER'
+        '--env', 'GITHUB_HEAD_REF',
+        '--env', 'GITHUB_BASE_REF',
+        '--env', 'GITHUB_EVENT_PULL_REQUEST_NUMBER'
     ];
 }
 exports.getOrchestratorEnvVars = getOrchestratorEnvVars;
 function getVaultEnvVars() {
     return [
-        '--env',
-        'PIPER_vaultAppRoleID',
-        '--env',
-        'PIPER_vaultAppRoleSecretID'
+        '--env', 'PIPER_vaultAppRoleID',
+        '--env', 'PIPER_vaultAppRoleSecretID'
     ];
 }
 exports.getVaultEnvVars = getVaultEnvVars;
 function getProxyEnvVars() {
     return [
-        '--env',
-        'http_proxy',
-        '--env',
-        'https_proxy',
-        '--env',
-        'no_proxy',
-        '--env',
-        'HTTP_PROXY',
-        '--env',
-        'HTTPS_PROXY',
-        '--env',
-        'NO_PROXY'
+        '--env', 'http_proxy',
+        '--env', 'https_proxy',
+        '--env', 'no_proxy',
+        '--env', 'HTTP_PROXY',
+        '--env', 'HTTPS_PROXY',
+        '--env', 'NO_PROXY'
     ];
 }
 exports.getProxyEnvVars = getProxyEnvVars;
-function getSystemTrustToken() {
+function getSystemTrustEnvVars() {
     return [
-        '--env',
-        'PIPER_systemTrustToken',
+        '--env', 'PIPER_systemTrustToken',
         // PIPER_trustEngineToken is still created for compatibility with jenkins-library version from v1.383.0 to 1.414.0. Remove it in ~June 2025
-        '--env',
-        'PIPER_trustEngineToken',
-        '--env',
-        'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
-        '--env',
-        'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
+        '--env', 'PIPER_trustEngineToken',
+        '--env', 'PIPER_ACTIONS_ID_TOKEN_REQUEST_TOKEN',
+        '--env', 'PIPER_ACTIONS_ID_TOKEN_REQUEST_URL'
     ];
 }
-exports.getSystemTrustToken = getSystemTrustToken;
+exports.getSystemTrustEnvVars = getSystemTrustEnvVars;
+function getTelemetryEnvVars() {
+    return [
+        '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+    ];
+}
+exports.getTelemetryEnvVars = getTelemetryEnvVars;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
@@ -16784,9 +16764,14 @@ function getTag(version, forAPICall) {
 exports.getTag = getTag;
 function getDownloadUrlByTag(version, forAPICall = false) {
     version = version.toLowerCase();
+    if (forAPICall) {
+        return (version === '' || version === 'master' || version === 'latest')
+            ? `${exports.GITHUB_COM_API_URL}/repos/SAP/jenkins-library/releases/latest`
+            : `${exports.GITHUB_COM_API_URL}/repos/SAP/jenkins-library/releases/tags/${version}`;
+    }
     return (version === '' || version === 'master' || version === 'latest')
         ? `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/latest`
-        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/${forAPICall ? 'tags' : 'tag'}/${version}`;
+        : `${exports.GITHUB_COM_SERVER_URL}/SAP/jenkins-library/releases/tag/${version}`;
 }
 exports.getDownloadUrlByTag = getDownloadUrlByTag;
 

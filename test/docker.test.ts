@@ -10,7 +10,8 @@ import {
   getOrchestratorEnvVars,
   getProxyEnvVars,
   getVaultEnvVars,
-  getSystemTrustToken,
+  getSystemTrustEnvVars,
+  getTelemetryEnvVars,
   runContainers,
   startContainer,
   stopContainer
@@ -106,7 +107,8 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getSystemTrustToken(),
+      ...getSystemTrustEnvVars(),
+      ...getTelemetryEnvVars(),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -135,7 +137,8 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getSystemTrustToken(),
+      ...getSystemTrustEnvVars(),
+      ...getTelemetryEnvVars(),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -168,7 +171,8 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getSystemTrustToken(),
+      ...getSystemTrustEnvVars(),
+      ...getTelemetryEnvVars(),
       ctxCfg.dockerImage,
       'cat'
     ]
@@ -206,7 +210,8 @@ describe('Docker', () => {
       ...getProxyEnvVars(),
       ...getOrchestratorEnvVars(),
       ...getVaultEnvVars(),
-      ...getSystemTrustToken(),
+      ...getSystemTrustEnvVars(),
+      ...getTelemetryEnvVars(),
       ctxCfg.dockerImage,
       'cat'
     ]
