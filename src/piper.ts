@@ -24,7 +24,7 @@ export const internalActionVariables = {
   sidecarContainerID: ''
 }
 
-export async function run(): Promise<void> {
+export async function run (): Promise<void> {
   try {
     startGroup('Setup')
     info('Getting action configuration')
@@ -77,7 +77,7 @@ export async function run(): Promise<void> {
       }
       endGroup()
     }
-    
+
     startGroup('Export Pipeline Environment')
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
     endGroup()
@@ -88,7 +88,7 @@ export async function run(): Promise<void> {
   }
 }
 
-async function preparePiperBinary(actionCfg: ActionConfiguration): Promise<void> {
+async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void> {
   const piperPath: string = await preparePiperPath(actionCfg)
 
   if (piperPath === undefined || piperPath === '') {
@@ -100,7 +100,7 @@ async function preparePiperBinary(actionCfg: ActionConfiguration): Promise<void>
   chmodSync(piperPath, 0o775)
 }
 
-async function preparePiperPath(actionCfg: ActionConfiguration): Promise<string> {
+async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
   if (isEnterpriseStep(actionCfg.stepName)) {
