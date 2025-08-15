@@ -16906,7 +16906,7 @@ function run() {
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
-                    throw new Error(`Step '${actionCfg.stepName}' failed with exit code ${result.exitCode}`);
+                    throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
             }
