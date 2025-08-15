@@ -288,17 +288,17 @@ describe('Docker', () => {
     })
 
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(0))
-    
+
     await dockerExecReadOutput(dockerArgs)
-    
+
     expect(exec.exec).toHaveBeenCalledWith('docker', dockerArgs, expectedOptions)
   })
 
   test('dockerExecReadOutput with non-zero exit code', async () => {
     const dockerArgs = ['invalid', 'command']
-    
+
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(1))
-    
+
     await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed:')
   })
 })

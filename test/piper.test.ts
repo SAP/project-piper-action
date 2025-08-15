@@ -153,7 +153,7 @@ describe('Piper', () => {
     inputs['github-token'] = 'testGithubToken'
     inputs['piper-owner'] = 'SAP'
     inputs['piper-repository'] = 'jenkins-library'
-    
+
     jest.spyOn(execute, 'executePiper').mockResolvedValue({
       stdout: 'error output',
       stderr: 'step failed',
@@ -161,7 +161,7 @@ describe('Piper', () => {
     })
 
     await piper.run()
-    
+
     expect(core.setFailed).toHaveBeenCalledWith('Step \'mavenBuild\' failed with exit code 1')
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
