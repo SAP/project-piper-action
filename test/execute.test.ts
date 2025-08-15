@@ -7,7 +7,7 @@ jest.mock('@actions/exec')
 
 describe('Execute', () => {
   const piperPath = './piper'
-  const expectedOptions = expect.objectContaining({ listeners: expect.anything() })
+  const expectedOptions = { ignoreReturnCode: true }
   // The workflow runs in a job named 'units' and it's appended with '--stageName' to a Piper call,
   // therefore to pass tests locally as well, the env var is set
   const githubJob = process.env.GITHUB_JOB
