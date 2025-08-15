@@ -14,7 +14,8 @@ import {
   getTelemetryEnvVars,
   runContainers,
   startContainer,
-  stopContainer
+  stopContainer,
+  dockerExecReadOutput
 } from '../src/docker'
 
 jest.mock('@actions/core')
@@ -274,5 +275,30 @@ describe('Docker', () => {
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--timeout=1', expectedContainerId], expect.anything())
     expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--timeout=1', expectedSidecarId], expect.anything())
     expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
+  })
+
+  test('dockerExecReadOutput with ignoreReturnCode and silent options', async () => {
+    const dockerArgs = ['ps', '-a']
+    const expectedOptions = expect.objectContaining({
+      ignoreReturnCode: true,
+      silent: true,
+      listeners: expect.objectContaining({
+        stdout: expect.any(Function)
+      })
+    })
+
+    jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(0))
+    
+    await dockerExecReadOutput(dockerArgs)
+    
+    expect(exec.exec).toHaveBeenCalledWith('docker', dockerArgs, expectedOptions)
+  })
+
+  test('dockerExecReadOutput with non-zero exit code', async () => {
+    const dockerArgs = ['invalid', 'command']
+    
+    jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(1))
+    
+    await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed:')
   })
 })
