@@ -50,11 +50,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Publish release
+        id: publish_release
         uses: release-drafter/release-drafter@v6
         with:
           publish: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update/create dynamic tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          .github/scripts/update_dynamic_tags.sh "${{ steps.publish_release.outputs.tag_name }}"
 
   post:
     name: Post Action
