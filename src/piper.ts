@@ -66,9 +66,7 @@ export async function run (): Promise<void> {
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
       endGroup()
 
-      startGroup('Docker Setup')
       await runContainers(actionCfg, contextConfig)
-      endGroup()
 
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
@@ -78,9 +76,7 @@ export async function run (): Promise<void> {
       endGroup()
     }
 
-    startGroup('Export Pipeline Environment')
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
-    endGroup()
   } catch (error: unknown) {
     setFailed(error instanceof Error ? error.message : String(error))
   } finally {
