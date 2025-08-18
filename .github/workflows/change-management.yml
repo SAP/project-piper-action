@@ -1,0 +1,41 @@
+name: Trigger Change Management
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  trigger_change_management:
+    name: Trigger Change Management Workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger change-management workflow in private repo
+        run: |
+          set -e
+          response=$(curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: Bearer ${{ secrets.CHANGE_MANAGEMENT_TOKEN }}" \
+            -w "%{http_code}" \
+            --max-time 30 \
+            "${{ secrets.CHANGE_MANAGEMENT_API_URL }}/dispatches" \
+            -d '{
+                  "event_type": "change-management",
+                  "client_payload": {
+                    "tag_name": "${{ github.event.release.tag_name }}",
+                    "release_url": "${{ github.event.release.html_url }}",
+                    "release_name": "${{ github.event.release.name }}"
+                  }
+                }')
+
+          status_code=${response: -3}
+          body=$(echo "$response" | head -c -3)
+          echo "Response body: $body"
+          echo "HTTP status: $status_code"
+          if [ "$status_code" -ne 204 ]; then
+            echo "::error title=Change Management Trigger Failed::Status code: $status_code. Response body: $body"
+            exit 1
+          fi
