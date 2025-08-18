@@ -29,7 +29,7 @@ if echo "$TAG_DATA" | grep -q '"message": "Not Found"'; then
     exit 1
 fi
 
-COMMIT_HASH=$(echo "$TAG_DATA" | grep '"sha":' | head -1 | sed -E 's/.*"sha": *"([^"]+)".*/\1/')
+COMMIT_HASH=$(echo "$TAG_DATA" | jq -r '.object.sha')
 echo "ℹ️ Tag '$NEW_TAG' points to commit: $COMMIT_HASH"
 
 if [[ "$NEW_TAG" =~ ^v ]]; then
@@ -80,6 +80,6 @@ echo "ℹ️ Verification - Tags pointing to the same commit:"
 for t in "$MAJOR_TAG" "$MINOR_TAG" "$NEW_TAG"; do
     ref_api="$TAGS_API/$t"
     resp=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$ref_api")
-    sha=$(echo "$resp" | grep '"sha":' | head -1 | sed -E 's/.*"sha": *"([^"]+)".*/\1/')
+    sha=$(echo "$resp" | jq -r '.object.sha')
     echo "   $t -> $sha"
 done
