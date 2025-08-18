@@ -16900,9 +16900,7 @@ function run() {
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 (0, core_1.endGroup)();
-                (0, core_1.startGroup)('Docker Setup');
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                (0, core_1.endGroup)();
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
@@ -16910,9 +16908,7 @@ function run() {
                 }
                 (0, core_1.endGroup)();
             }
-            (0, core_1.startGroup)('Export Pipeline Environment');
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
-            (0, core_1.endGroup)();
         }
         catch (error) {
             (0, core_1.setFailed)(error instanceof Error ? error.message : String(error));
