@@ -1,4 +1,4 @@
-import { debug, setFailed, info } from '@actions/core'
+import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -26,6 +26,7 @@ export const internalActionVariables = {
 
 export async function run (): Promise<void> {
   try {
+    startGroup('Setup')
     info('Getting action configuration')
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
@@ -35,10 +36,15 @@ export async function run (): Promise<void> {
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
+    endGroup()
 
-    info('Executing action - version')
+    startGroup('version')
+    info('Getting version')
     await executePiper('version')
+    endGroup()
+
     if (onGitHubEnterprise() && actionCfg.stepName !== 'getDefaults') {
+      startGroup('Enterprise Configuration')
       debug('Enterprise step detected')
       await getDefaultConfig(
         actionCfg.gitHubEnterpriseServer,
@@ -52,13 +58,24 @@ export async function run (): Promise<void> {
       if (actionCfg.createCheckIfStepActiveMaps) {
         await createCheckIfStepActiveMaps(actionCfg)
       }
+      endGroup()
     }
     if (actionCfg.stepName !== '') {
+      startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+      endGroup()
+
       await runContainers(actionCfg, contextConfig)
-      await executePiper(actionCfg.stepName, flags)
+
+      startGroup(actionCfg.stepName)
+      const result = await executePiper(actionCfg.stepName, flags)
+      if (result.exitCode !== 0) {
+        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+      }
+      endGroup()
     }
+
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {
     setFailed(error instanceof Error ? error.message : String(error))
