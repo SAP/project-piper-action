@@ -36,7 +36,6 @@ jobs:
           echo "Response body: $body"
           echo "HTTP status: $status_code"
           if [ "$status_code" -ne 204 ]; then
-            echo "❌ Failed to trigger change-management workflow. Status code: $status_code"
-            echo "❌ Response body: $body"
+            echo "::error title=Change Management Trigger Failed::Status code: $status_code. Response body: $body"
             exit 1
           fi
