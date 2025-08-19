@@ -1,0 +1,15 @@
+name: Release Change Management
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  call-change-management:
+    uses: project-piper/.github/workflows/change-management.yml@main
+    secrets: inherit
+    with:
+      jira_project: HSPIPER
+      jira_issue_type: "Change Request"
+      jira_summary: "Release Change Request - ${{ github.event.release.tag_name }}"
+      jira_description: "Release link: ${{ github.event.release.html_url }}"
