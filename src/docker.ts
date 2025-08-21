@@ -16,8 +16,17 @@ export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: 
   await startContainer(actionCfg, ctxConfig)
 }
 
-export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
-  const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
+export async function startContainer (
+  actionCfg: ActionConfiguration,
+  ctxConfig: any,
+  workflowInputs?: Record<string, string>
+): Promise<void> {
+  // Prefer workflowInputs, then actionCfg, then ctxConfig
+  const dockerImage =
+    (workflowInputs && workflowInputs.dockerImage && workflowInputs.dockerImage !== '')
+      ? workflowInputs.dockerImage
+      : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage)
+
   if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
