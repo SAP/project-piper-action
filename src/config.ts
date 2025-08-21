@@ -53,8 +53,11 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
-export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
-  const getValue = (param: string, defaultValue?: string, workflowInputs?: Record<string, string>): string => {
+export async function getActionConfig (
+  options: InputOptions,
+  workflowInputs?: Record<string, string>
+): Promise<ActionConfiguration> {
+  const getValue = (param: string, defaultValue?: string): string => {
     // 1. Check workflow inputs first
     if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
       debug(`workflow input ${param}: ${workflowInputs[param]}`)
@@ -81,6 +84,7 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     debug(`Final value for ${param}: ${defaultValue ?? ''} (from default)`)
     return defaultValue ?? ''
   }
+
   let enterpriseHost: string = ''
   let enterpriseApi: string = ''
   if (onGitHubEnterprise()) {

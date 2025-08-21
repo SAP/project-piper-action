@@ -6,14 +6,18 @@ import type { ActionConfiguration } from './config'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
 
-export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
+export async function runContainers (
+  actionCfg: ActionConfiguration,
+  ctxConfig: any,
+  workflowInputs?: Record<string, string>
+): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
   if (sidecarImage !== undefined && sidecarImage !== '') {
     await createNetwork()
     await startSidecar(actionCfg, ctxConfig, sidecarImage)
-  }
+  } 
 
-  await startContainer(actionCfg, ctxConfig)
+  await startContainer(actionCfg, ctxConfig, workflowInputs)
 }
 
 export async function startContainer (
