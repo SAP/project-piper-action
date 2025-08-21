@@ -54,17 +54,32 @@ export interface ActionConfiguration {
 }
 
 export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
-  const getValue = (param: string, defaultValue?: string): string => {
-    let value: string = getInput(param, options)
-    if (value === '') {
-      // EnVs should be provided like this
-      // PIPER_ACTION_DOWNLOAD_URL
-      value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
-      if (value === '') return defaultValue ?? ''
+  const getValue = (param: string, defaultValue?: string, workflowInputs?: Record<string, string>): string => {
+    // 1. Check workflow inputs first
+    if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
+      debug(`workflow input ${param}: ${workflowInputs[param]}`)
+      debug(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`)
+      return workflowInputs[param]
     }
 
-    debug(`${param}: ${value}`)
-    return value
+    // 2. Check action input
+    let value: string = getInput(param, options)
+    if (value !== '') {
+      debug(`Final value for ${param}: ${value} (from action input)`)
+      return value
+    }
+
+    // 3. Check environment variable
+    // EnVs should be provided like this
+    // PIPER_ACTION_DOWNLOAD_URL
+    value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
+    if (value !== '') {
+      debug(`Final value for ${param}: ${value} (from environment variable)`)
+      return value
+    }
+
+    debug(`Final value for ${param}: ${defaultValue ?? ''} (from default)`)
+    return defaultValue ?? ''
   }
   let enterpriseHost: string = ''
   let enterpriseApi: string = ''
