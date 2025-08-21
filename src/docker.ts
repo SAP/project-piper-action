@@ -83,7 +83,7 @@ export async function stopContainer (containerID: string): Promise<void> {
     return
   }
 
-  await dockerExecReadOutput(['stop', '--timeout=1', containerID])
+  await dockerExecReadOutput(['stop', '--time=1', containerID])
 }
 
 /** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
@@ -145,21 +145,25 @@ export function getTelemetryEnvVars (): string[] {
 
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
   let dockerOutput = ''
+  let dockerError = ''
   const options = {
     listeners: {
       stdout: (data: Buffer) => {
         dockerOutput += data.toString()
+      },
+      stderr: (data: Buffer) => {
+        dockerError += data.toString()
       }
-    },
-    ignoreReturnCode: true,
-    silent: true
+    }
   }
-  dockerOutput = dockerOutput.trim()
 
   const exitCode = await exec('docker', dockerRunArgs, options)
+  dockerOutput = dockerOutput.trim()
+  dockerError = dockerError.trim()
+
   if (exitCode !== 0) {
-    await Promise.reject(new Error('docker execute failed: ' + dockerOutput))
-    return ''
+    const errorMessage = dockerError || dockerOutput || 'Unknown error'
+    throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`)
   }
 
   return dockerOutput
