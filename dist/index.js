@@ -15831,20 +15831,32 @@ const enterprise_1 = __nccwpck_require__(4340);
 const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
-function getActionConfig(options) {
+function getActionConfig(options, workflowInputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
-            let value = (0, core_1.getInput)(param, options);
-            if (value === '') {
-                // EnVs should be provided like this
-                // PIPER_ACTION_DOWNLOAD_URL
-                value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
-                if (value === '')
-                    return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
+            // 1. Check workflow inputs first
+            if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
+                (0, core_1.debug)(`workflow input ${param}: ${workflowInputs[param]}`);
+                (0, core_1.debug)(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`);
+                return workflowInputs[param];
             }
-            (0, core_1.debug)(`${param}: ${value}`);
-            return value;
+            // 2. Check action input
+            let value = (0, core_1.getInput)(param, options);
+            if (value !== '') {
+                (0, core_1.debug)(`Final value for ${param}: ${value} (from action input)`);
+                return value;
+            }
+            // 3. Check environment variable
+            // EnVs should be provided like this
+            // PIPER_ACTION_DOWNLOAD_URL
+            value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
+            if (value !== '') {
+                (0, core_1.debug)(`Final value for ${param}: ${value} (from environment variable)`);
+                return value;
+            }
+            (0, core_1.debug)(`Final value for ${param}: ${defaultValue !== null && defaultValue !== void 0 ? defaultValue : ''} (from default)`);
+            return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
         };
         let enterpriseHost = '';
         let enterpriseApi = '';
@@ -16143,21 +16155,24 @@ const exec_1 = __nccwpck_require__(1514);
 const uuid_1 = __nccwpck_require__(5840);
 const sidecar_1 = __nccwpck_require__(9124);
 const piper_1 = __nccwpck_require__(309);
-function runContainers(actionCfg, ctxConfig) {
+function runContainers(actionCfg, ctxConfig, workflowInputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage;
         if (sidecarImage !== undefined && sidecarImage !== '') {
             yield (0, sidecar_1.createNetwork)();
             yield (0, sidecar_1.startSidecar)(actionCfg, ctxConfig, sidecarImage);
         }
-        yield startContainer(actionCfg, ctxConfig);
+        yield startContainer(actionCfg, ctxConfig, workflowInputs);
     });
 }
 exports.runContainers = runContainers;
-function startContainer(actionCfg, ctxConfig) {
+function startContainer(actionCfg, ctxConfig, workflowInputs) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
+        // Prefer workflowInputs, then actionCfg, then ctxConfig
+        const dockerImage = (workflowInputs && workflowInputs.dockerImage && workflowInputs.dockerImage !== '')
+            ? workflowInputs.dockerImage
+            : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage);
         if (dockerImage === undefined || dockerImage === '')
             return;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
