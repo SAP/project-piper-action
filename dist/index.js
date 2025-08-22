@@ -16275,20 +16275,25 @@ exports.getTelemetryEnvVars = getTelemetryEnvVars;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
+        let dockerError = '';
         const options = {
             listeners: {
                 stdout: (data) => {
                     dockerOutput += data.toString();
+                },
+                stderr: (data) => {
+                    dockerError += data.toString();
                 }
             },
             ignoreReturnCode: true,
             silent: true
         };
-        dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
+        dockerOutput = dockerOutput.trim();
+        dockerError = dockerError.trim();
         if (exitCode !== 0) {
-            yield Promise.reject(new Error('docker execute failed: ' + dockerOutput));
-            return '';
+            const errorMessage = dockerError || dockerOutput || 'Unknown error';
+            throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`);
         }
         return dockerOutput;
     });
