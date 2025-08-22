@@ -1,5 +1,5 @@
 import { dirname } from 'path'
-import { debug, info } from '@actions/core'
+import { debug, info, getInput } from '@actions/core'
 import { exec } from '@actions/exec'
 import { v4 as uuidv4 } from 'uuid'
 import type { ActionConfiguration } from './config'
@@ -8,8 +8,7 @@ import { internalActionVariables } from './piper'
 
 export async function runContainers (
   actionCfg: ActionConfiguration,
-  ctxConfig: any,
-  workflowInputs?: Record<string, string>
+  ctxConfig: any
 ): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
   if (sidecarImage !== undefined && sidecarImage !== '') {
@@ -17,18 +16,18 @@ export async function runContainers (
     await startSidecar(actionCfg, ctxConfig, sidecarImage)
   } 
 
-  await startContainer(actionCfg, ctxConfig, workflowInputs)
+  await startContainer(actionCfg, ctxConfig)
 }
 
 export async function startContainer (
   actionCfg: ActionConfiguration,
-  ctxConfig: any,
-  workflowInputs?: Record<string, string>
+  ctxConfig: any
 ): Promise<void> {
-  // Prefer workflowInputs, then actionCfg, then ctxConfig
+  // Always prefer workflow input if provided
+  const dockerImageInput = getInput('dockerImage')
   const dockerImage =
-    (workflowInputs && workflowInputs.dockerImage && workflowInputs.dockerImage !== '')
-      ? workflowInputs.dockerImage
+    dockerImageInput && dockerImageInput !== ''
+      ? dockerImageInput
       : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage)
 
   if (dockerImage === undefined || dockerImage === '') return
