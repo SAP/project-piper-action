@@ -102,6 +102,12 @@ export async function getActionConfig (
     stepNameValue = getValue('command')
   }
 
+  // Get docker image value and export to env if set
+  const dockerImageValue = getValue('docker-image')
+  if (dockerImageValue && dockerImageValue !== '') {
+    exportVariable('PIPER_dockerImage', dockerImageValue)
+  }
+
   return {
     stepName: stepNameValue,
     flags: getValue('flags'),
@@ -118,7 +124,7 @@ export async function getActionConfig (
     gitHubEnterpriseApi: enterpriseApi,
     gitHubEnterpriseToken: getValue('github-enterprise-token'),
     wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
-    dockerImage: getValue('docker-image'),
+    dockerImage: dockerImageValue,
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
     sidecarImage: getValue('sidecar-image'),
