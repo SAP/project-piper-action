@@ -164,7 +164,11 @@ export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<st
   dockerError = dockerError.trim()
 
   if (exitCode !== 0) {
-    const errorMessage = dockerError || dockerOutput || 'Unknown error'
+    const errorMessage = dockerError.length > 0
+      ? dockerError
+      : dockerOutput.length > 0
+        ? dockerOutput
+        : 'Unknown error'
     throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`)
   }
 
