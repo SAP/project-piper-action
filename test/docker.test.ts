@@ -299,6 +299,6 @@ describe('Docker', () => {
 
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(1))
 
-    await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed:')
+    await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed with exit code')
   })
 })
