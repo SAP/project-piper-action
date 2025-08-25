@@ -53,16 +53,12 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
-export async function getActionConfig (
-  options: InputOptions,
-  workflowInputs?: Record<string, string>
-): Promise<ActionConfiguration> {
+export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
     // 1. Check action input
     let value: string = getInput(param)
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from action input)`)
-      debug(`use export docker-image`)
       return value
     }
 
@@ -70,12 +66,10 @@ export async function getActionConfig (
     value = process.env[`PIPER_${param}`] ?? ''
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from environment variable)`)
-      debug(`use export docker-image`)
       return value
     }
 
     debug(`Final value for ${param}: ${defaultValue ?? ''} (from default)`)
-    debug(`use export docker-image`)
     return defaultValue ?? ''
   }
 
