@@ -62,6 +62,7 @@ export async function getActionConfig (
     let value: string = getInput(param)
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from action input)`)
+      debug(`use export docker-image`)
       return value
     }
 
@@ -69,10 +70,12 @@ export async function getActionConfig (
     value = process.env[`PIPER_${param}`] ?? ''
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from environment variable)`)
+      debug(`use export docker-image`)
       return value
     }
 
     debug(`Final value for ${param}: ${defaultValue ?? ''} (from default)`)
+    debug(`use export docker-image`)
     return defaultValue ?? ''
   }
 
@@ -96,6 +99,7 @@ export async function getActionConfig (
   // Get docker image value and export to env if set
   const dockerImageValue = getInput('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine'
   debug(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`)
+  debug(`use export docker-image`)
   exportVariable('PIPER_dockerImage', dockerImageValue)
 
   return {
