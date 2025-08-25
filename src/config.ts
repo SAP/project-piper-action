@@ -53,7 +53,10 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
-export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
+export async function getActionConfig (
+  options: InputOptions,
+  workflowInputs?: Record<string, string>
+): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
     // 1. Check action input
     let value: string = getInput(param)
