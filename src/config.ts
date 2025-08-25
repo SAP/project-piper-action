@@ -58,24 +58,15 @@ export async function getActionConfig (
   workflowInputs?: Record<string, string>
 ): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
-    // 1. Check workflow inputs first
-    if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
-      debug(`workflow input ${param}: ${workflowInputs[param]}`)
-      debug(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`)
-      return workflowInputs[param]
-    }
-
-    // 2. Check action input
-    let value: string = getInput(param, options)
+    // 1. Check action input
+    let value: string = getInput(param)
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from action input)`)
       return value
     }
 
-    // 3. Check environment variable
-    // EnVs should be provided like this
-    // PIPER_ACTION_DOWNLOAD_URL
-    value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
+    // 2. Check environment variable
+    value = process.env[`PIPER_${param}`] ?? ''
     if (value !== '') {
       debug(`Final value for ${param}: ${value} (from environment variable)`)
       return value
@@ -103,13 +94,9 @@ export async function getActionConfig (
   }
 
   // Get docker image value and export to env if set
-  const dockerImageValue = getValue('docker-image')
+  const dockerImageValue = getInput('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine'
   debug(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`)
-  debug(`[getActionConfig] process.env.PIPER_dockerImage before export: ${process.env.PIPER_dockerImage}`)
-  if (dockerImageValue && dockerImageValue !== '') {
-    exportVariable('PIPER_dockerImage', dockerImageValue)
-    debug(`[getActionConfig] process.env.PIPER_dockerImage after export: ${process.env.PIPER_dockerImage}`)
-  }
+  exportVariable('PIPER_dockerImage', dockerImageValue)
 
   return {
     stepName: stepNameValue,
