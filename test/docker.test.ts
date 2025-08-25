@@ -277,11 +277,10 @@ describe('Docker', () => {
     expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
   })
 
-  test('dockerExecReadOutput with ignoreReturnCode and silent options', async () => {
+  test('dockerExecReadOutput with ignoreReturnCode', async () => {
     const dockerArgs = ['ps', '-a']
     const expectedOptions = expect.objectContaining({
       ignoreReturnCode: true,
-      silent: true,
       listeners: expect.objectContaining({
         stdout: expect.any(Function)
       })
