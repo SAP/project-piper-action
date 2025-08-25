@@ -17,7 +17,12 @@ export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: 
 }
 
 export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
-  const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
+  // Prefer env var, then config
+  const dockerImage =
+    process.env.PIPER_dockerImage && process.env.PIPER_dockerImage !== ''
+      ? process.env.PIPER_dockerImage
+      : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage)
+
   if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
@@ -144,8 +149,10 @@ export function getTelemetryEnvVars (): string[] {
   ]
 }
 
-export function getDockerImageFromEnvVar (): string {
-  return process.env.DOCKER_IMAGE ?? ''
+export function getDockerImageFromEnvVar (): string[] {
+  return [
+    '--env', 'PIPER_dockerImage'
+  ]
 }
 
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
