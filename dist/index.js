@@ -15835,27 +15835,22 @@ function getActionConfig(options, workflowInputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
-            // 1. Check workflow inputs first
-            if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
-                (0, core_1.debug)(`workflow input ${param}: ${workflowInputs[param]}`);
-                (0, core_1.debug)(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`);
-                return workflowInputs[param];
-            }
-            // 2. Check action input
-            let value = (0, core_1.getInput)(param, options);
+            // 1. Check action input
+            let value = (0, core_1.getInput)(param);
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from action input)`);
+                (0, core_1.debug)(`use export docker-image`);
                 return value;
             }
-            // 3. Check environment variable
-            // EnVs should be provided like this
-            // PIPER_ACTION_DOWNLOAD_URL
-            value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
+            // 2. Check environment variable
+            value = (_a = process.env[`PIPER_${param}`]) !== null && _a !== void 0 ? _a : '';
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from environment variable)`);
+                (0, core_1.debug)(`use export docker-image`);
                 return value;
             }
             (0, core_1.debug)(`Final value for ${param}: ${defaultValue !== null && defaultValue !== void 0 ? defaultValue : ''} (from default)`);
+            (0, core_1.debug)(`use export docker-image`);
             return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
         };
         let enterpriseHost = '';
@@ -15873,6 +15868,11 @@ function getActionConfig(options, workflowInputs) {
         if (stepNameValue === undefined || stepNameValue === '') {
             stepNameValue = getValue('command');
         }
+        // Get docker image value and export to env if set
+        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine';
+        (0, core_1.debug)(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`);
+        (0, core_1.debug)(`use export docker-image`);
+        (0, core_1.exportVariable)('PIPER_dockerImage', dockerImageValue);
         return {
             stepName: stepNameValue,
             flags: getValue('flags'),
@@ -15889,7 +15889,7 @@ function getActionConfig(options, workflowInputs) {
             gitHubEnterpriseApi: enterpriseApi,
             gitHubEnterpriseToken: getValue('github-enterprise-token'),
             wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
-            dockerImage: getValue('docker-image'),
+            dockerImage: dockerImageValue,
             dockerOptions: getValue('docker-options'),
             dockerEnvVars: getValue('docker-env-vars'),
             sidecarImage: getValue('sidecar-image'),
@@ -16155,23 +16155,24 @@ const exec_1 = __nccwpck_require__(1514);
 const uuid_1 = __nccwpck_require__(5840);
 const sidecar_1 = __nccwpck_require__(9124);
 const piper_1 = __nccwpck_require__(309);
-function runContainers(actionCfg, ctxConfig, workflowInputs) {
+function runContainers(actionCfg, ctxConfig) {
     return __awaiter(this, void 0, void 0, function* () {
         const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage;
         if (sidecarImage !== undefined && sidecarImage !== '') {
             yield (0, sidecar_1.createNetwork)();
             yield (0, sidecar_1.startSidecar)(actionCfg, ctxConfig, sidecarImage);
         }
-        yield startContainer(actionCfg, ctxConfig, workflowInputs);
+        yield startContainer(actionCfg, ctxConfig);
     });
 }
 exports.runContainers = runContainers;
-function startContainer(actionCfg, ctxConfig, workflowInputs) {
+function startContainer(actionCfg, ctxConfig) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        // Prefer workflowInputs, then actionCfg, then ctxConfig
-        const dockerImage = (workflowInputs && workflowInputs.dockerImage && workflowInputs.dockerImage !== '')
-            ? workflowInputs.dockerImage
+        // Always prefer workflow input if provided
+        const dockerImageInput = (0, core_1.getInput)('dockerImage');
+        const dockerImage = dockerImageInput && dockerImageInput !== ''
+            ? dockerImageInput
             : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage);
         if (dockerImage === undefined || dockerImage === '')
             return;
