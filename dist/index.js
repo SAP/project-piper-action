@@ -15874,7 +15874,7 @@ function getActionConfig(options, workflowInputs) {
             stepNameValue = getValue('command');
         }
         // Get docker image value and export to env if set
-        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:16-jdk11-alpine';
+        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine';
         (0, core_1.debug)(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`);
         (0, core_1.exportVariable)('PIPER_dockerImage', dockerImageValue);
         return {
