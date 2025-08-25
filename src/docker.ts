@@ -165,8 +165,7 @@ export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<st
         dockerOutput += data.toString()
       }
     },
-    ignoreReturnCode: true,
-    silent: true
+    ignoreReturnCode: true
   }
   dockerOutput = dockerOutput.trim()
 
