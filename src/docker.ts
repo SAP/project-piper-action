@@ -155,8 +155,7 @@ export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<st
         dockerError += data.toString()
       }
     },
-    ignoreReturnCode: true,
-    silent: true
+    ignoreReturnCode: true
   }
 
   const exitCode = await exec('docker', dockerRunArgs, options)
