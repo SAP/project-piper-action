@@ -76,6 +76,7 @@ export async function startContainer (
     ...getVaultEnvVars(),
     ...getSystemTrustEnvVars(),
     ...getTelemetryEnvVars(),
+    ...getDockerImage(),
     dockerImage,
     'cat'
   )
@@ -152,6 +153,13 @@ export function getSystemTrustEnvVars (): string[] {
 export function getTelemetryEnvVars (): string[] {
   return [
     '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+  ]
+}
+
+// dockerImage is passed to container to make it available for build options
+export function getDockerImage (): string[] {
+  return [
+    '--env', 'PIPER_dockerImage'
   ]
 }
 
