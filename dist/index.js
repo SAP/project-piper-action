@@ -15831,7 +15831,7 @@ const enterprise_1 = __nccwpck_require__(4340);
 const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
-function getActionConfig(options, workflowInputs) {
+function getActionConfig(options) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
@@ -15839,18 +15839,15 @@ function getActionConfig(options, workflowInputs) {
             let value = (0, core_1.getInput)(param);
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from action input)`);
-                (0, core_1.debug)(`use export docker-image`);
                 return value;
             }
             // 2. Check environment variable
             value = (_a = process.env[`PIPER_${param}`]) !== null && _a !== void 0 ? _a : '';
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from environment variable)`);
-                (0, core_1.debug)(`use export docker-image`);
                 return value;
             }
             (0, core_1.debug)(`Final value for ${param}: ${defaultValue !== null && defaultValue !== void 0 ? defaultValue : ''} (from default)`);
-            (0, core_1.debug)(`use export docker-image`);
             return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
         };
         let enterpriseHost = '';
