@@ -103,7 +103,7 @@ export async function getActionConfig (
   }
 
   // Get docker image value and export to env if set
-  const dockerImageValue = getInput('docker-image') || process.env.PIPER_dockerImage || 'gradle:16-jdk11-alpine'
+  const dockerImageValue = getInput('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine'
   debug(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`)
   exportVariable('PIPER_dockerImage', dockerImageValue)
 
