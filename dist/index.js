@@ -16152,7 +16152,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getDockerImageFromEnvVar = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16173,10 +16173,9 @@ exports.runContainers = runContainers;
 function startContainer(actionCfg, ctxConfig) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        // Always prefer workflow input if provided
-        const dockerImageInput = (0, core_1.getInput)('dockerImage');
-        const dockerImage = dockerImageInput && dockerImageInput !== ''
-            ? dockerImageInput
+        // Prefer env var, then config
+        const dockerImage = process.env.PIPER_dockerImage && process.env.PIPER_dockerImage !== ''
+            ? process.env.PIPER_dockerImage
             : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage);
         if (dockerImage === undefined || dockerImage === '')
             return;
@@ -16212,7 +16211,8 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(), dockerImage, 'cat');
+        (0, core_1.debug)(`[startContainer] Docker start command: docker ${dockerRunArgs.join(' ')}`);
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16292,6 +16292,12 @@ function getTelemetryEnvVars() {
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
+function getDockerImageFromEnvVar() {
+    return [
+        '--env', 'PIPER_dockerImage'
+    ];
+}
+exports.getDockerImageFromEnvVar = getDockerImageFromEnvVar;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
@@ -16301,8 +16307,7 @@ function dockerExecReadOutput(dockerRunArgs) {
                     dockerOutput += data.toString();
                 }
             },
-            ignoreReturnCode: true,
-            silent: true
+            ignoreReturnCode: true
         };
         dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
