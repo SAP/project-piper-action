@@ -104,8 +104,11 @@ export async function getActionConfig (
 
   // Get docker image value and export to env if set
   const dockerImageValue = getValue('docker-image')
+  debug(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`)
+  debug(`[getActionConfig] process.env.PIPER_dockerImage before export: ${process.env.PIPER_dockerImage}`)
   if (dockerImageValue && dockerImageValue !== '') {
     exportVariable('PIPER_dockerImage', dockerImageValue)
+    debug(`[getActionConfig] process.env.PIPER_dockerImage after export: ${process.env.PIPER_dockerImage}`)
   }
 
   return {
