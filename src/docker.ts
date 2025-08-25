@@ -1,35 +1,23 @@
 import { dirname } from 'path'
-import { debug, info, getInput } from '@actions/core'
+import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { v4 as uuidv4 } from 'uuid'
 import type { ActionConfiguration } from './config'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
 
-export async function runContainers (
-  actionCfg: ActionConfiguration,
-  ctxConfig: any
-): Promise<void> {
+export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
   if (sidecarImage !== undefined && sidecarImage !== '') {
     await createNetwork()
     await startSidecar(actionCfg, ctxConfig, sidecarImage)
-  } 
+  }
 
   await startContainer(actionCfg, ctxConfig)
 }
 
-export async function startContainer (
-  actionCfg: ActionConfiguration,
-  ctxConfig: any
-): Promise<void> {
-  // Always prefer workflow input if provided
-  const dockerImageInput = getInput('dockerImage')
-  const dockerImage =
-    dockerImageInput && dockerImageInput !== ''
-      ? dockerImageInput
-      : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage)
-
+export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
+  const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
   if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
@@ -76,7 +64,7 @@ export async function startContainer (
     ...getVaultEnvVars(),
     ...getSystemTrustEnvVars(),
     ...getTelemetryEnvVars(),
-    ...getDockerImage(),
+    ...getDockerImageFromEnvVar(),
     dockerImage,
     'cat'
   )
@@ -156,11 +144,8 @@ export function getTelemetryEnvVars (): string[] {
   ]
 }
 
-// dockerImage is passed to container to make it available for build options
-export function getDockerImage (): string[] {
-  return [
-    '--env', 'PIPER_dockerImage'
-  ]
+export function getDockerImageFromEnvVar (): string {
+  return process.env.DOCKER_IMAGE ?? ''
 }
 
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
