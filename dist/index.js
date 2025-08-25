@@ -15831,7 +15831,7 @@ const enterprise_1 = __nccwpck_require__(4340);
 const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
-function getActionConfig(options) {
+function getActionConfig(options, workflowInputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
