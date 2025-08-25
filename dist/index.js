@@ -15835,14 +15835,22 @@ function getActionConfig(options, workflowInputs) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
-            // 1. Check action input
-            let value = (0, core_1.getInput)(param);
+            // 1. Check workflow inputs first
+            if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
+                (0, core_1.debug)(`workflow input ${param}: ${workflowInputs[param]}`);
+                (0, core_1.debug)(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`);
+                return workflowInputs[param];
+            }
+            // 2. Check action input
+            let value = (0, core_1.getInput)(param, options);
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from action input)`);
                 return value;
             }
-            // 2. Check environment variable
-            value = (_a = process.env[`PIPER_${param}`]) !== null && _a !== void 0 ? _a : '';
+            // 3. Check environment variable
+            // EnVs should be provided like this
+            // PIPER_ACTION_DOWNLOAD_URL
+            value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
             if (value !== '') {
                 (0, core_1.debug)(`Final value for ${param}: ${value} (from environment variable)`);
                 return value;
@@ -15866,9 +15874,8 @@ function getActionConfig(options, workflowInputs) {
             stepNameValue = getValue('command');
         }
         // Get docker image value and export to env if set
-        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine';
+        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:16-jdk11-alpine';
         (0, core_1.debug)(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`);
-        (0, core_1.debug)(`use export docker-image`);
         (0, core_1.exportVariable)('PIPER_dockerImage', dockerImageValue);
         return {
             stepName: stepNameValue,
