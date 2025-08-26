@@ -20,7 +20,6 @@ import {
   onGitHubEnterprise
 } from './enterprise'
 import { internalActionVariables } from './piper'
-import { get } from 'http'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
@@ -57,7 +56,7 @@ export interface ActionConfiguration {
 export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
     let value: string = getInput(param, options)
-    if (value !== '') {
+    if (value === '') {
       // EnVs should be provided like this
       // PIPER_ACTION_DOWNLOAD_URL
       value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
@@ -67,7 +66,6 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     debug(`${param}: ${value}`)
     return value
   }
-
   let enterpriseHost: string = ''
   let enterpriseApi: string = ''
   if (onGitHubEnterprise()) {

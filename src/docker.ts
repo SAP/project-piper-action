@@ -69,8 +69,6 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     'cat'
   )
 
-  debug(`[startContainer] verbose: Docker start command: docker ${dockerRunArgs.join(' ')}`)
-
   await dockerExecReadOutput(dockerRunArgs)
 }
 
