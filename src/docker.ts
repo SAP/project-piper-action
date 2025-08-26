@@ -68,6 +68,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     dockerImage,
     'cat'
   )
+  
   await dockerExecReadOutput(dockerRunArgs)
 }
 
