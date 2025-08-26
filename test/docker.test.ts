@@ -15,7 +15,8 @@ import {
   runContainers,
   startContainer,
   stopContainer,
-  dockerExecReadOutput
+  dockerExecReadOutput,
+  getDockerImageFromEnvVar
 } from '../src/docker'
 
 jest.mock('@actions/core')
