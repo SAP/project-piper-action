@@ -15831,32 +15831,20 @@ const enterprise_1 = __nccwpck_require__(4340);
 const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
-function getActionConfig(options, workflowInputs) {
+function getActionConfig(options) {
     return __awaiter(this, void 0, void 0, function* () {
         const getValue = (param, defaultValue) => {
             var _a;
-            // 1. Check workflow inputs first
-            if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
-                (0, core_1.debug)(`workflow input ${param}: ${workflowInputs[param]}`);
-                (0, core_1.debug)(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`);
-                return workflowInputs[param];
-            }
-            // 2. Check action input
             let value = (0, core_1.getInput)(param, options);
-            if (value !== '') {
-                (0, core_1.debug)(`Final value for ${param}: ${value} (from action input)`);
-                return value;
+            if (value === '') {
+                // EnVs should be provided like this
+                // PIPER_ACTION_DOWNLOAD_URL
+                value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
+                if (value === '')
+                    return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
             }
-            // 3. Check environment variable
-            // EnVs should be provided like this
-            // PIPER_ACTION_DOWNLOAD_URL
-            value = (_a = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`]) !== null && _a !== void 0 ? _a : '';
-            if (value !== '') {
-                (0, core_1.debug)(`Final value for ${param}: ${value} (from environment variable)`);
-                return value;
-            }
-            (0, core_1.debug)(`Final value for ${param}: ${defaultValue !== null && defaultValue !== void 0 ? defaultValue : ''} (from default)`);
-            return defaultValue !== null && defaultValue !== void 0 ? defaultValue : '';
+            (0, core_1.debug)(`${param}: ${value}`);
+            return value;
         };
         let enterpriseHost = '';
         let enterpriseApi = '';
@@ -15873,10 +15861,6 @@ function getActionConfig(options, workflowInputs) {
         if (stepNameValue === undefined || stepNameValue === '') {
             stepNameValue = getValue('command');
         }
-        // Get docker image value and export to env if set
-        const dockerImageValue = (0, core_1.getInput)('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine';
-        (0, core_1.debug)(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`);
-        (0, core_1.exportVariable)('PIPER_dockerImage', dockerImageValue);
         return {
             stepName: stepNameValue,
             flags: getValue('flags'),
@@ -15893,7 +15877,7 @@ function getActionConfig(options, workflowInputs) {
             gitHubEnterpriseApi: enterpriseApi,
             gitHubEnterpriseToken: getValue('github-enterprise-token'),
             wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
-            dockerImage: dockerImageValue,
+            dockerImage: getValue('docker-image'),
             dockerOptions: getValue('docker-options'),
             dockerEnvVars: getValue('docker-env-vars'),
             sidecarImage: getValue('sidecar-image'),
@@ -16173,10 +16157,7 @@ exports.runContainers = runContainers;
 function startContainer(actionCfg, ctxConfig) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        // Prefer env var, then config
-        const dockerImage = process.env.PIPER_dockerImage && process.env.PIPER_dockerImage !== ''
-            ? process.env.PIPER_dockerImage
-            : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage);
+        const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
         if (dockerImage === undefined || dockerImage === '')
             return;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
@@ -16211,8 +16192,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(), dockerImage, 'cat');
-        (0, core_1.debug)(`[startContainer] Docker start command: docker ${dockerRunArgs.join(' ')}`);
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(dockerImage), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16292,9 +16272,9 @@ function getTelemetryEnvVars() {
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
-function getDockerImageFromEnvVar() {
+function getDockerImageFromEnvVar(dockerImage) {
     return [
-        '--env', 'PIPER_dockerImage'
+        '--env', `PIPER_dockerImage=${dockerImage}`
     ];
 }
 exports.getDockerImageFromEnvVar = getDockerImageFromEnvVar;
