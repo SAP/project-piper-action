@@ -17,12 +17,7 @@ export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: 
 }
 
 export async function startContainer (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
-  // Prefer env var, then config
-  const dockerImage =
-    process.env.PIPER_dockerImage && process.env.PIPER_dockerImage !== ''
-      ? process.env.PIPER_dockerImage
-      : (actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage)
-
+  const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage
   if (dockerImage === undefined || dockerImage === '') return
 
   const piperPath = internalActionVariables.piperBinPath
@@ -49,6 +44,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--volume', `${dirname(piperPath)}:/piper`,
     '--workdir', cwd,
     ...dockerOptionsArray,
+    '--env', dockerImage,
     '--name', containerID
   ]
 
@@ -69,7 +65,6 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getVaultEnvVars(),
     ...getSystemTrustEnvVars(),
     ...getTelemetryEnvVars(),
-    ...getDockerImageFromEnvVar(),
     dockerImage,
     'cat'
   )
@@ -151,12 +146,6 @@ export function getTelemetryEnvVars (): string[] {
   ]
 }
 
-export function getDockerImageFromEnvVar (): string[] {
-  return [
-    '--env', 'PIPER_dockerImage'
-  ]
-}
-
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
   let dockerOutput = ''
   const options = {
@@ -165,7 +154,8 @@ export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<st
         dockerOutput += data.toString()
       }
     },
-    ignoreReturnCode: true
+    ignoreReturnCode: true,
+    silent: true
   }
   dockerOutput = dockerOutput.trim()
 

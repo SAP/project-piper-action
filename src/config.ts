@@ -20,6 +20,7 @@ import {
   onGitHubEnterprise
 } from './enterprise'
 import { internalActionVariables } from './piper'
+import { get } from 'http'
 
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
@@ -53,36 +54,18 @@ export interface ActionConfiguration {
   exportPipelineEnvironment: boolean
 }
 
-export async function getActionConfig (
-  options: InputOptions,
-  workflowInputs?: Record<string, string>
-): Promise<ActionConfiguration> {
+export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
   const getValue = (param: string, defaultValue?: string): string => {
-    // 1. Check workflow inputs first
-    if (workflowInputs && workflowInputs[param] !== undefined && workflowInputs[param] !== '') {
-      debug(`workflow input ${param}: ${workflowInputs[param]}`)
-      debug(`Final value for ${param}: ${workflowInputs[param]} (from workflow input)`)
-      return workflowInputs[param]
-    }
-
-    // 2. Check action input
     let value: string = getInput(param, options)
     if (value !== '') {
-      debug(`Final value for ${param}: ${value} (from action input)`)
-      return value
+      // EnVs should be provided like this
+      // PIPER_ACTION_DOWNLOAD_URL
+      value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
+      if (value === '') return defaultValue ?? ''
     }
 
-    // 3. Check environment variable
-    // EnVs should be provided like this
-    // PIPER_ACTION_DOWNLOAD_URL
-    value = process.env[`PIPER_ACTION_${param.toUpperCase().replace(/-/g, '_')}`] ?? ''
-    if (value !== '') {
-      debug(`Final value for ${param}: ${value} (from environment variable)`)
-      return value
-    }
-
-    debug(`Final value for ${param}: ${defaultValue ?? ''} (from default)`)
-    return defaultValue ?? ''
+    debug(`${param}: ${value}`)
+    return value
   }
 
   let enterpriseHost: string = ''
@@ -102,11 +85,6 @@ export async function getActionConfig (
     stepNameValue = getValue('command')
   }
 
-  // Get docker image value and export to env if set
-  const dockerImageValue = getInput('docker-image') || process.env.PIPER_dockerImage || 'gradle:6-jdk11-alpine'
-  debug(`[getActionConfig] docker-image resolved value: ${dockerImageValue}`)
-  exportVariable('PIPER_dockerImage', dockerImageValue)
-
   return {
     stepName: stepNameValue,
     flags: getValue('flags'),
@@ -123,7 +101,7 @@ export async function getActionConfig (
     gitHubEnterpriseApi: enterpriseApi,
     gitHubEnterpriseToken: getValue('github-enterprise-token'),
     wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
-    dockerImage: dockerImageValue,
+    dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
     sidecarImage: getValue('sidecar-image'),
