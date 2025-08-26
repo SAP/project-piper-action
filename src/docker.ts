@@ -44,7 +44,6 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--volume', `${dirname(piperPath)}:/piper`,
     '--workdir', cwd,
     ...dockerOptionsArray,
-    '--env', dockerImage,
     '--name', containerID
   ]
 
@@ -65,10 +64,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getVaultEnvVars(),
     ...getSystemTrustEnvVars(),
     ...getTelemetryEnvVars(),
+    ...getDockerImageFromEnvVar(dockerImage),
     dockerImage,
     'cat'
   )
-
   await dockerExecReadOutput(dockerRunArgs)
 }
 
@@ -141,6 +140,12 @@ export function getSystemTrustEnvVars (): string[] {
 export function getTelemetryEnvVars (): string[] {
   return [
     '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+  ]
+}
+
+export function getDockerImageFromEnvVar (dockerImage: string): string[] {
+  return [
+    '--env', `PIPER_dockerImage=${dockerImage}`
   ]
 }
 
