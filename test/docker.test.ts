@@ -15,7 +15,8 @@ import {
   runContainers,
   startContainer,
   stopContainer,
-  dockerExecReadOutput
+  dockerExecReadOutput,
+  getDockerImageFromEnvVar
 } from '../src/docker'
 
 jest.mock('@actions/core')
@@ -110,6 +111,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(actionConfig.dockerImage),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -140,6 +142,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(actionConfig.dockerImage),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -174,6 +177,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(ctxCfg.dockerImage),
       ctxCfg.dockerImage,
       'cat'
     ]
@@ -213,6 +217,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(ctxCfg.dockerImage),
       ctxCfg.dockerImage,
       'cat'
     ]
