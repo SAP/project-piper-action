@@ -64,6 +64,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     ...getVaultEnvVars(),
     ...getSystemTrustEnvVars(),
     ...getTelemetryEnvVars(),
+    ...getDockerImageFromEnvVar(dockerImage),
     dockerImage,
     'cat'
   )
@@ -83,7 +84,7 @@ export async function stopContainer (containerID: string): Promise<void> {
     return
   }
 
-  await dockerExecReadOutput(['stop', '--time=1', containerID])
+  await dockerExecReadOutput(['stop', '--timeout=1', containerID])
 }
 
 /** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
@@ -143,21 +144,38 @@ export function getTelemetryEnvVars (): string[] {
   ]
 }
 
+export function getDockerImageFromEnvVar (dockerImage: string): string[] {
+  return [
+    '--env', `PIPER_dockerImage=${dockerImage}`
+  ]
+}
+
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
   let dockerOutput = ''
+  let dockerError = ''
   const options = {
     listeners: {
       stdout: (data: Buffer) => {
         dockerOutput += data.toString()
+      },
+      stderr: (data: Buffer) => {
+        dockerError += data.toString()
       }
-    }
+    },
+    ignoreReturnCode: true
   }
-  dockerOutput = dockerOutput.trim()
 
   const exitCode = await exec('docker', dockerRunArgs, options)
+  dockerOutput = dockerOutput.trim()
+  dockerError = dockerError.trim()
+
   if (exitCode !== 0) {
-    await Promise.reject(new Error('docker execute failed: ' + dockerOutput))
-    return ''
+    const errorMessage = dockerError.length > 0
+      ? dockerError
+      : dockerOutput.length > 0
+        ? dockerOutput
+        : 'Unknown error'
+    throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`)
   }
 
   return dockerOutput

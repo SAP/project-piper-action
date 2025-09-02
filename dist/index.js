@@ -16136,7 +16136,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getDockerImageFromEnvVar = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16192,7 +16192,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(dockerImage), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16211,7 +16211,7 @@ function stopContainer(containerID) {
             (0, core_1.debug)('no container to stop');
             return;
         }
-        yield dockerExecReadOutput(['stop', '--time=1', containerID]);
+        yield dockerExecReadOutput(['stop', '--timeout=1', containerID]);
     });
 }
 exports.stopContainer = stopContainer;
@@ -16272,21 +16272,37 @@ function getTelemetryEnvVars() {
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
+function getDockerImageFromEnvVar(dockerImage) {
+    return [
+        '--env', `PIPER_dockerImage=${dockerImage}`
+    ];
+}
+exports.getDockerImageFromEnvVar = getDockerImageFromEnvVar;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
+        let dockerError = '';
         const options = {
             listeners: {
                 stdout: (data) => {
                     dockerOutput += data.toString();
+                },
+                stderr: (data) => {
+                    dockerError += data.toString();
                 }
-            }
+            },
+            ignoreReturnCode: true
         };
-        dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
+        dockerOutput = dockerOutput.trim();
+        dockerError = dockerError.trim();
         if (exitCode !== 0) {
-            yield Promise.reject(new Error('docker execute failed: ' + dockerOutput));
-            return '';
+            const errorMessage = dockerError.length > 0
+                ? dockerError
+                : dockerOutput.length > 0
+                    ? dockerOutput
+                    : 'Unknown error';
+            throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`);
         }
         return dockerOutput;
     });
@@ -16497,12 +16513,6 @@ const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
-const stream_1 = __nccwpck_require__(2781);
-class NullWriter extends stream_1.Writable {
-    _write(chunk, encoding, callback) { }
-}
-// Used to suppress output from 'exec' and 'getExecOutput'
-const nullWriter = new NullWriter();
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
@@ -16526,19 +16536,7 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
                 ...flags
             ];
         }
-        const handleFatalLog = (data) => {
-            // temporary solution until logging is improved in Piper binary. It relies on:
-            // https://github.com/SAP/jenkins-library/blob/d12e283a4b316e6cf86c938d49bfa0461773b3b5/pkg/log/fatalHook.go#L46-L47
-            data.includes('fatal error: errorDetails') ? (0, core_1.setFailed)(data) : (0, core_1.info)(data);
-        };
-        let options = {
-            outStream: nullWriter,
-            errStream: nullWriter,
-            listeners: {
-                stdline: handleFatalLog,
-                errline: handleFatalLog
-            }
-        };
+        let options = { ignoreReturnCode: true };
         options = Object.assign({}, options, execOptions);
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
@@ -16889,6 +16887,7 @@ exports.internalActionVariables = {
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
+            (0, core_1.startGroup)('Setup');
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
@@ -16896,20 +16895,32 @@ function run() {
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
-            (0, core_1.info)('Executing action - version');
+            (0, core_1.endGroup)();
+            (0, core_1.startGroup)('version');
+            (0, core_1.info)('Getting version');
             yield (0, execute_1.executePiper)('version');
+            (0, core_1.endGroup)();
             if ((0, enterprise_1.onGitHubEnterprise)() && actionCfg.stepName !== 'getDefaults') {
+                (0, core_1.startGroup)('Enterprise Configuration');
                 (0, core_1.debug)('Enterprise step detected');
                 yield (0, config_1.getDefaultConfig)(actionCfg.gitHubEnterpriseServer, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.customDefaultsPaths);
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
+                (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
+                (0, core_1.startGroup)('Step Configuration');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
+                (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                (0, core_1.startGroup)(actionCfg.stepName);
+                const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                if (result.exitCode !== 0) {
+                    throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
+                }
+                (0, core_1.endGroup)();
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
