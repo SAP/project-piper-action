@@ -375,9 +375,9 @@ export function readVerboseFromConfig (): boolean {
       return false
     }
 
-    // Parse YAML and check for verbose setting
+    // Parse YAML and check for verbose setting in general section
     const config = yaml.load(configContent) as any
-    const verboseValue = config?.verbose
+    const verboseValue = config?.general?.verbose
     
     debug(`Parsed verbose setting from config: ${verboseValue} (type: ${typeof verboseValue})`)
     

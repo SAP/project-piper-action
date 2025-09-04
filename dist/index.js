@@ -20227,6 +20227,7 @@ function readContextConfig(stepName, flags) {
 }
 exports.readContextConfig = readContextConfig;
 function readVerboseFromConfig() {
+    var _a;
     const configPath = path.join(exports.CONFIG_DIR, 'config.yml');
     const altConfigPath = path.join(exports.CONFIG_DIR, 'config.yaml');
     try {
@@ -20244,9 +20245,9 @@ function readVerboseFromConfig() {
             (0, core_1.debug)('No .pipeline/config.yml or .pipeline/config.yaml found');
             return false;
         }
-        // Parse YAML and check for verbose setting
+        // Parse YAML and check for verbose setting in general section
         const config = yaml.load(configContent);
-        const verboseValue = config === null || config === void 0 ? void 0 : config.verbose;
+        const verboseValue = (_a = config === null || config === void 0 ? void 0 : config.general) === null || _a === void 0 ? void 0 : _a.verbose;
         (0, core_1.debug)(`Parsed verbose setting from config: ${verboseValue} (type: ${typeof verboseValue})`);
         return verboseValue === true;
     }
