@@ -21033,6 +21033,14 @@ function run() {
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
+            // Check if verbose is enabled in config file and enable debug logging early
+            const isVerbose = (0, config_1.readVerboseFromConfig)();
+            if (isVerbose) {
+                (0, core_1.info)('Verbose mode enabled in config - enabling debug logging for action');
+                // Enable runner debug logging to show all debug output
+                process.env.ACTIONS_RUNNER_DEBUG = 'true';
+                process.env.ACTIONS_STEP_DEBUG = 'true';
+            }
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -21053,15 +21061,6 @@ function run() {
                 (0, core_1.startGroup)('Step Configuration');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
-                // Check if verbose is enabled in config file and enable debug logging
-                const isVerbose = (0, config_1.readVerboseFromConfig)();
-                if (isVerbose) {
-                    (0, core_1.info)('Verbose mode enabled in config - enabling debug logging');
-                    process.env.ACTIONS_STEP_DEBUG = 'true';
-                }
-                else {
-                    (0, core_1.debug)('Verbose not enabled in config');
-                }
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.startGroup)(actionCfg.stepName);

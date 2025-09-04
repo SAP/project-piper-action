@@ -35,6 +35,15 @@ export async function run (): Promise<void> {
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
 
+    // Check if verbose is enabled in config file and enable debug logging early
+    const isVerbose = readVerboseFromConfig()
+    if (isVerbose) {
+      info('Verbose mode enabled in config - enabling debug logging for action')
+      // Enable runner debug logging to show all debug output
+      process.env.ACTIONS_RUNNER_DEBUG = 'true'
+      process.env.ACTIONS_STEP_DEBUG = 'true'
+    }
+
     info('Loading pipeline environment')
     await loadPipelineEnv()
     endGroup()
@@ -65,16 +74,6 @@ export async function run (): Promise<void> {
       startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
-
-      // Check if verbose is enabled in config file and enable debug logging
-      const isVerbose = readVerboseFromConfig()
-      if (isVerbose) {
-        info('Verbose mode enabled in config - enabling debug logging')
-        process.env.ACTIONS_STEP_DEBUG = 'true'
-      } else {
-        debug('Verbose not enabled in config')
-      }
-
       endGroup()
 
       await runContainers(actionCfg, contextConfig)
