@@ -1,5 +1,6 @@
 import * as path from 'path'
 import * as fs from 'fs'
+import * as yaml from 'js-yaml'
 import { debug, exportVariable, getInput, info, type InputOptions } from '@actions/core'
 import * as artifact from '@actions/artifact'
 import { type UploadResponse } from '@actions/artifact'
@@ -355,20 +356,34 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
   return JSON.parse(stdout)
 }
 
-export async function readGeneralConfig (): Promise<any> {
-  const piperPath = internalActionVariables.piperBinPath
-
-  if (piperPath === undefined) {
-    throw new Error('Can\'t get general config: piperPath not defined!')
-  }
+export function readVerboseFromConfig (): boolean {
+  const configPath = path.join(CONFIG_DIR, 'config.yml')
+  const altConfigPath = path.join(CONFIG_DIR, 'config.yaml')
 
   try {
-    // Get general config without any step-specific flags to include global settings like verbose
-    const getConfigFlags: string[] = []
-    const { stdout } = await executePiper('getConfig', getConfigFlags)
-    return JSON.parse(stdout)
+    let configContent = ''
+    
+    // Try config.yml first, then config.yaml
+    if (fs.existsSync(configPath)) {
+      configContent = fs.readFileSync(configPath, 'utf8')
+      debug(`Reading config from: ${configPath}`)
+    } else if (fs.existsSync(altConfigPath)) {
+      configContent = fs.readFileSync(altConfigPath, 'utf8')
+      debug(`Reading config from: ${altConfigPath}`)
+    } else {
+      debug('No .pipeline/config.yml or .pipeline/config.yaml found')
+      return false
+    }
+
+    // Parse YAML and check for verbose setting
+    const config = yaml.load(configContent) as any
+    const verboseValue = config?.verbose
+    
+    debug(`Parsed verbose setting from config: ${verboseValue} (type: ${typeof verboseValue})`)
+    
+    return verboseValue === true
   } catch (err) {
-    debug(`Failed to read general config: ${err as string}`)
-    return {}
+    debug(`Failed to read verbose from config: ${err}`)
+    return false
   }
 }

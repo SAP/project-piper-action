@@ -6,7 +6,7 @@ import {
   type ActionConfiguration,
   getDefaultConfig,
   readContextConfig,
-  readGeneralConfig,
+  readVerboseFromConfig,
   createCheckIfStepActiveMaps,
   getActionConfig
 } from './config'
@@ -34,17 +34,6 @@ export async function run (): Promise<void> {
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
-
-    // Check if verbose is enabled in config and enable debug logging for everything
-    const generalConfig = await readGeneralConfig()
-    info(`General config retrieved: ${JSON.stringify(generalConfig)}`)
-    info(`Verbose setting: ${generalConfig.verbose}`)
-    if (generalConfig.verbose === true) {
-      info('Verbose mode enabled - enabling debug logging')
-      process.env.ACTIONS_STEP_DEBUG = 'true'
-    } else {
-      info(`Verbose not enabled - verbose value is: ${generalConfig.verbose} (type: ${typeof generalConfig.verbose})`)
-    }
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
@@ -76,6 +65,16 @@ export async function run (): Promise<void> {
       startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+
+      // Check if verbose is enabled in config file and enable debug logging
+      const isVerbose = readVerboseFromConfig()
+      if (isVerbose) {
+        info('Verbose mode enabled in config - enabling debug logging')
+        process.env.ACTIONS_STEP_DEBUG = 'true'
+      } else {
+        debug('Verbose not enabled in config')
+      }
+
       endGroup()
 
       await runContainers(actionCfg, contextConfig)
