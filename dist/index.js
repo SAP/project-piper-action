@@ -15820,7 +15820,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.downloadStageConfig = exports.createCheckIfStepActiveMaps = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.getActionConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
+exports.readGeneralConfig = exports.readContextConfig = exports.generateDefaultConfigFlags = exports.uploadDefaultConfigArtifact = exports.restoreDefaultConfig = exports.checkIfStepActive = exports.downloadStageConfig = exports.createCheckIfStepActiveMaps = exports.saveDefaultConfigs = exports.downloadDefaultConfig = exports.getDefaultConfig = exports.getActionConfig = exports.ARTIFACT_NAME = exports.CONFIG_DIR = void 0;
 const path = __importStar(__nccwpck_require__(1017));
 const fs = __importStar(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(2186);
@@ -16117,6 +16117,25 @@ function readContextConfig(stepName, flags) {
     });
 }
 exports.readContextConfig = readContextConfig;
+function readGeneralConfig() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const piperPath = piper_1.internalActionVariables.piperBinPath;
+        if (piperPath === undefined) {
+            throw new Error('Can\'t get general config: piperPath not defined!');
+        }
+        try {
+            // Get general config without any step-specific flags to include global settings like verbose
+            const getConfigFlags = [];
+            const { stdout } = yield (0, execute_1.executePiper)('getConfig', getConfigFlags);
+            return JSON.parse(stdout);
+        }
+        catch (err) {
+            (0, core_1.debug)(`Failed to read general config: ${err}`);
+            return {};
+        }
+    });
+}
+exports.readGeneralConfig = readGeneralConfig;
 
 
 /***/ }),
@@ -16893,6 +16912,17 @@ function run() {
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
+            // Check if verbose is enabled in config and enable debug logging for everything
+            const generalConfig = yield (0, config_1.readGeneralConfig)();
+            (0, core_1.info)(`General config retrieved: ${JSON.stringify(generalConfig)}`);
+            (0, core_1.info)(`Verbose setting: ${generalConfig.verbose}`);
+            if (generalConfig.verbose === true) {
+                (0, core_1.info)('Verbose mode enabled - enabling debug logging');
+                process.env.ACTIONS_STEP_DEBUG = 'true';
+            }
+            else {
+                (0, core_1.info)(`Verbose not enabled - verbose value is: ${generalConfig.verbose} (type: ${typeof generalConfig.verbose})`);
+            }
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
