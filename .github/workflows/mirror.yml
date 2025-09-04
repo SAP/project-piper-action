@@ -6,10 +6,6 @@ on:
     branches-ignore:
       - 'renovate/**'
   workflow_dispatch:
-    inputs:
-      branch:
-        description: 'Branch to mirror'
-        required: true
   release:
     types: [released]
 
@@ -41,9 +37,27 @@ jobs:
     name: Trigger Mirror Workflow
     runs-on: ubuntu-latest
     env:
-      EVENT_TYPE: ${{ github.event_name == 'push' && 'mirror-push' || github.event_name == 'release' && 'mirror-tag' || github.event_name == 'delete' && 'mirror-delete-ref' || '' }}
-      PAYLOAD_KEY: ${{ github.event_name == 'push' && 'source_branch' || github.event_name == 'release' && 'tag_name' || github.event_name == 'delete' && 'delete_ref' || '' }}
-      PAYLOAD_VALUE: ${{ github.event_name == 'push' && github.ref_name || github.event_name == 'release' && github.event.release.tag_name || github.event_name == 'delete' && github.event.ref || '' }}
+      EVENT_TYPE: >-
+        ${{
+          github.event_name == 'workflow_dispatch' && 'mirror-push' ||
+          github.event_name == 'push' && 'mirror-push' ||
+          github.event_name == 'release' && 'mirror-tag' ||
+          github.event_name == 'delete' && 'mirror-delete-ref' || ''
+        }}
+      PAYLOAD_KEY: >-
+        ${{
+          github.event_name == 'workflow_dispatch' && 'source_branch' ||
+          github.event_name == 'push' && 'source_branch' ||
+          github.event_name == 'release' && 'tag_name' ||
+          github.event_name == 'delete' && 'delete_ref' || ''
+        }}
+      PAYLOAD_VALUE: >-
+        ${{
+          github.event_name == 'workflow_dispatch' && github.ref_name ||
+          github.event_name == 'push' && github.ref_name ||
+          github.event_name == 'release' && github.event.release.tag_name ||
+          github.event_name == 'delete' && github.event.ref || ''
+        }}
     steps:
       - name: Trigger ${{ env.EVENT_TYPE}} with payload ${{ env.PAYLOAD_KEY}}=${{ env.PAYLOAD_VALUE}}
         if: github.event_name == 'push'
