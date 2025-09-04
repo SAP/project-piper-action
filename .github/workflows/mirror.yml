@@ -39,22 +39,19 @@ jobs:
     env:
       EVENT_TYPE: >-
         ${{
-          github.event_name == 'workflow_dispatch' && 'mirror-push' ||
-          github.event_name == 'push' && 'mirror-push' ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'mirror-push' ||
           github.event_name == 'release' && 'mirror-tag' ||
           github.event_name == 'delete' && 'mirror-delete-ref' || ''
         }}
       PAYLOAD_KEY: >-
         ${{
-          github.event_name == 'workflow_dispatch' && 'source_branch' ||
-          github.event_name == 'push' && 'source_branch' ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'source_branch' ||
           github.event_name == 'release' && 'tag_name' ||
           github.event_name == 'delete' && 'delete_ref' || ''
         }}
       PAYLOAD_VALUE: >-
         ${{
-          github.event_name == 'workflow_dispatch' && github.ref_name ||
-          github.event_name == 'push' && github.ref_name ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name ||
           github.event_name == 'release' && github.event.release.tag_name ||
           github.event_name == 'delete' && github.event.ref || ''
         }}
@@ -62,8 +59,6 @@ jobs:
       - name: Trigger ${{ env.EVENT_TYPE}} with payload ${{ env.PAYLOAD_KEY}}=${{ env.PAYLOAD_VALUE}}
         if: github.event_name == 'push'
         run: |
-          echo "Triggering mirror workflow for branch: $BRANCH_NAME"
-
           response=$(curl -s -w "%{http_code}" -o mirror_response.txt \
             -X POST \
             -H "Accept: application/vnd.github.v3+json" \
