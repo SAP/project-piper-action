@@ -1,4 +1,4 @@
-import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
+import { debug, setFailed, info, startGroup, endGroup, setOutput } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -64,6 +64,13 @@ export async function run (): Promise<void> {
       startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+
+      // Enable GitHub Actions debug logging if verbose is enabled in config
+      if (contextConfig.verbose === true) {
+        info('Verbose mode enabled - enabling debug logging')
+        process.env.ACTIONS_STEP_DEBUG = 'true'
+      }
+      
       endGroup()
 
       await runContainers(actionCfg, contextConfig)
