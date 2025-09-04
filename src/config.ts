@@ -354,3 +354,29 @@ export async function readContextConfig (stepName: string, flags: string[]): Pro
   const { stdout } = await executePiper('getConfig', getConfigFlags)
   return JSON.parse(stdout)
 }
+
+export async function readGeneralConfig (stepName: string): Promise<any> {
+  if (['version', 'help', 'getConfig', 'getDefaults', 'writePipelineEnv'].includes(stepName)) {
+    return {}
+  }
+
+  const stageName = process.env.GITHUB_JOB
+  const piperPath = internalActionVariables.piperBinPath
+
+  if (piperPath === undefined) {
+    throw new Error('Can\'t get general config: piperPath not defined!')
+  }
+  if (stageName === undefined) {
+    throw new Error('Can\'t get general config: stageName not defined!')
+  }
+
+  try {
+    // Get general config without --contextConfig to include global settings like verbose
+    const getConfigFlags = ['--stageName', `${stageName}`, '--stepName', `${stepName}`]
+    const { stdout } = await executePiper('getConfig', getConfigFlags)
+    return JSON.parse(stdout)
+  } catch (err) {
+    debug(`Failed to read general config: ${err as string}`)
+    return {}
+  }
+}

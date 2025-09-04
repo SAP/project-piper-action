@@ -6,6 +6,7 @@ import {
   type ActionConfiguration,
   getDefaultConfig,
   readContextConfig,
+  readGeneralConfig,
   createCheckIfStepActiveMaps,
   getActionConfig
 } from './config'
@@ -65,8 +66,9 @@ export async function run (): Promise<void> {
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
 
-      // Enable GitHub Actions debug logging if verbose is enabled in config
-      if (contextConfig.verbose === true) {
+      // Check if verbose is enabled in general config (includes global settings like verbose)
+      const generalConfig = await readGeneralConfig(actionCfg.stepName)
+      if (generalConfig.verbose === true) {
         info('Verbose mode enabled - enabling debug logging')
         process.env.ACTIONS_STEP_DEBUG = 'true'
       }
