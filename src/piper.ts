@@ -37,9 +37,13 @@ export async function run (): Promise<void> {
 
     // Check if verbose is enabled in config and enable debug logging for everything
     const generalConfig = await readGeneralConfig()
+    info(`General config retrieved: ${JSON.stringify(generalConfig)}`)
+    info(`Verbose setting: ${generalConfig.verbose}`)
     if (generalConfig.verbose === true) {
       info('Verbose mode enabled - enabling debug logging')
       process.env.ACTIONS_STEP_DEBUG = 'true'
+    } else {
+      info(`Verbose not enabled - verbose value is: ${generalConfig.verbose} (type: ${typeof generalConfig.verbose})`)
     }
 
     info('Loading pipeline environment')
