@@ -27,8 +27,9 @@ run-name: >-
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event_name }}-${{
-      github.event_name == 'push' && github.ref_name ||
       github.event_name == 'delete' && github.event.ref ||
+      inputs.released-tag != null && inputs.released-tag ||
+      github.event_name == 'push' && github.ref_name ||
       ''
     }}
   cancel-in-progress: true
