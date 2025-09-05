@@ -40,21 +40,21 @@ jobs:
     env:
       EVENT_TYPE: >-
         ${{
-          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'mirror-push' ||
           github.event_name == 'delete' && 'mirror-delete-ref' ||
-          inputs.released-tag != null && 'mirror-tag' || ''
+          inputs.released-tag != null && 'mirror-tag' ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'mirror-push' || ''
         }}
       PAYLOAD_KEY: >-
         ${{
-          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'source_branch' ||
           github.event_name == 'delete' && 'delete_ref' ||
-          inputs.released-tag != null && 'tag_name' || ''
+          inputs.released-tag != null && 'tag_name' ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'source_branch' || ''
         }}
       PAYLOAD_VALUE: >-
         ${{
-          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name ||
           github.event_name == 'delete' && github.event.ref ||
-          inputs.released-tag != null && inputs.released-tag || ''
+          inputs.released-tag != null && inputs.released-tag ||
+          contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name || ''
         }}
     steps:
       - name: Trigger ${{ env.EVENT_TYPE}} with payload ${{ env.PAYLOAD_KEY}}=${{ env.PAYLOAD_VALUE}}
