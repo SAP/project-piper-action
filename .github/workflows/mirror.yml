@@ -6,15 +6,17 @@ on:
     branches-ignore:
       - 'renovate/**'
   workflow_dispatch:
-  release:
-    types: [released]
+  workflow_call:
+    inputs:
+      released-tag:
+        required: true
+        type: string
 
 # For dynamic naming of the workflow runs
 run-name: >-
   Trigger ${{ github.event_name }}:
   ${{
     contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name ||
-    github.event_name == 'release' && github.event.release.tag_name ||
     github.event_name == 'delete' && github.event.ref ||
     ''
   }}
@@ -26,7 +28,6 @@ concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.event_name }}-${{
       github.event_name == 'push' && github.ref_name ||
-      github.event_name == 'release' && github.event.release.tag_name ||
       github.event_name == 'delete' && github.event.ref ||
       ''
     }}
@@ -40,19 +41,19 @@ jobs:
       EVENT_TYPE: >-
         ${{
           contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'mirror-push' ||
-          github.event_name == 'release' && 'mirror-tag' ||
+          github.event_name == 'workflow_call' && 'mirror-tag' ||
           github.event_name == 'delete' && 'mirror-delete-ref' || ''
         }}
       PAYLOAD_KEY: >-
         ${{
           contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && 'source_branch' ||
-          github.event_name == 'release' && 'tag_name' ||
+          github.event_name == 'workflow_call' && 'tag_name' ||
           github.event_name == 'delete' && 'delete_ref' || ''
         }}
       PAYLOAD_VALUE: >-
         ${{
           contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name) && github.ref_name ||
-          github.event_name == 'release' && github.event.release.tag_name ||
+          github.event_name == 'workflow_call' && inputs.released-tag ||
           github.event_name == 'delete' && github.event.ref || ''
         }}
     steps:
