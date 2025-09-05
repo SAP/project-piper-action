@@ -46,6 +46,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      tag_name: ${{ steps.publish_release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,15 +65,17 @@ jobs:
         run: >
           .github/scripts/update_dynamic_tags.sh "${{ steps.publish_release.outputs.tag_name }}"
 
-      - name: Trigger tag mirror
-        uses: ./.github/workflows/mirror.yml
-        with:
-          released-tag: ${{ steps.publish_release.outputs.tag_name }}
+  trigger-mirror:
+    name: Trigger tag mirroring workflow
+    needs: release
+    uses: ./.github/workflows/mirror.yml
+    with:
+      released-tag: ${{ needs.release.outputs.tag_name }}
 
   post:
     name: Post Action
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: release
     if: always()
     steps:
       # Check status of the worklfow
