@@ -16357,9 +16357,9 @@ const tool_cache_1 = __nccwpck_require__(7784);
 const enterprise_1 = __nccwpck_require__(4340);
 const github_1 = __nccwpck_require__(978);
 const fetch_1 = __nccwpck_require__(7560);
-function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
+function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName);
+        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName, flags);
         if (isEnterprise && token === '')
             throw new Error('Token is not provided for enterprise step');
         if (owner === '')
@@ -16445,10 +16445,17 @@ exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
-function isEnterpriseStep(stepName) {
+function isEnterpriseStep(stepName, flags = '') {
     if (stepName === '') {
         // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
         return false;
+    }
+    if (stepName === 'getConfig') {
+        // in this case getConfig could be used to get enterprise step config
+        if (flags.includes(`--stepName ${ENTERPRISE_STEPNAME_PREFIX}`) ||
+            flags.includes(`--stepName=${ENTERPRISE_STEPNAME_PREFIX}`)) {
+            return true;
+        }
     }
     return stepName.startsWith(ENTERPRISE_STEPNAME_PREFIX);
 }
@@ -16947,7 +16954,7 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
-        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
             // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
@@ -16955,7 +16962,7 @@ function preparePiperPath(actionCfg) {
                 return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
             (0, core_1.info)('Downloading Piper Inner source binary');
-            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
         if (actionCfg.piperVersion.startsWith('devel:')) {
@@ -16963,7 +16970,7 @@ function preparePiperPath(actionCfg) {
             return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
-        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }
 

@@ -9,9 +9,9 @@ import {
 import { fetchRetry } from './fetch'
 
 export async function downloadPiperBinary (
-  stepName: string, version: string, apiURL: string, token: string, owner: string, repo: string
+  stepName: string, flags: string, version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<string> {
-  const isEnterprise = isEnterpriseStep(stepName)
+  const isEnterprise = isEnterpriseStep(stepName, flags)
   if (isEnterprise && token === '') throw new Error('Token is not provided for enterprise step')
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')

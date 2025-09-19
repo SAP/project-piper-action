@@ -99,7 +99,7 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
-  if (isEnterpriseStep(actionCfg.stepName)) {
+  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
     info('Preparing Piper binary for enterprise step')
     // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
     if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
@@ -107,7 +107,7 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
       return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
     }
     info('Downloading Piper Inner source binary')
-    return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+    return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
   if (actionCfg.piperVersion.startsWith('devel:')) {
@@ -115,5 +115,5 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     return await buildPiperFromSource(actionCfg.piperVersion)
   }
   info('Downloading Piper OS binary')
-  return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
