@@ -29,7 +29,7 @@ describe('GitHub package tests', () => {
 
   test('downloadPiperBinary - inner source piper, no token', async () => {
     try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, '', owner, repo)
+      await downloadPiperBinary(sapStep, '', 'latest', githubApiURL, '', owner, repo)
     } catch (e) {
       expect(e).toStrictEqual(Error('Token is not provided for enterprise step'))
     }
@@ -37,7 +37,7 @@ describe('GitHub package tests', () => {
 
   test('downloadPiperBinary - no owner', async () => {
     try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, '', repo)
+      await downloadPiperBinary(sapStep, '', 'latest', githubApiURL, token, '', repo)
     } catch (e) {
       expect(e).toStrictEqual(Error('owner is not provided'))
     }
@@ -45,7 +45,7 @@ describe('GitHub package tests', () => {
 
   test('downloadPiperBinary - no repo', async () => {
     try {
-      await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, owner, '')
+      await downloadPiperBinary(sapStep, '', 'latest', githubApiURL, token, owner, '')
     } catch (e) {
       expect(e).toStrictEqual(Error('repository is not provided'))
     }
@@ -60,7 +60,7 @@ describe('GitHub package tests', () => {
       } as unknown as Response
     })
 
-    await downloadPiperBinary(osStep, 'latest', githubApiURL, '', owner, repo)
+    await downloadPiperBinary(osStep, '', 'latest', githubApiURL, '', owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
     expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from URL')
     expect(core.debug).toHaveBeenCalledTimes(4)
@@ -84,7 +84,7 @@ describe('GitHub package tests', () => {
       } as unknown as octokit.Octokit
     })
 
-    await downloadPiperBinary(sapStep, 'latest', githubApiURL, token, owner, repo)
+    await downloadPiperBinary(sapStep, '', 'latest', githubApiURL, token, owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
     expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from GitHub API')
     expect(core.debug).toHaveBeenNthCalledWith(3, 'Using latest tag')
@@ -113,7 +113,7 @@ describe('GitHub package tests', () => {
       } as unknown as octokit.Octokit
     })
 
-    await downloadPiperBinary(osStep, version, githubApiURL, token, owner, repo)
+    await downloadPiperBinary(osStep, '', version, githubApiURL, token, owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: v1.1.1')
     expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from GitHub API')
     expect(core.debug).toHaveBeenNthCalledWith(3, 'getTag returns: tags/v1.1.1')

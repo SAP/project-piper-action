@@ -91,6 +91,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
+      "",
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -123,11 +124,38 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
+      "",
       inputs['piper-version'],
       GITHUB_COM_API_URL,
       inputs['github-token'],
       inputs['piper-owner'],
       inputs['piper-repository']
+    )
+    expect(docker.cleanupContainers).toHaveBeenCalled()
+  })
+
+  test('getConfig command to get enterprise step config', async () => {
+    inputs['step-name'] = 'getConfig'
+    inputs['flags'] = '--stepName sapGenerateEnvironmentInfo'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    inputs['create-check-if-step-active-maps'] = 'true'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
+
+    await piper.run()
+
+    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
+      inputs['step-name'],
+      "--stepName sapGenerateEnvironmentInfo",
+      inputs['sap-piper-version'],
+      'https://api.githubenterprise.test.com/',
+      inputs['github-enterprise-token'],
+      inputs['sap-piper-owner'],
+      inputs['sap-piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
