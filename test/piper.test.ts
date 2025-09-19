@@ -136,7 +136,7 @@ describe('Piper', () => {
 
   test('getConfig command to get enterprise step config', async () => {
     inputs['step-name'] = 'getConfig'
-    inputs['flags'] = '--stepName sapGenerateEnvironmentInfo'
+    inputs.flags = '--stepName sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
     inputs['wdf-github-enterprise-token'] = 'testWDFToken'
@@ -150,7 +150,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
-      inputs['flags'],
+      inputs.flags,
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
