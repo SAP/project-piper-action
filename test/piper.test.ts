@@ -91,7 +91,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
-      "",
+      '',
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -124,7 +124,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
-      "",
+      '',
       inputs['piper-version'],
       GITHUB_COM_API_URL,
       inputs['github-token'],
@@ -150,7 +150,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
-      "--stepName sapGenerateEnvironmentInfo",
+      inputs['flags'],
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
