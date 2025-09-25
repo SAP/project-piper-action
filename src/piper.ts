@@ -81,7 +81,8 @@ export async function run (): Promise<void> {
         // Set the cache directory environment variable for docker volume mounting
         process.env.PIPER_CACHE_DIR = cacheDir
 
-        const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, getHashFiles())
+        // Use a stable cache key for testing - only changes with step name and platform
+        const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
         const restoreKeys: string[] = [
           `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
           `piper-deps-${actionCfg.stepName}-`
@@ -108,7 +109,8 @@ export async function run (): Promise<void> {
       if (cacheEnabled && fs.existsSync(cacheDir)) {
         startGroup('Cache Save')
 
-        const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, getHashFiles())
+        // Use same stable cache key for save as restore
+        const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
         await saveDependencyCache({
           enabled: true,
           paths: [cacheDir],

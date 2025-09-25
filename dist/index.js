@@ -55085,7 +55085,15 @@ function generateCacheKey(baseName, hashFiles) {
         const hash = crypto_1.default.createHash('sha256');
         for (const file of hashFiles) {
             if (fs_1.default.existsSync(file)) {
-                const content = fs_1.default.readFileSync(file, 'utf8');
+                let content = fs_1.default.readFileSync(file, 'utf8');
+                // For pom.xml, only hash the dependencies section to avoid cache misses
+                // from unrelated changes like version bumps, descriptions, etc.
+                if (file.endsWith('pom.xml')) {
+                    const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
+                    if (dependenciesMatch !== null) {
+                        content = dependenciesMatch.join('');
+                    }
+                }
                 hash.update(content);
             }
         }
@@ -56292,7 +56300,8 @@ function run() {
                     }
                     // Set the cache directory environment variable for docker volume mounting
                     process.env.PIPER_CACHE_DIR = cacheDir;
-                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, (0, cache_1.getHashFiles)());
+                    // Use a stable cache key for testing - only changes with step name and platform
+                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
                     const restoreKeys = [
                         `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
                         `piper-deps-${actionCfg.stepName}-`
@@ -56315,7 +56324,8 @@ function run() {
                 // Save cache after successful step execution
                 if (cacheEnabled && fs.existsSync(cacheDir)) {
                     (0, core_1.startGroup)('Cache Save');
-                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, (0, cache_1.getHashFiles)());
+                    // Use same stable cache key for save as restore
+                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
                     yield (0, cache_1.saveDependencyCache)({
                         enabled: true,
                         paths: [cacheDir],

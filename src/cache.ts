@@ -58,7 +58,17 @@ export function generateCacheKey (baseName: string, hashFiles?: string[]): strin
     const hash = crypto.createHash('sha256')
     for (const file of hashFiles) {
       if (fs.existsSync(file)) {
-        const content = fs.readFileSync(file, 'utf8')
+        let content = fs.readFileSync(file, 'utf8')
+
+        // For pom.xml, only hash the dependencies section to avoid cache misses
+        // from unrelated changes like version bumps, descriptions, etc.
+        if (file.endsWith('pom.xml')) {
+          const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g)
+          if (dependenciesMatch !== null) {
+            content = dependenciesMatch.join('')
+          }
+        }
+
         hash.update(content)
       }
     }
