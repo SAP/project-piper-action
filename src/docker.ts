@@ -50,14 +50,12 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
   // Add cache directory volumes if specified
   const cacheDir = process.env.PIPER_CACHE_DIR ?? ''
   if (cacheDir !== '') {
-    // Mount cache directories for common dependency managers
+    // Mount cache directory to Maven home where dependencies are stored
     dockerRunArgs.push(
-      '--volume', `${cacheDir}/npm:/home/node/.npm`,
-      '--volume', `${cacheDir}/maven:/home/node/.m2`,
-      '--volume', `${cacheDir}/gradle:/home/node/.gradle`,
-      '--volume', `${cacheDir}/go:/home/node/go/pkg/mod`
+      '--volume', `${cacheDir}:/home/ubuntu/.m2`
     )
-    debug(`Mounted cache directory: ${cacheDir}`)
+
+    debug(`Mounted cache directory: ${cacheDir} to /home/ubuntu/.m2`)
   }
 
   const networkID = internalActionVariables.sidecarNetworkID

@@ -55521,9 +55521,9 @@ function startContainer(actionCfg, ctxConfig) {
         // Add cache directory volumes if specified
         const cacheDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : '';
         if (cacheDir !== '') {
-            // Mount cache directories for common dependency managers
-            dockerRunArgs.push('--volume', `${cacheDir}/npm:/home/node/.npm`, '--volume', `${cacheDir}/maven:/home/node/.m2`, '--volume', `${cacheDir}/gradle:/home/node/.gradle`, '--volume', `${cacheDir}/go:/home/node/go/pkg/mod`);
-            (0, core_1.debug)(`Mounted cache directory: ${cacheDir}`);
+            // Mount cache directory to Maven home where dependencies are stored
+            dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
+            (0, core_1.debug)(`Mounted cache directory: ${cacheDir} to /home/ubuntu/.m2`);
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
