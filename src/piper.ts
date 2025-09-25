@@ -1,7 +1,8 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync } from 'fs'
+import * as fs from 'fs'
 import { executePiper } from './execute'
+import { restoreDependencyCache, saveDependencyCache, generateCacheKey, getHashFiles } from './cache'
 import {
   type ActionConfiguration,
   getDefaultConfig,
@@ -66,6 +67,34 @@ export async function run (): Promise<void> {
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
       endGroup()
 
+      // Setup cache directory for dependencies
+      const cacheEnabled: boolean = true // enable by default for testing -> process.env.PIPER_ENABLE_CACHE === 'true'
+      const cacheDir: string = process.env.RUNNER_TEMP !== undefined
+        ? `${process.env.RUNNER_TEMP}/piper-cache`
+        : '/tmp/piper-cache'
+      if (cacheEnabled) {
+        startGroup('Cache Restoration')
+        // Create cache directory if it doesn't exist
+        if (!fs.existsSync(cacheDir)) {
+          fs.mkdirSync(cacheDir, { recursive: true })
+        }
+        // Set the cache directory environment variable for docker volume mounting
+        process.env.PIPER_CACHE_DIR = cacheDir
+
+        const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, getHashFiles())
+        const restoreKeys: string[] = [
+          `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
+          `piper-deps-${actionCfg.stepName}-`
+        ]
+        await restoreDependencyCache({
+          enabled: true,
+          paths: [cacheDir],
+          key: cacheKey,
+          restoreKeys
+        })
+        endGroup()
+      }
+
       await runContainers(actionCfg, contextConfig)
 
       startGroup(actionCfg.stepName)
@@ -74,6 +103,19 @@ export async function run (): Promise<void> {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      // Save cache after successful step execution
+      if (cacheEnabled && fs.existsSync(cacheDir)) {
+        startGroup('Cache Save')
+
+        const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, getHashFiles())
+        await saveDependencyCache({
+          enabled: true,
+          paths: [cacheDir],
+          key: cacheKey
+        })
+        endGroup()
+      }
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
@@ -93,7 +135,7 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 
   internalActionVariables.piperBinPath = piperPath
   debug('obtained piper binary at '.concat(piperPath))
-  chmodSync(piperPath, 0o775)
+  fs.chmodSync(piperPath, 0o775)
 }
 
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
