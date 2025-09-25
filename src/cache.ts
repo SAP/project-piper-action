@@ -76,15 +76,3 @@ export function generateCacheKey (baseName: string, hashFiles?: string[]): strin
   }
   return key
 }
-
-export function getHashFiles (): string[] {
-  const hashFiles: string[] = []
-  // Check for common dependency files
-  if (fs.existsSync('package-lock.json')) hashFiles.push('package-lock.json')
-  if (fs.existsSync('package.json')) hashFiles.push('package.json')
-  if (fs.existsSync('pom.xml')) hashFiles.push('pom.xml')
-  if (fs.existsSync('build.gradle')) hashFiles.push('build.gradle')
-  if (fs.existsSync('go.mod')) hashFiles.push('go.mod')
-  if (fs.existsSync('go.sum')) hashFiles.push('go.sum')
-  return hashFiles
-}

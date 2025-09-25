@@ -55034,7 +55034,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
+exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
 const core_1 = __nccwpck_require__(42186);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const cache_1 = __nccwpck_require__(27799);
@@ -55102,24 +55102,6 @@ function generateCacheKey(baseName, hashFiles) {
     return key;
 }
 exports.generateCacheKey = generateCacheKey;
-function getHashFiles() {
-    const hashFiles = [];
-    // Check for common dependency files
-    if (fs_1.default.existsSync('package-lock.json'))
-        hashFiles.push('package-lock.json');
-    if (fs_1.default.existsSync('package.json'))
-        hashFiles.push('package.json');
-    if (fs_1.default.existsSync('pom.xml'))
-        hashFiles.push('pom.xml');
-    if (fs_1.default.existsSync('build.gradle'))
-        hashFiles.push('build.gradle');
-    if (fs_1.default.existsSync('go.mod'))
-        hashFiles.push('go.mod');
-    if (fs_1.default.existsSync('go.sum'))
-        hashFiles.push('go.sum');
-    return hashFiles;
-}
-exports.getHashFiles = getHashFiles;
 
 
 /***/ }),
@@ -55529,14 +55511,10 @@ function startContainer(actionCfg, ctxConfig) {
         // Add cache directory volumes if specified
         const cacheDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : '';
         if (cacheDir !== '') {
-            // Mount cache directories for Maven dependencies and build artifacts
-            dockerRunArgs.push(
-            // Maven repository cache (keeping backward compatibility)
-            '--volume', `${cacheDir}:/home/ubuntu/.m2`, 
-            // Target directory cache (compiled classes, JARs, etc.)
-            '--volume', `${cacheDir}/target:${cwd}/target`);
+            // Mount cache directory for Maven repository only
+            // The repository subdirectory contains the actual Maven artifacts
+            dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
             (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
-            (0, core_1.debug)(`Mounted target cache: ${cacheDir}/target to ${cwd}/target`);
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {

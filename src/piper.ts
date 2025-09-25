@@ -2,7 +2,7 @@ import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import * as fs from 'fs'
 import { executePiper } from './execute'
-import { restoreDependencyCache, saveDependencyCache, generateCacheKey, getHashFiles } from './cache'
+import { restoreDependencyCache, saveDependencyCache, generateCacheKey } from './cache'
 import {
   type ActionConfiguration,
   getDefaultConfig,

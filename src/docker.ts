@@ -50,16 +50,13 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
   // Add cache directory volumes if specified
   const cacheDir = process.env.PIPER_CACHE_DIR ?? ''
   if (cacheDir !== '') {
-    // Mount cache directories for Maven dependencies and build artifacts
+    // Mount cache directory for Maven repository only
+    // The repository subdirectory contains the actual Maven artifacts
     dockerRunArgs.push(
-      // Maven repository cache (keeping backward compatibility)
-      '--volume', `${cacheDir}:/home/ubuntu/.m2`,
-      // Target directory cache (compiled classes, JARs, etc.)
-      '--volume', `${cacheDir}/target:${cwd}/target`
+      '--volume', `${cacheDir}:/home/ubuntu/.m2`
     )
 
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
-    debug(`Mounted target cache: ${cacheDir}/target to ${cwd}/target`)
   }
 
   const networkID = internalActionVariables.sidecarNetworkID
