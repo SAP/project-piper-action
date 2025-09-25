@@ -56,7 +56,13 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       '--volume', `${cacheDir}:/home/ubuntu/.m2`
     )
 
+    // Set Maven options for better performance with cached dependencies
+    dockerRunArgs.push(
+      '--env', 'MAVEN_OPTS=-Dmaven.artifact.threads=10 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn'
+    )
+
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
+    debug('Maven optimized for cached dependencies')
   }
 
   const networkID = internalActionVariables.sidecarNetworkID

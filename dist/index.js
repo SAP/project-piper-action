@@ -55514,7 +55514,10 @@ function startContainer(actionCfg, ctxConfig) {
             // Mount cache directory for Maven repository only
             // The repository subdirectory contains the actual Maven artifacts
             dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
+            // Set Maven options for better performance with cached dependencies
+            dockerRunArgs.push('--env', 'MAVEN_OPTS=-Dmaven.artifact.threads=10 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn');
             (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
+            (0, core_1.debug)('Maven optimized for cached dependencies');
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
