@@ -55034,7 +55034,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
+exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
 const core_1 = __nccwpck_require__(42186);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const cache_1 = __nccwpck_require__(27799);
@@ -55102,6 +55102,11 @@ function generateCacheKey(baseName, hashFiles) {
     return key;
 }
 exports.generateCacheKey = generateCacheKey;
+function getHashFiles() {
+    const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'Gemfile'];
+    return dependencyFiles.filter(file => fs_1.default.existsSync(file));
+}
+exports.getHashFiles = getHashFiles;
 
 
 /***/ }),
@@ -55505,6 +55510,11 @@ function startContainer(actionCfg, ctxConfig) {
             '--volume', `${cwd}:${cwd}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
             '--workdir', cwd,
+            // Docker performance optimizations
+            '--memory', '4g',
+            '--cpus', '2.0',
+            '--shm-size', '1g',
+            '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g',
             ...dockerOptionsArray,
             '--name', containerID
         ];
@@ -55515,7 +55525,30 @@ function startContainer(actionCfg, ctxConfig) {
             // The repository subdirectory contains the actual Maven artifacts
             dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
             // Set Maven options for better performance with cached dependencies
-            dockerRunArgs.push('--env', 'MAVEN_OPTS=-Dmaven.artifact.threads=10 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn');
+            const mavenOpts = [
+                // Parallel artifact resolution
+                '-Dmaven.artifact.threads=10',
+                // Suppress transfer logging for cleaner output
+                '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn',
+                // JVM performance optimizations
+                '-Xmx2g',
+                '-Xms1g',
+                '-XX:+UseG1GC',
+                '-XX:+UseStringDeduplication',
+                // Maven daemon for faster builds (reuse JVM)
+                '-Dmvnd.enabled=true',
+                // Incremental compilation
+                '-Dmaven.compiler.useIncrementalCompilation=true',
+                // Parallel test execution
+                '-Dmaven.test.parallel=all',
+                '-Dmaven.test.perCoreThreadCount=2',
+                // Faster dependency resolution
+                '-Dmaven.repo.local.recordReverseTree=true',
+                // Skip unnecessary plugin goals in multi-module builds
+                '-Dmaven.javadoc.skip=true',
+                '-Dmaven.source.skip=true'
+            ].join(' ');
+            dockerRunArgs.push('--env', `MAVEN_OPTS=${mavenOpts}`);
             (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
             (0, core_1.debug)('Maven optimized for cached dependencies');
         }

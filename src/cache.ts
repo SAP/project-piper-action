@@ -76,3 +76,8 @@ export function generateCacheKey (baseName: string, hashFiles?: string[]): strin
   }
   return key
 }
+
+export function getHashFiles (): string[] {
+  const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'Gemfile']
+  return dependencyFiles.filter(file => fs.existsSync(file))
+}

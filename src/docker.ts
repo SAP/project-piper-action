@@ -43,6 +43,11 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--volume', `${cwd}:${cwd}`,
     '--volume', `${dirname(piperPath)}:/piper`,
     '--workdir', cwd,
+    // Docker performance optimizations
+    '--memory', '4g',
+    '--cpus', '2.0',
+    '--shm-size', '1g', // Increase shared memory for parallel compilation
+    '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g', // Fast temporary filesystem
     ...dockerOptionsArray,
     '--name', containerID
   ]
@@ -57,8 +62,32 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     )
 
     // Set Maven options for better performance with cached dependencies
+    const mavenOpts = [
+      // Parallel artifact resolution
+      '-Dmaven.artifact.threads=10',
+      // Suppress transfer logging for cleaner output
+      '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn',
+      // JVM performance optimizations
+      '-Xmx2g',
+      '-Xms1g',
+      '-XX:+UseG1GC',
+      '-XX:+UseStringDeduplication',
+      // Maven daemon for faster builds (reuse JVM)
+      '-Dmvnd.enabled=true',
+      // Incremental compilation
+      '-Dmaven.compiler.useIncrementalCompilation=true',
+      // Parallel test execution
+      '-Dmaven.test.parallel=all',
+      '-Dmaven.test.perCoreThreadCount=2',
+      // Faster dependency resolution
+      '-Dmaven.repo.local.recordReverseTree=true',
+      // Skip unnecessary plugin goals in multi-module builds
+      '-Dmaven.javadoc.skip=true',
+      '-Dmaven.source.skip=true'
+    ].join(' ')
+
     dockerRunArgs.push(
-      '--env', 'MAVEN_OPTS=-Dmaven.artifact.threads=10 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn'
+      '--env', `MAVEN_OPTS=${mavenOpts}`
     )
 
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
