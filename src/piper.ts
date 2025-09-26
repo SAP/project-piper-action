@@ -2,7 +2,7 @@ import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import * as fs from 'fs'
 import { executePiper } from './execute'
-import { restoreDependencyCache, saveDependencyCache, generateCacheKey } from './cache'
+import { restoreDependencyCache, saveDependencyCache, generateCacheKey, saveBOMCache, restoreBOMCache, generateBOMCacheKey, generateDependencyHash } from './cache'
 import {
   type ActionConfiguration,
   getDefaultConfig,
@@ -96,6 +96,33 @@ export async function run (): Promise<void> {
         endGroup()
       }
 
+      // BOM caching optimization for mavenBuild step
+      let bomCacheRestored = false
+      if (actionCfg.stepName === 'mavenBuild' && cacheEnabled) {
+        startGroup('BOM Cache Restoration')
+
+        // Generate dependency hash for BOM cache key
+        const dependencyHash = generateDependencyHash()
+        const bomCacheKey = generateBOMCacheKey(`piper-bom-${actionCfg.stepName}`, dependencyHash)
+
+        // Try to restore BOM files
+        const bomPaths = ['target/bom-maven.xml', 'target/simple-bom-maven.xml']
+        const bomRestoreKeys = [
+          generateBOMCacheKey(`piper-bom-${actionCfg.stepName}`, ''),
+          `piper-bom-${actionCfg.stepName}-${process.platform}-${process.arch}`
+        ]
+
+        bomCacheRestored = await restoreBOMCache(bomPaths, bomCacheKey, bomRestoreKeys)
+
+        if (bomCacheRestored) {
+          info('BOM files restored from cache, skipping BOM generation')
+          // Set environment variable to potentially skip BOM generation in Piper
+          process.env.PIPER_BOM_CACHE_RESTORED = 'true'
+        }
+
+        endGroup()
+      }
+
       await runContainers(actionCfg, contextConfig)
 
       startGroup(actionCfg.stepName)
@@ -104,6 +131,21 @@ export async function run (): Promise<void> {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      // Save BOM cache after successful mavenBuild execution
+      if (actionCfg.stepName === 'mavenBuild' && cacheEnabled && !bomCacheRestored) {
+        startGroup('BOM Cache Save')
+
+        // Generate dependency hash for BOM cache key
+        const dependencyHash = generateDependencyHash()
+        const bomCacheKey = generateBOMCacheKey(`piper-bom-${actionCfg.stepName}`, dependencyHash)
+
+        // Save BOM files if they were generated
+        const bomFiles = ['target/bom-maven.xml', 'target/simple-bom-maven.xml']
+        await saveBOMCache(bomFiles, bomCacheKey)
+
+        endGroup()
+      }
 
       // Save cache after successful step execution
       if (cacheEnabled && fs.existsSync(cacheDir)) {

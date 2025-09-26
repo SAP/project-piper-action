@@ -83,7 +83,11 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       '-Dmaven.repo.local.recordReverseTree=true',
       // Skip unnecessary plugin goals in multi-module builds
       '-Dmaven.javadoc.skip=true',
-      '-Dmaven.source.skip=true'
+      '-Dmaven.source.skip=true',
+      // CycloneDX BOM optimization - use cached dependency info
+      '-Dcyclonedx.skipAttach=false',
+      '-Dcyclonedx.outputReactor=false',
+      '-Dcyclonedx.verbose=false'
     ].join(' ')
 
     dockerRunArgs.push(
