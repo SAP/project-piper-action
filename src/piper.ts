@@ -81,18 +81,65 @@ export async function run (): Promise<void> {
         // Set the cache directory environment variable for docker volume mounting
         process.env.PIPER_CACHE_DIR = cacheDir
 
-        // Use a stable cache key for testing - only changes with step name and platform
-        const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
-        const restoreKeys: string[] = [
-          `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
-          `piper-deps-${actionCfg.stepName}-`
-        ]
-        await restoreDependencyCache({
-          enabled: true,
-          paths: [cacheDir],
-          key: cacheKey,
-          restoreKeys
-        })
+        // Generate dependency-aware cache key based on pom.xml dependencies
+        const dependencyFiles = ['pom.xml']
+        const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
+
+        if (existingDepFiles.length > 0) {
+          // Use dependency-aware cache key
+          const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+          const restoreKeys: string[] = [
+            generateCacheKey(`piper-deps-${actionCfg.stepName}`, []), // fallback without hash
+            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
+            `piper-deps-${actionCfg.stepName}-`
+          ]
+
+          info(`Attempting dependency cache restore with key: ${cacheKey}`)
+          const beforeRestore = Date.now()
+
+          await restoreDependencyCache({
+            enabled: true,
+            paths: [cacheDir],
+            key: cacheKey,
+            restoreKeys
+          })
+
+          const afterRestore = Date.now()
+          const restoreTime = afterRestore - beforeRestore
+
+          // Check if cache was actually restored by looking at cache directory contents
+          const cacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+
+          // Set environment variables for Maven offline mode decision
+          process.env.PIPER_CACHE_RESTORED = cacheExists ? 'true' : 'false'
+          process.env.PIPER_DEPENDENCIES_CHANGED = cacheExists ? 'false' : 'true'
+
+          debug(`Cache restore completed in ${restoreTime}ms`)
+          debug(`Cache directory exists and populated: ${cacheExists}`)
+
+          if (cacheExists) {
+            info('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode')
+          } else {
+            info('❌ Dependencies cache MISS - Maven will download dependencies')
+          }
+        } else {
+          // No dependency files found, use stable key
+          const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
+          const restoreKeys: string[] = [
+            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
+            `piper-deps-${actionCfg.stepName}-`
+          ]
+          await restoreDependencyCache({
+            enabled: true,
+            paths: [cacheDir],
+            key: cacheKey,
+            restoreKeys
+          })
+
+          // Default to online mode for non-Maven projects
+          process.env.PIPER_CACHE_RESTORED = 'false'
+          process.env.PIPER_DEPENDENCIES_CHANGED = 'false'
+        }
         endGroup()
       }
 
@@ -151,8 +198,14 @@ export async function run (): Promise<void> {
       if (cacheEnabled && fs.existsSync(cacheDir)) {
         startGroup('Cache Save')
 
-        // Use same stable cache key for save as restore
-        const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
+        // Use same dependency-aware cache key for save as restore
+        const dependencyFiles = ['pom.xml']
+        const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
+        const cacheKey = existingDepFiles.length > 0
+          ? generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+          : generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
+
+        info(`Saving dependencies cache with key: ${cacheKey}`)
         await saveDependencyCache({
           enabled: true,
           paths: [cacheDir],

@@ -61,6 +61,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       '--volume', `${cacheDir}:/home/ubuntu/.m2`
     )
 
+    // Check if dependencies have changed by looking at cache metadata
+    const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true'
+    const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true'
+
     // Set Maven options for better performance with cached dependencies
     const mavenOpts = [
       // Parallel artifact resolution
@@ -88,13 +92,37 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       '-Dcyclonedx.skipAttach=false',
       '-Dcyclonedx.outputReactor=false',
       '-Dcyclonedx.verbose=false'
-    ].join(' ')
+    ]
+
+    // Add offline mode if cache was restored and dependencies haven't changed
+    if (cacheRestored && !dependenciesChanged) {
+      mavenOpts.push(
+        // Run in offline mode - no network dependency resolution
+        '-Dmaven.offline=true',
+        // Don't check for updated snapshots
+        '-Dmaven.snapshot.updatePolicy=never',
+        // Don't check for updated releases
+        '-Dmaven.release.updatePolicy=never'
+      )
+      info('Maven running in OFFLINE mode - using cached dependencies only')
+    } else if (dependenciesChanged) {
+      mavenOpts.push(
+        // Force update dependencies when changes detected
+        '-U',
+        // Update snapshots
+        '-Dmaven.snapshot.updatePolicy=always'
+      )
+      info('Dependencies changed - Maven will re-download and update cache')
+    } else {
+      info('Maven running in ONLINE mode - will download missing dependencies')
+    }
 
     dockerRunArgs.push(
-      '--env', `MAVEN_OPTS=${mavenOpts}`
+      '--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`
     )
 
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
+    debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
     debug('Maven optimized for cached dependencies')
   }
 

@@ -55605,6 +55605,9 @@ function startContainer(actionCfg, ctxConfig) {
             // Mount cache directory for Maven repository only
             // The repository subdirectory contains the actual Maven artifacts
             dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
+            // Check if dependencies have changed by looking at cache metadata
+            const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true';
+            const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true';
             // Set Maven options for better performance with cached dependencies
             const mavenOpts = [
                 // Parallel artifact resolution
@@ -55632,9 +55635,32 @@ function startContainer(actionCfg, ctxConfig) {
                 '-Dcyclonedx.skipAttach=false',
                 '-Dcyclonedx.outputReactor=false',
                 '-Dcyclonedx.verbose=false'
-            ].join(' ');
-            dockerRunArgs.push('--env', `MAVEN_OPTS=${mavenOpts}`);
+            ];
+            // Add offline mode if cache was restored and dependencies haven't changed
+            if (cacheRestored && !dependenciesChanged) {
+                mavenOpts.push(
+                // Run in offline mode - no network dependency resolution
+                '-Dmaven.offline=true', 
+                // Don't check for updated snapshots
+                '-Dmaven.snapshot.updatePolicy=never', 
+                // Don't check for updated releases
+                '-Dmaven.release.updatePolicy=never');
+                (0, core_1.info)('Maven running in OFFLINE mode - using cached dependencies only');
+            }
+            else if (dependenciesChanged) {
+                mavenOpts.push(
+                // Force update dependencies when changes detected
+                '-U', 
+                // Update snapshots
+                '-Dmaven.snapshot.updatePolicy=always');
+                (0, core_1.info)('Dependencies changed - Maven will re-download and update cache');
+            }
+            else {
+                (0, core_1.info)('Maven running in ONLINE mode - will download missing dependencies');
+            }
+            dockerRunArgs.push('--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`);
             (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
+            (0, core_1.debug)(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`);
             (0, core_1.debug)('Maven optimized for cached dependencies');
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
@@ -56404,18 +56430,58 @@ function run() {
                     }
                     // Set the cache directory environment variable for docker volume mounting
                     process.env.PIPER_CACHE_DIR = cacheDir;
-                    // Use a stable cache key for testing - only changes with step name and platform
-                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
-                    const restoreKeys = [
-                        `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
-                        `piper-deps-${actionCfg.stepName}-`
-                    ];
-                    yield (0, cache_1.restoreDependencyCache)({
-                        enabled: true,
-                        paths: [cacheDir],
-                        key: cacheKey,
-                        restoreKeys
-                    });
+                    // Generate dependency-aware cache key based on pom.xml dependencies
+                    const dependencyFiles = ['pom.xml'];
+                    const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
+                    if (existingDepFiles.length > 0) {
+                        // Use dependency-aware cache key
+                        const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles);
+                        const restoreKeys = [
+                            (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []),
+                            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
+                            `piper-deps-${actionCfg.stepName}-`
+                        ];
+                        (0, core_1.info)(`Attempting dependency cache restore with key: ${cacheKey}`);
+                        const beforeRestore = Date.now();
+                        yield (0, cache_1.restoreDependencyCache)({
+                            enabled: true,
+                            paths: [cacheDir],
+                            key: cacheKey,
+                            restoreKeys
+                        });
+                        const afterRestore = Date.now();
+                        const restoreTime = afterRestore - beforeRestore;
+                        // Check if cache was actually restored by looking at cache directory contents
+                        const cacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+                        // Set environment variables for Maven offline mode decision
+                        process.env.PIPER_CACHE_RESTORED = cacheExists ? 'true' : 'false';
+                        process.env.PIPER_DEPENDENCIES_CHANGED = cacheExists ? 'false' : 'true';
+                        (0, core_1.debug)(`Cache restore completed in ${restoreTime}ms`);
+                        (0, core_1.debug)(`Cache directory exists and populated: ${cacheExists}`);
+                        if (cacheExists) {
+                            (0, core_1.info)('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode');
+                        }
+                        else {
+                            (0, core_1.info)('❌ Dependencies cache MISS - Maven will download dependencies');
+                        }
+                    }
+                    else {
+                        // No dependency files found, use stable key
+                        const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
+                        const restoreKeys = [
+                            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
+                            `piper-deps-${actionCfg.stepName}-`
+                        ];
+                        yield (0, cache_1.restoreDependencyCache)({
+                            enabled: true,
+                            paths: [cacheDir],
+                            key: cacheKey,
+                            restoreKeys
+                        });
+                        // Default to online mode for non-Maven projects
+                        process.env.PIPER_CACHE_RESTORED = 'false';
+                        process.env.PIPER_DEPENDENCIES_CHANGED = 'false';
+                    }
                     (0, core_1.endGroup)();
                 }
                 // BOM caching optimization for mavenBuild step
@@ -56460,8 +56526,13 @@ function run() {
                 // Save cache after successful step execution
                 if (cacheEnabled && fs.existsSync(cacheDir)) {
                     (0, core_1.startGroup)('Cache Save');
-                    // Use same stable cache key for save as restore
-                    const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
+                    // Use same dependency-aware cache key for save as restore
+                    const dependencyFiles = ['pom.xml'];
+                    const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
+                    const cacheKey = existingDepFiles.length > 0
+                        ? (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+                        : (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
+                    (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
                     yield (0, cache_1.saveDependencyCache)({
                         enabled: true,
                         paths: [cacheDir],
