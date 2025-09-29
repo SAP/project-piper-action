@@ -55034,7 +55034,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateDependencyHash = exports.generateBOMCacheKey = exports.restoreBOMCache = exports.saveBOMCache = exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
+exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
 const core_1 = __nccwpck_require__(42186);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const cache_1 = __nccwpck_require__(27799);
@@ -55107,87 +55107,6 @@ function getHashFiles() {
     return dependencyFiles.filter(file => fs_1.default.existsSync(file));
 }
 exports.getHashFiles = getHashFiles;
-function saveBOMCache(bomFiles, cacheKey) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // Check if BOM files exist
-            const existingBOMFiles = bomFiles.filter(file => fs_1.default.existsSync(file));
-            if (existingBOMFiles.length === 0) {
-                (0, core_1.debug)('No BOM files found, skipping BOM cache save');
-                return;
-            }
-            (0, core_1.info)(`Saving BOM cache with key: ${cacheKey}`);
-            yield (0, cache_1.saveCache)(existingBOMFiles, `bom-${cacheKey}`);
-            (0, core_1.info)('BOM cache saved successfully');
-        }
-        catch (error) {
-            (0, core_1.debug)(`Failed to save BOM cache: ${String(error)}`);
-        }
-    });
-}
-exports.saveBOMCache = saveBOMCache;
-function restoreBOMCache(bomPaths, cacheKey, restoreKeys) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            (0, core_1.info)(`Attempting to restore BOM cache with key: bom-${cacheKey}`);
-            const restoredKey = yield (0, cache_1.restoreCache)(bomPaths, `bom-${cacheKey}`, restoreKeys === null || restoreKeys === void 0 ? void 0 : restoreKeys.map(key => `bom-${key}`));
-            if (restoredKey !== undefined) {
-                (0, core_1.info)(`BOM cache restored from key: ${restoredKey}`);
-                return true;
-            }
-            else {
-                (0, core_1.info)('BOM cache not found');
-                return false;
-            }
-        }
-        catch (error) {
-            (0, core_1.debug)(`Failed to restore BOM cache: ${String(error)}`);
-            return false;
-        }
-    });
-}
-exports.restoreBOMCache = restoreBOMCache;
-function generateBOMCacheKey(baseName, dependencyHash) {
-    let key = `${baseName}-${process.platform}-${process.arch}`;
-    if (dependencyHash !== undefined && dependencyHash !== '') {
-        key += `-${dependencyHash}`;
-    }
-    return key;
-}
-exports.generateBOMCacheKey = generateBOMCacheKey;
-function generateDependencyHash(pomFiles) {
-    const hash = crypto_1.default.createHash('sha256');
-    // Default to finding pom.xml files if not provided
-    const filesToHash = pomFiles !== null && pomFiles !== void 0 ? pomFiles : (fs_1.default.existsSync('pom.xml') ? ['pom.xml'] : []);
-    for (const file of filesToHash) {
-        if (fs_1.default.existsSync(file)) {
-            const content = fs_1.default.readFileSync(file, 'utf8');
-            // Only hash dependencies, plugins, and build configuration that affects BOM
-            const relevantSections = [
-                /<dependencies>[\s\S]*?<\/dependencies>/g,
-                /<dependencyManagement>[\s\S]*?<\/dependencyManagement>/g,
-                /<plugins>[\s\S]*?<\/plugins>/g,
-                /<pluginManagement>[\s\S]*?<\/pluginManagement>/g
-            ];
-            let combinedContent = '';
-            for (const sectionRegex of relevantSections) {
-                const matches = content.match(sectionRegex);
-                if (matches !== null) {
-                    combinedContent += matches.join('');
-                }
-            }
-            if (combinedContent !== '') {
-                hash.update(combinedContent);
-            }
-            else {
-                // Fallback to entire file if no sections found
-                hash.update(content);
-            }
-        }
-    }
-    return hash.digest('hex').substring(0, 16);
-}
-exports.generateDependencyHash = generateDependencyHash;
 
 
 /***/ }),
@@ -56488,27 +56407,6 @@ function run() {
                     }
                     (0, core_1.endGroup)();
                 }
-                // BOM caching optimization for mavenBuild step
-                let bomCacheRestored = false;
-                if (actionCfg.stepName === 'mavenBuild' && cacheEnabled) {
-                    (0, core_1.startGroup)('BOM Cache Restoration');
-                    // Generate dependency hash for BOM cache key
-                    const dependencyHash = (0, cache_1.generateDependencyHash)();
-                    const bomCacheKey = (0, cache_1.generateBOMCacheKey)(`piper-bom-${actionCfg.stepName}`, dependencyHash);
-                    // Try to restore BOM files
-                    const bomPaths = ['target/bom-maven.xml', 'target/simple-bom-maven.xml'];
-                    const bomRestoreKeys = [
-                        (0, cache_1.generateBOMCacheKey)(`piper-bom-${actionCfg.stepName}`, ''),
-                        `piper-bom-${actionCfg.stepName}-${process.platform}-${process.arch}`
-                    ];
-                    bomCacheRestored = yield (0, cache_1.restoreBOMCache)(bomPaths, bomCacheKey, bomRestoreKeys);
-                    if (bomCacheRestored) {
-                        (0, core_1.info)('BOM files restored from cache, skipping BOM generation');
-                        // Set environment variable to potentially skip BOM generation in Piper
-                        process.env.PIPER_BOM_CACHE_RESTORED = 'true';
-                    }
-                    (0, core_1.endGroup)();
-                }
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
@@ -56516,17 +56414,6 @@ function run() {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
-                // Save BOM cache after successful mavenBuild execution
-                if (actionCfg.stepName === 'mavenBuild' && cacheEnabled && !bomCacheRestored) {
-                    (0, core_1.startGroup)('BOM Cache Save');
-                    // Generate dependency hash for BOM cache key
-                    const dependencyHash = (0, cache_1.generateDependencyHash)();
-                    const bomCacheKey = (0, cache_1.generateBOMCacheKey)(`piper-bom-${actionCfg.stepName}`, dependencyHash);
-                    // Save BOM files if they were generated
-                    const bomFiles = ['target/bom-maven.xml', 'target/simple-bom-maven.xml'];
-                    yield (0, cache_1.saveBOMCache)(bomFiles, bomCacheKey);
-                    (0, core_1.endGroup)();
-                }
                 // Save cache after successful step execution
                 if (cacheEnabled && fs.existsSync(cacheDir)) {
                     (0, core_1.startGroup)('Cache Save');
