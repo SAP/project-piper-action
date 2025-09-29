@@ -52,6 +52,10 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--name', containerID
   ]
 
+  // Check cache state from environment variables
+  const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true'
+  const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true'
+
   // Add cache directory volumes if specified
   const cacheDir = process.env.PIPER_CACHE_DIR ?? ''
   if (cacheDir !== '') {
@@ -60,10 +64,6 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     dockerRunArgs.push(
       '--volume', `${cacheDir}:/home/ubuntu/.m2`
     )
-
-    // Check if dependencies have changed by looking at cache metadata
-    const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true'
-    const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true'
 
     // Set Maven options for better performance with cached dependencies
     const mavenOpts = [
@@ -119,16 +119,22 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       '--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`
     )
 
-    // Pass force update flag to container if dependencies changed
-    if (dependenciesChanged) {
-      dockerRunArgs.push(
-        '--env', 'PIPER_MAVEN_FORCE_UPDATE=true'
-      )
-    }
-
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
     debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
     debug('Maven optimized for cached dependencies')
+  }
+
+  // Always pass cache state environment variables to container for Piper to read
+  dockerRunArgs.push(
+    '--env', `PIPER_CACHE_RESTORED=${cacheRestored ? 'true' : 'false'}`,
+    '--env', `PIPER_DEPENDENCIES_CHANGED=${dependenciesChanged ? 'true' : 'false'}`
+  )
+
+  // Pass force update flag to container if dependencies changed
+  if (dependenciesChanged) {
+    dockerRunArgs.push(
+      '--env', 'PIPER_MAVEN_FORCE_UPDATE=true'
+    )
   }
 
   const networkID = internalActionVariables.sidecarNetworkID

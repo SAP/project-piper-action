@@ -55518,15 +55518,15 @@ function startContainer(actionCfg, ctxConfig) {
             ...dockerOptionsArray,
             '--name', containerID
         ];
+        // Check cache state from environment variables
+        const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true';
+        const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true';
         // Add cache directory volumes if specified
         const cacheDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : '';
         if (cacheDir !== '') {
             // Mount cache directory for Maven repository only
             // The repository subdirectory contains the actual Maven artifacts
             dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
-            // Check if dependencies have changed by looking at cache metadata
-            const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true';
-            const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true';
             // Set Maven options for better performance with cached dependencies
             const mavenOpts = [
                 // Parallel artifact resolution
@@ -55576,13 +55576,15 @@ function startContainer(actionCfg, ctxConfig) {
                 (0, core_1.info)('Maven running in ONLINE mode - will download missing dependencies');
             }
             dockerRunArgs.push('--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`);
-            // Pass force update flag to container if dependencies changed
-            if (dependenciesChanged) {
-                dockerRunArgs.push('--env', 'PIPER_MAVEN_FORCE_UPDATE=true');
-            }
             (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
             (0, core_1.debug)(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`);
             (0, core_1.debug)('Maven optimized for cached dependencies');
+        }
+        // Always pass cache state environment variables to container for Piper to read
+        dockerRunArgs.push('--env', `PIPER_CACHE_RESTORED=${cacheRestored ? 'true' : 'false'}`, '--env', `PIPER_DEPENDENCIES_CHANGED=${dependenciesChanged ? 'true' : 'false'}`);
+        // Pass force update flag to container if dependencies changed
+        if (dependenciesChanged) {
+            dockerRunArgs.push('--env', 'PIPER_MAVEN_FORCE_UPDATE=true');
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
