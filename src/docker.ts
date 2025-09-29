@@ -47,7 +47,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--memory', '4g',
     '--cpus', '2.0',
     '--shm-size', '1g', // Increase shared memory for parallel compilation
-    '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g', // Fast temporary filesystem
+    '--tmpfs', '/tmp:rw,nosuid,size=1g', // Fast temporary filesystem
     ...dockerOptionsArray,
     '--name', containerID
   ]

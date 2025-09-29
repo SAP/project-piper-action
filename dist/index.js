@@ -55514,7 +55514,7 @@ function startContainer(actionCfg, ctxConfig) {
             '--memory', '4g',
             '--cpus', '2.0',
             '--shm-size', '1g',
-            '--tmpfs', '/tmp:rw,noexec,nosuid,size=1g',
+            '--tmpfs', '/tmp:rw,nosuid,size=1g',
             ...dockerOptionsArray,
             '--name', containerID
         ];
