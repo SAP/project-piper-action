@@ -107,11 +107,11 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
       info('Maven running in OFFLINE mode - using cached dependencies only')
     } else if (dependenciesChanged) {
       mavenOpts.push(
-        // Force update dependencies when changes detected
-        '-U',
-        // Update snapshots
+        // Update snapshots when dependencies changed
         '-Dmaven.snapshot.updatePolicy=always'
       )
+      // Set environment variable to signal Maven command should use -U flag
+      process.env.PIPER_MAVEN_FORCE_UPDATE = 'true'
       info('Dependencies changed - Maven will re-download and update cache')
     } else {
       info('Maven running in ONLINE mode - will download missing dependencies')
@@ -120,6 +120,13 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     dockerRunArgs.push(
       '--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`
     )
+
+    // Pass force update flag to container if dependencies changed
+    if (dependenciesChanged) {
+      dockerRunArgs.push(
+        '--env', 'PIPER_MAVEN_FORCE_UPDATE=true'
+      )
+    }
 
     debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
     debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
