@@ -97,6 +97,10 @@ export async function run (): Promise<void> {
           info(`Attempting dependency cache restore with key: ${cacheKey}`)
           const beforeRestore = Date.now()
 
+          // Check cache directory before restore
+          const beforeCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+          debug(`Cache directory before restore - exists: ${fs.existsSync(cacheDir)}, populated: ${beforeCacheExists}`)
+
           await restoreDependencyCache({
             enabled: true,
             paths: [cacheDir],
@@ -108,16 +112,18 @@ export async function run (): Promise<void> {
           const restoreTime = afterRestore - beforeRestore
 
           // Check if cache was actually restored by looking at cache directory contents
-          const cacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+          const afterCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+          const cacheRestored = afterCacheExists && !beforeCacheExists
 
           // Set environment variables for Maven offline mode decision
-          process.env.PIPER_CACHE_RESTORED = cacheExists ? 'true' : 'false'
-          process.env.PIPER_DEPENDENCIES_CHANGED = cacheExists ? 'false' : 'true'
+          process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false'
+          process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true'
 
           debug(`Cache restore completed in ${restoreTime}ms`)
-          debug(`Cache directory exists and populated: ${cacheExists}`)
+          debug(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${afterCacheExists}`)
+          debug(`Cache was restored: ${cacheRestored}`)
 
-          if (cacheExists) {
+          if (cacheRestored) {
             info('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode')
           } else {
             info('❌ Dependencies cache MISS - Maven will download dependencies')
@@ -152,8 +158,11 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
-      // Save cache after successful step execution
-      if (cacheEnabled && fs.existsSync(cacheDir)) {
+      // Save cache after successful step execution - only if cache wasn't restored and directory has content
+      const cacheWasRestored = process.env.PIPER_CACHE_RESTORED === 'true'
+      const cacheDirHasContent = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+
+      if (cacheEnabled && cacheDirHasContent && !cacheWasRestored) {
         startGroup('Cache Save')
 
         // Use same dependency-aware cache key for save as restore
@@ -164,12 +173,17 @@ export async function run (): Promise<void> {
           : generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
 
         info(`Saving dependencies cache with key: ${cacheKey}`)
+        debug(`Cache directory has ${fs.readdirSync(cacheDir).length} items`)
         await saveDependencyCache({
           enabled: true,
           paths: [cacheDir],
           key: cacheKey
         })
         endGroup()
+      } else if (cacheWasRestored) {
+        info('Cache was restored - skipping cache save to avoid conflicts')
+      } else if (!cacheDirHasContent) {
+        info('Cache directory is empty - skipping cache save')
       }
     }
 

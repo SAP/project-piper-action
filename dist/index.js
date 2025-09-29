@@ -56366,6 +56366,9 @@ function run() {
                         ];
                         (0, core_1.info)(`Attempting dependency cache restore with key: ${cacheKey}`);
                         const beforeRestore = Date.now();
+                        // Check cache directory before restore
+                        const beforeCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+                        (0, core_1.debug)(`Cache directory before restore - exists: ${fs.existsSync(cacheDir)}, populated: ${beforeCacheExists}`);
                         yield (0, cache_1.restoreDependencyCache)({
                             enabled: true,
                             paths: [cacheDir],
@@ -56375,13 +56378,15 @@ function run() {
                         const afterRestore = Date.now();
                         const restoreTime = afterRestore - beforeRestore;
                         // Check if cache was actually restored by looking at cache directory contents
-                        const cacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+                        const afterCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+                        const cacheRestored = afterCacheExists && !beforeCacheExists;
                         // Set environment variables for Maven offline mode decision
-                        process.env.PIPER_CACHE_RESTORED = cacheExists ? 'true' : 'false';
-                        process.env.PIPER_DEPENDENCIES_CHANGED = cacheExists ? 'false' : 'true';
+                        process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false';
+                        process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true';
                         (0, core_1.debug)(`Cache restore completed in ${restoreTime}ms`);
-                        (0, core_1.debug)(`Cache directory exists and populated: ${cacheExists}`);
-                        if (cacheExists) {
+                        (0, core_1.debug)(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${afterCacheExists}`);
+                        (0, core_1.debug)(`Cache was restored: ${cacheRestored}`);
+                        if (cacheRestored) {
                             (0, core_1.info)('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode');
                         }
                         else {
@@ -56414,8 +56419,10 @@ function run() {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
-                // Save cache after successful step execution
-                if (cacheEnabled && fs.existsSync(cacheDir)) {
+                // Save cache after successful step execution - only if cache wasn't restored and directory has content
+                const cacheWasRestored = process.env.PIPER_CACHE_RESTORED === 'true';
+                const cacheDirHasContent = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
+                if (cacheEnabled && cacheDirHasContent && !cacheWasRestored) {
                     (0, core_1.startGroup)('Cache Save');
                     // Use same dependency-aware cache key for save as restore
                     const dependencyFiles = ['pom.xml'];
@@ -56424,12 +56431,19 @@ function run() {
                         ? (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
                         : (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
                     (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
+                    (0, core_1.debug)(`Cache directory has ${fs.readdirSync(cacheDir).length} items`);
                     yield (0, cache_1.saveDependencyCache)({
                         enabled: true,
                         paths: [cacheDir],
                         key: cacheKey
                     });
                     (0, core_1.endGroup)();
+                }
+                else if (cacheWasRestored) {
+                    (0, core_1.info)('Cache was restored - skipping cache save to avoid conflicts');
+                }
+                else if (!cacheDirHasContent) {
+                    (0, core_1.info)('Cache directory is empty - skipping cache save');
                 }
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
