@@ -56411,15 +56411,10 @@ function run() {
                     else {
                         // No dependency files found, use stable key
                         const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
-                        const restoreKeys = [
-                            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
-                            `piper-deps-${actionCfg.stepName}-`
-                        ];
                         yield (0, cache_1.restoreDependencyCache)({
                             enabled: true,
                             paths: [cacheDir],
-                            key: cacheKey,
-                            restoreKeys
+                            key: cacheKey
                         });
                         // Default to online mode for non-Maven projects
                         process.env.PIPER_CACHE_RESTORED = 'false';

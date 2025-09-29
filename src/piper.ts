@@ -145,15 +145,10 @@ export async function run (): Promise<void> {
         } else {
           // No dependency files found, use stable key
           const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
-          const restoreKeys: string[] = [
-            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
-            `piper-deps-${actionCfg.stepName}-`
-          ]
           await restoreDependencyCache({
             enabled: true,
             paths: [cacheDir],
-            key: cacheKey,
-            restoreKeys
+            key: cacheKey
           })
 
           // Default to online mode for non-Maven projects
