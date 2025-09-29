@@ -86,15 +86,10 @@ export async function run (): Promise<void> {
         const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
 
         if (existingDepFiles.length > 0) {
-          // Use dependency-aware cache key with git SHA for uniqueness
-          const gitSha = process.env.GITHUB_SHA?.substring(0, 8) ?? 'unknown'
-          const baseCacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
-          const cacheKey: string = `${baseCacheKey}-${gitSha}`
-          const restoreKeys: string[] = [
-            baseCacheKey, // try exact dependency match first
-            generateCacheKey(`piper-deps-${actionCfg.stepName}`, []), // fallback without hash
-            `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
-            `piper-deps-${actionCfg.stepName}-`
+          // Use dependency-aware cache key based only on dependencies hash
+          const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+          const restoreKeys = [
+            generateCacheKey(`piper-deps-${actionCfg.stepName}`, []) // fallback without hash
           ]
 
           info(`Attempting dependency cache restore with key: ${cacheKey}`)
@@ -115,15 +110,14 @@ export async function run (): Promise<void> {
           const restoreTime = afterRestore - beforeRestore
 
           // Check if cache was actually restored by looking at cache directory contents
-          const afterCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
-          const cacheRestored = afterCacheExists && !beforeCacheExists
+          const cacheRestored = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0 && !beforeCacheExists
 
           // Set environment variables for Maven offline mode decision
           process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false'
           process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true'
 
           debug(`Cache restore completed in ${restoreTime}ms`)
-          debug(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${afterCacheExists}`)
+          debug(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0}`)
           debug(`Cache was restored: ${cacheRestored}`)
 
           if (cacheRestored) {
@@ -171,14 +165,13 @@ export async function run (): Promise<void> {
         // Use same dependency-aware cache key for save as restore
         const dependencyFiles = ['pom.xml']
         const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
-        const gitSha = process.env.GITHUB_SHA?.substring(0, 8) ?? 'unknown'
-        const baseCacheKey = existingDepFiles.length > 0
+        const cacheKey = existingDepFiles.length > 0
           ? generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
           : generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
-        const cacheKey = `${baseCacheKey}-${gitSha}`
 
         info(`Saving dependencies cache with key: ${cacheKey}`)
         debug(`Cache directory has ${fs.readdirSync(cacheDir).length} items`)
+
         await saveDependencyCache({
           enabled: true,
           paths: [cacheDir],
