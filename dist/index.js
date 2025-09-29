@@ -55531,8 +55531,6 @@ function startContainer(actionCfg, ctxConfig) {
             const mavenOpts = [
                 // Parallel artifact resolution
                 '-Dmaven.artifact.threads=10',
-                // Suppress transfer logging for cleaner output
-                '-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn',
                 // JVM performance optimizations
                 '-Xmx2g',
                 '-Xms1g',
