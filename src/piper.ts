@@ -86,9 +86,12 @@ export async function run (): Promise<void> {
         const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
 
         if (existingDepFiles.length > 0) {
-          // Use dependency-aware cache key
-          const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+          // Use dependency-aware cache key with git SHA for uniqueness
+          const gitSha = process.env.GITHUB_SHA?.substring(0, 8) ?? 'unknown'
+          const baseCacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
+          const cacheKey: string = `${baseCacheKey}-${gitSha}`
           const restoreKeys: string[] = [
+            baseCacheKey, // try exact dependency match first
             generateCacheKey(`piper-deps-${actionCfg.stepName}`, []), // fallback without hash
             `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
             `piper-deps-${actionCfg.stepName}-`
@@ -168,9 +171,11 @@ export async function run (): Promise<void> {
         // Use same dependency-aware cache key for save as restore
         const dependencyFiles = ['pom.xml']
         const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
-        const cacheKey = existingDepFiles.length > 0
+        const gitSha = process.env.GITHUB_SHA?.substring(0, 8) ?? 'unknown'
+        const baseCacheKey = existingDepFiles.length > 0
           ? generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
           : generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
+        const cacheKey = `${baseCacheKey}-${gitSha}`
 
         info(`Saving dependencies cache with key: ${cacheKey}`)
         debug(`Cache directory has ${fs.readdirSync(cacheDir).length} items`)

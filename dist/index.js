@@ -56311,6 +56311,7 @@ exports.internalActionVariables = {
     sidecarContainerID: ''
 };
 function run() {
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         try {
             (0, core_1.startGroup)('Setup');
@@ -56357,9 +56358,12 @@ function run() {
                     const dependencyFiles = ['pom.xml'];
                     const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
                     if (existingDepFiles.length > 0) {
-                        // Use dependency-aware cache key
-                        const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles);
+                        // Use dependency-aware cache key with git SHA for uniqueness
+                        const gitSha = (_b = (_a = process.env.GITHUB_SHA) === null || _a === void 0 ? void 0 : _a.substring(0, 8)) !== null && _b !== void 0 ? _b : 'unknown';
+                        const baseCacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles);
+                        const cacheKey = `${baseCacheKey}-${gitSha}`;
                         const restoreKeys = [
+                            baseCacheKey,
                             (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []),
                             `piper-deps-${actionCfg.stepName}-${process.platform}-${process.arch}-`,
                             `piper-deps-${actionCfg.stepName}-`
@@ -56427,9 +56431,11 @@ function run() {
                     // Use same dependency-aware cache key for save as restore
                     const dependencyFiles = ['pom.xml'];
                     const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
-                    const cacheKey = existingDepFiles.length > 0
+                    const gitSha = (_d = (_c = process.env.GITHUB_SHA) === null || _c === void 0 ? void 0 : _c.substring(0, 8)) !== null && _d !== void 0 ? _d : 'unknown';
+                    const baseCacheKey = existingDepFiles.length > 0
                         ? (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
                         : (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
+                    const cacheKey = `${baseCacheKey}-${gitSha}`;
                     (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
                     (0, core_1.debug)(`Cache directory has ${fs.readdirSync(cacheDir).length} items`);
                     yield (0, cache_1.saveDependencyCache)({
