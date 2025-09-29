@@ -88,9 +88,6 @@ export async function run (): Promise<void> {
         if (existingDepFiles.length > 0) {
           // Use dependency-aware cache key based only on dependencies hash
           const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
-          const restoreKeys = [
-            generateCacheKey(`piper-deps-${actionCfg.stepName}`, []) // fallback without hash
-          ]
 
           info(`Attempting dependency cache restore with key: ${cacheKey}`)
           const beforeRestore = Date.now()
@@ -102,8 +99,7 @@ export async function run (): Promise<void> {
           await restoreDependencyCache({
             enabled: true,
             paths: [cacheDir],
-            key: cacheKey,
-            restoreKeys
+            key: cacheKey
           })
 
           const afterRestore = Date.now()
@@ -111,6 +107,27 @@ export async function run (): Promise<void> {
 
           // Check if cache was actually restored by looking at cache directory contents
           const cacheRestored = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0 && !beforeCacheExists
+
+          // On cache miss, ensure clean state by removing any stale cache data
+          if (!cacheRestored && fs.existsSync(cacheDir)) {
+            const cacheContents = fs.readdirSync(cacheDir)
+            if (cacheContents.length > 0) {
+              info('🧹 Cleaning stale cache data for fresh dependency download')
+              // Remove all contents but keep the directory
+              cacheContents.forEach(item => {
+                const itemPath = `${cacheDir}/${item}`
+                try {
+                  if (fs.statSync(itemPath).isDirectory()) {
+                    fs.rmSync(itemPath, { recursive: true })
+                  } else {
+                    fs.unlinkSync(itemPath)
+                  }
+                } catch (error) {
+                  debug(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`)
+                }
+              })
+            }
+          }
 
           // Set environment variables for Maven offline mode decision
           process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false'
@@ -123,7 +140,7 @@ export async function run (): Promise<void> {
           if (cacheRestored) {
             info('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode')
           } else {
-            info('❌ Dependencies cache MISS - Maven will download dependencies')
+            info('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh')
           }
         } else {
           // No dependency files found, use stable key
