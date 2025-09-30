@@ -55034,7 +55034,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
+exports.restoreCachedDependencies = exports.saveCachedDependencies = exports.getHashFiles = exports.generateCacheKey = exports.restoreDependencyCache = exports.saveDependencyCache = void 0;
 const core_1 = __nccwpck_require__(42186);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const cache_1 = __nccwpck_require__(27799);
@@ -55068,8 +55068,8 @@ function restoreDependencyCache(cacheConfig) {
             (0, core_1.debug)('Dependency caching is disabled or no paths specified');
             return;
         }
+        (0, core_1.info)(`Attempting to restore cache with key: ${cacheConfig.key}`);
         try {
-            (0, core_1.info)(`Attempting to restore cache with key: ${cacheConfig.key}`);
             const cacheKey = yield (0, cache_1.restoreCache)(cacheConfig.paths, cacheConfig.key, cacheConfig.restoreKeys);
             (0, core_1.info)(cacheKey !== undefined ? `Cache restored from key: ${cacheKey}` : 'Cache not found');
         }
@@ -55081,32 +55081,139 @@ function restoreDependencyCache(cacheConfig) {
 exports.restoreDependencyCache = restoreDependencyCache;
 function generateCacheKey(baseName, hashFiles) {
     let key = `${baseName}-${process.platform}-${process.arch}`;
-    if (hashFiles !== undefined && hashFiles.length > 0) {
-        const hash = crypto_1.default.createHash('sha256');
-        for (const file of hashFiles) {
-            if (fs_1.default.existsSync(file)) {
-                let content = fs_1.default.readFileSync(file, 'utf8');
-                // For pom.xml, only hash the dependencies section to avoid cache misses
-                // from unrelated changes like version bumps, descriptions, etc.
-                if (file.endsWith('pom.xml')) {
-                    const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
-                    if (dependenciesMatch !== null) {
-                        content = dependenciesMatch.join('');
-                    }
-                }
-                hash.update(content);
+    if (hashFiles === undefined || hashFiles.length === 0) {
+        return key;
+    }
+    const hash = crypto_1.default.createHash('sha256');
+    for (const file of hashFiles) {
+        if (!fs_1.default.existsSync(file))
+            continue;
+        let content = fs_1.default.readFileSync(file, 'utf8');
+        // For pom.xml, only hash the dependencies section to avoid cache misses
+        // from unrelated changes like version bumps, descriptions, etc.
+        if (file.endsWith('pom.xml')) {
+            const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
+            if (dependenciesMatch !== null) {
+                content = dependenciesMatch.join('');
             }
         }
-        key += `-${hash.digest('hex').substring(0, 16)}`;
+        hash.update(content);
     }
+    key += `-${hash.digest('hex').substring(0, 16)}`;
     return key;
 }
 exports.generateCacheKey = generateCacheKey;
 function getHashFiles() {
-    const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'Gemfile'];
+    const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'go.mod'];
     return dependencyFiles.filter(file => fs_1.default.existsSync(file));
 }
 exports.getHashFiles = getHashFiles;
+function saveCachedDependencies(stepName, cacheDir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Save cache after successful step execution - only if cache wasn't restored and directory has content
+        const cacheDirHasContent = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0;
+        if (process.env.PIPER_CACHE_RESTORED === 'true') {
+            (0, core_1.info)('Cache was restored - skipping cache save to avoid conflicts');
+            return;
+        }
+        if (!cacheDirHasContent) {
+            (0, core_1.info)('Cache directory is empty - skipping cache save');
+            return;
+        }
+        (0, core_1.startGroup)('Cache Save');
+        // Use same dependency-aware cache key for save as restore
+        const dependencyFiles = ['pom.xml'];
+        const existingDepFiles = dependencyFiles.filter(file => fs_1.default.existsSync(file));
+        const cacheKey = existingDepFiles.length > 0
+            ? generateCacheKey(`piper-deps-${stepName}`, existingDepFiles)
+            : generateCacheKey(`piper-deps-${stepName}`, []);
+        (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
+        (0, core_1.debug)(`Cache directory has ${fs_1.default.readdirSync(cacheDir).length} items`);
+        yield saveDependencyCache({
+            enabled: true,
+            paths: [cacheDir],
+            key: cacheKey
+        });
+        (0, core_1.endGroup)();
+    });
+}
+exports.saveCachedDependencies = saveCachedDependencies;
+function restoreCachedDependencies(stepName, cacheDir) {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.startGroup)('Cache Restoration');
+        // Create cache directory if it doesn't exist
+        if (!fs_1.default.existsSync(cacheDir)) {
+            fs_1.default.mkdirSync(cacheDir, { recursive: true });
+        }
+        // Set the cache directory environment variable for docker volume mounting
+        process.env.PIPER_CACHE_DIR = cacheDir;
+        // Generate dependency-aware cache key based on pom.xml dependencies
+        const dependencyFiles = ['pom.xml'];
+        const existingDepFiles = dependencyFiles.filter(file => fs_1.default.existsSync(file));
+        if (existingDepFiles.length > 0) {
+            // Use dependency-aware cache key based only on dependencies hash
+            const cacheKey = generateCacheKey(`piper-deps-${stepName}`, existingDepFiles);
+            (0, core_1.info)(`Attempting dependency cache restore with key: ${cacheKey}`);
+            // Check cache directory before restore
+            const beforeCacheExists = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0;
+            (0, core_1.debug)(`Cache directory before restore - exists: ${fs_1.default.existsSync(cacheDir)}, populated: ${beforeCacheExists}`);
+            yield restoreDependencyCache({
+                enabled: true,
+                paths: [cacheDir],
+                key: cacheKey
+            });
+            // Check if cache was actually restored by looking at cache directory contents
+            const cacheRestored = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0 && !beforeCacheExists;
+            // On cache miss, ensure clean state by removing any stale cache data
+            if (!cacheRestored && fs_1.default.existsSync(cacheDir)) {
+                const cacheContents = fs_1.default.readdirSync(cacheDir);
+                if (cacheContents.length > 0) {
+                    (0, core_1.info)('🧹 Cleaning stale cache data for fresh dependency download');
+                    // Remove all contents but keep the directory
+                    cacheContents.forEach(item => {
+                        const itemPath = `${cacheDir}/${item}`;
+                        try {
+                            if (fs_1.default.statSync(itemPath).isDirectory()) {
+                                fs_1.default.rmSync(itemPath, { recursive: true });
+                            }
+                            else {
+                                fs_1.default.unlinkSync(itemPath);
+                            }
+                        }
+                        catch (error) {
+                            (0, core_1.debug)(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`);
+                        }
+                    });
+                }
+            }
+            // Set environment variables for Maven offline mode decision
+            process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false';
+            process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true';
+            (0, core_1.debug)(`Cache directory after restore - exists: ${fs_1.default.existsSync(cacheDir)}, populated: ${fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0}`);
+            (0, core_1.debug)(`Cache was restored: ${cacheRestored}`);
+            if (cacheRestored) {
+                (0, core_1.info)('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode');
+            }
+            else {
+                (0, core_1.info)('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh');
+            }
+        }
+        else {
+            // No dependency files found, use stable key
+            const cacheKey = generateCacheKey(`piper-deps-${stepName}`, []);
+            yield restoreDependencyCache({
+                enabled: true,
+                paths: [cacheDir],
+                key: cacheKey
+            });
+            // Default to online mode for non-Maven projects
+            process.env.PIPER_CACHE_RESTORED = 'false';
+            process.env.PIPER_DEPENDENCIES_CHANGED = 'false';
+        }
+        (0, core_1.endGroup)();
+    });
+}
+exports.restoreCachedDependencies = restoreCachedDependencies;
 
 
 /***/ }),
@@ -56257,29 +56364,6 @@ exports.exportPipelineEnv = exportPipelineEnv;
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -56293,7 +56377,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(42186);
 const github_1 = __nccwpck_require__(70978);
-const fs = __importStar(__nccwpck_require__(57147));
+const fs_1 = __nccwpck_require__(57147);
 const execute_1 = __nccwpck_require__(5938);
 const cache_1 = __nccwpck_require__(64810);
 const config_1 = __nccwpck_require__(96373);
@@ -56341,86 +56425,12 @@ function run() {
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 (0, core_1.endGroup)();
                 // Setup cache directory for dependencies
-                const cacheEnabled = true; // enable by default for testing -> process.env.PIPER_ENABLE_CACHE === 'true'
+                const cacheEnabled = process.env.PIPER_ENABLE_CACHE !== 'false';
                 const cacheDir = process.env.RUNNER_TEMP !== undefined
                     ? `${process.env.RUNNER_TEMP}/piper-cache`
                     : '/tmp/piper-cache';
                 if (cacheEnabled) {
-                    (0, core_1.startGroup)('Cache Restoration');
-                    // Create cache directory if it doesn't exist
-                    if (!fs.existsSync(cacheDir)) {
-                        fs.mkdirSync(cacheDir, { recursive: true });
-                    }
-                    // Set the cache directory environment variable for docker volume mounting
-                    process.env.PIPER_CACHE_DIR = cacheDir;
-                    // Generate dependency-aware cache key based on pom.xml dependencies
-                    const dependencyFiles = ['pom.xml'];
-                    const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
-                    if (existingDepFiles.length > 0) {
-                        // Use dependency-aware cache key based only on dependencies hash
-                        const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles);
-                        (0, core_1.info)(`Attempting dependency cache restore with key: ${cacheKey}`);
-                        const beforeRestore = Date.now();
-                        // Check cache directory before restore
-                        const beforeCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
-                        (0, core_1.debug)(`Cache directory before restore - exists: ${fs.existsSync(cacheDir)}, populated: ${beforeCacheExists}`);
-                        yield (0, cache_1.restoreDependencyCache)({
-                            enabled: true,
-                            paths: [cacheDir],
-                            key: cacheKey
-                        });
-                        const afterRestore = Date.now();
-                        const restoreTime = afterRestore - beforeRestore;
-                        // Check if cache was actually restored by looking at cache directory contents
-                        const cacheRestored = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0 && !beforeCacheExists;
-                        // On cache miss, ensure clean state by removing any stale cache data
-                        if (!cacheRestored && fs.existsSync(cacheDir)) {
-                            const cacheContents = fs.readdirSync(cacheDir);
-                            if (cacheContents.length > 0) {
-                                (0, core_1.info)('🧹 Cleaning stale cache data for fresh dependency download');
-                                // Remove all contents but keep the directory
-                                cacheContents.forEach(item => {
-                                    const itemPath = `${cacheDir}/${item}`;
-                                    try {
-                                        if (fs.statSync(itemPath).isDirectory()) {
-                                            fs.rmSync(itemPath, { recursive: true });
-                                        }
-                                        else {
-                                            fs.unlinkSync(itemPath);
-                                        }
-                                    }
-                                    catch (error) {
-                                        (0, core_1.debug)(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`);
-                                    }
-                                });
-                            }
-                        }
-                        // Set environment variables for Maven offline mode decision
-                        process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false';
-                        process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true';
-                        (0, core_1.debug)(`Cache restore completed in ${restoreTime}ms`);
-                        (0, core_1.debug)(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0}`);
-                        (0, core_1.debug)(`Cache was restored: ${cacheRestored}`);
-                        if (cacheRestored) {
-                            (0, core_1.info)('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode');
-                        }
-                        else {
-                            (0, core_1.info)('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh');
-                        }
-                    }
-                    else {
-                        // No dependency files found, use stable key
-                        const cacheKey = (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
-                        yield (0, cache_1.restoreDependencyCache)({
-                            enabled: true,
-                            paths: [cacheDir],
-                            key: cacheKey
-                        });
-                        // Default to online mode for non-Maven projects
-                        process.env.PIPER_CACHE_RESTORED = 'false';
-                        process.env.PIPER_DEPENDENCIES_CHANGED = 'false';
-                    }
-                    (0, core_1.endGroup)();
+                    yield (0, cache_1.restoreCachedDependencies)(actionCfg.stepName, cacheDir);
                 }
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.startGroup)(actionCfg.stepName);
@@ -56429,31 +56439,9 @@ function run() {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
-                // Save cache after successful step execution - only if cache wasn't restored and directory has content
-                const cacheWasRestored = process.env.PIPER_CACHE_RESTORED === 'true';
-                const cacheDirHasContent = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0;
-                if (cacheEnabled && cacheDirHasContent && !cacheWasRestored) {
-                    (0, core_1.startGroup)('Cache Save');
-                    // Use same dependency-aware cache key for save as restore
-                    const dependencyFiles = ['pom.xml'];
-                    const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file));
-                    const cacheKey = existingDepFiles.length > 0
-                        ? (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
-                        : (0, cache_1.generateCacheKey)(`piper-deps-${actionCfg.stepName}`, []);
-                    (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
-                    (0, core_1.debug)(`Cache directory has ${fs.readdirSync(cacheDir).length} items`);
-                    yield (0, cache_1.saveDependencyCache)({
-                        enabled: true,
-                        paths: [cacheDir],
-                        key: cacheKey
-                    });
-                    (0, core_1.endGroup)();
-                }
-                else if (cacheWasRestored) {
-                    (0, core_1.info)('Cache was restored - skipping cache save to avoid conflicts');
-                }
-                else if (!cacheDirHasContent) {
-                    (0, core_1.info)('Cache directory is empty - skipping cache save');
+                if (cacheEnabled) {
+                    // Save cache after successful step execution - only if cache wasn't restored and directory has content
+                    yield (0, cache_1.saveCachedDependencies)(actionCfg.stepName, cacheDir);
                 }
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
@@ -56475,7 +56463,7 @@ function preparePiperBinary(actionCfg) {
         }
         exports.internalActionVariables.piperBinPath = piperPath;
         (0, core_1.debug)('obtained piper binary at '.concat(piperPath));
-        fs.chmodSync(piperPath, 0o775);
+        (0, fs_1.chmodSync)(piperPath, 0o775);
     });
 }
 function preparePiperPath(actionCfg) {

@@ -1,8 +1,8 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import * as fs from 'fs'
+import { chmodSync } from 'fs'
 import { executePiper } from './execute'
-import { restoreDependencyCache, saveDependencyCache, generateCacheKey } from './cache'
+import { saveCachedDependencies, restoreCachedDependencies } from './cache'
 import {
   type ActionConfiguration,
   getDefaultConfig,
@@ -68,94 +68,13 @@ export async function run (): Promise<void> {
       endGroup()
 
       // Setup cache directory for dependencies
-      const cacheEnabled: boolean = true // enable by default for testing -> process.env.PIPER_ENABLE_CACHE === 'true'
+      const cacheEnabled: boolean = process.env.PIPER_ENABLE_CACHE !== 'false'
       const cacheDir: string = process.env.RUNNER_TEMP !== undefined
         ? `${process.env.RUNNER_TEMP}/piper-cache`
         : '/tmp/piper-cache'
+
       if (cacheEnabled) {
-        startGroup('Cache Restoration')
-        // Create cache directory if it doesn't exist
-        if (!fs.existsSync(cacheDir)) {
-          fs.mkdirSync(cacheDir, { recursive: true })
-        }
-        // Set the cache directory environment variable for docker volume mounting
-        process.env.PIPER_CACHE_DIR = cacheDir
-
-        // Generate dependency-aware cache key based on pom.xml dependencies
-        const dependencyFiles = ['pom.xml']
-        const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
-
-        if (existingDepFiles.length > 0) {
-          // Use dependency-aware cache key based only on dependencies hash
-          const cacheKey = generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
-
-          info(`Attempting dependency cache restore with key: ${cacheKey}`)
-          const beforeRestore = Date.now()
-
-          // Check cache directory before restore
-          const beforeCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
-          debug(`Cache directory before restore - exists: ${fs.existsSync(cacheDir)}, populated: ${beforeCacheExists}`)
-
-          await restoreDependencyCache({
-            enabled: true,
-            paths: [cacheDir],
-            key: cacheKey
-          })
-
-          const afterRestore = Date.now()
-          const restoreTime = afterRestore - beforeRestore
-
-          // Check if cache was actually restored by looking at cache directory contents
-          const cacheRestored = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0 && !beforeCacheExists
-
-          // On cache miss, ensure clean state by removing any stale cache data
-          if (!cacheRestored && fs.existsSync(cacheDir)) {
-            const cacheContents = fs.readdirSync(cacheDir)
-            if (cacheContents.length > 0) {
-              info('🧹 Cleaning stale cache data for fresh dependency download')
-              // Remove all contents but keep the directory
-              cacheContents.forEach(item => {
-                const itemPath = `${cacheDir}/${item}`
-                try {
-                  if (fs.statSync(itemPath).isDirectory()) {
-                    fs.rmSync(itemPath, { recursive: true })
-                  } else {
-                    fs.unlinkSync(itemPath)
-                  }
-                } catch (error) {
-                  debug(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`)
-                }
-              })
-            }
-          }
-
-          // Set environment variables for Maven offline mode decision
-          process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false'
-          process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true'
-
-          debug(`Cache restore completed in ${restoreTime}ms`)
-          debug(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0}`)
-          debug(`Cache was restored: ${cacheRestored}`)
-
-          if (cacheRestored) {
-            info('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode')
-          } else {
-            info('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh')
-          }
-        } else {
-          // No dependency files found, use stable key
-          const cacheKey: string = generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
-          await restoreDependencyCache({
-            enabled: true,
-            paths: [cacheDir],
-            key: cacheKey
-          })
-
-          // Default to online mode for non-Maven projects
-          process.env.PIPER_CACHE_RESTORED = 'false'
-          process.env.PIPER_DEPENDENCIES_CHANGED = 'false'
-        }
-        endGroup()
+        await restoreCachedDependencies(actionCfg.stepName, cacheDir)
       }
 
       await runContainers(actionCfg, contextConfig)
@@ -167,33 +86,9 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
-      // Save cache after successful step execution - only if cache wasn't restored and directory has content
-      const cacheWasRestored = process.env.PIPER_CACHE_RESTORED === 'true'
-      const cacheDirHasContent = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
-
-      if (cacheEnabled && cacheDirHasContent && !cacheWasRestored) {
-        startGroup('Cache Save')
-
-        // Use same dependency-aware cache key for save as restore
-        const dependencyFiles = ['pom.xml']
-        const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
-        const cacheKey = existingDepFiles.length > 0
-          ? generateCacheKey(`piper-deps-${actionCfg.stepName}`, existingDepFiles)
-          : generateCacheKey(`piper-deps-${actionCfg.stepName}`, [])
-
-        info(`Saving dependencies cache with key: ${cacheKey}`)
-        debug(`Cache directory has ${fs.readdirSync(cacheDir).length} items`)
-
-        await saveDependencyCache({
-          enabled: true,
-          paths: [cacheDir],
-          key: cacheKey
-        })
-        endGroup()
-      } else if (cacheWasRestored) {
-        info('Cache was restored - skipping cache save to avoid conflicts')
-      } else if (!cacheDirHasContent) {
-        info('Cache directory is empty - skipping cache save')
+      if (cacheEnabled) {
+        // Save cache after successful step execution - only if cache wasn't restored and directory has content
+        await saveCachedDependencies(actionCfg.stepName, cacheDir)
       }
     }
 
@@ -214,7 +109,7 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 
   internalActionVariables.piperBinPath = piperPath
   debug('obtained piper binary at '.concat(piperPath))
-  fs.chmodSync(piperPath, 0o775)
+  chmodSync(piperPath, 0o775)
 }
 
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
