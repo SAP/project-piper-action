@@ -55016,6 +55016,314 @@ function getVersionName(commitISH) {
 
 /***/ }),
 
+/***/ 59959:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BuildToolManager = exports.GoBuildTool = exports.GradleBuildTool = exports.PipBuildTool = exports.PnpmBuildTool = exports.NpmBuildTool = exports.MavenBuildTool = void 0;
+const fs_1 = __importDefault(__nccwpck_require__(57147));
+const core_1 = __nccwpck_require__(42186);
+class BaseBuildTool {
+    detectTool() {
+        return this.dependencyFiles.some(file => fs_1.default.existsSync(file));
+    }
+    getDependencyFiles() {
+        return this.dependencyFiles.filter(file => fs_1.default.existsSync(file));
+    }
+    extractDependencyContent(filePath) {
+        if (!fs_1.default.existsSync(filePath))
+            return '';
+        return fs_1.default.readFileSync(filePath, 'utf8');
+    }
+    getCacheEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        return {
+            PIPER_CACHE_RESTORED: cacheRestored ? 'true' : 'false',
+            PIPER_DEPENDENCIES_CHANGED: dependenciesChanged ? 'true' : 'false'
+        };
+    }
+}
+class MavenBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'maven';
+        this.dependencyFiles = ['pom.xml'];
+        this.cachePath = '.m2';
+        this.dockerMountPath = '/home/ubuntu/.m2';
+    }
+    extractDependencyContent(filePath) {
+        if (!fs_1.default.existsSync(filePath))
+            return '';
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        if (filePath.endsWith('pom.xml')) {
+            const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
+            if (dependenciesMatch !== null) {
+                return dependenciesMatch.join('');
+            }
+        }
+        return content;
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        const mavenOpts = [
+            '-Dmaven.artifact.threads=10',
+            '-Xmx2g',
+            '-Xms1g',
+            '-XX:+UseG1GC',
+            '-XX:+UseStringDeduplication',
+            '-Dmvnd.enabled=true',
+            '-Dmaven.compiler.useIncrementalCompilation=true',
+            '-Dmaven.test.parallel=all',
+            '-Dmaven.test.perCoreThreadCount=2',
+            '-Dmaven.repo.local.recordReverseTree=true',
+            '-Dmaven.javadoc.skip=true',
+            '-Dmaven.source.skip=true',
+            '-Dcyclonedx.skipAttach=false',
+            '-Dcyclonedx.outputReactor=false',
+            '-Dcyclonedx.verbose=false'
+        ];
+        if (cacheRestored && !dependenciesChanged) {
+            mavenOpts.push('-Dmaven.offline=true', '-Dmaven.snapshot.updatePolicy=never', '-Dmaven.release.updatePolicy=never');
+            (0, core_1.info)('Maven running in OFFLINE mode - using cached dependencies only');
+        }
+        else if (dependenciesChanged) {
+            mavenOpts.push('-Dmaven.snapshot.updatePolicy=always');
+            envVars.push('PIPER_MAVEN_FORCE_UPDATE=true');
+            (0, core_1.info)('Dependencies changed - Maven will re-download and update cache');
+        }
+        else {
+            (0, core_1.info)('Maven running in ONLINE mode - will download missing dependencies');
+        }
+        envVars.push(`MAVEN_OPTS=${mavenOpts.join(' ')}`);
+        return envVars;
+    }
+    getCacheEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const baseVars = super.getCacheEnvironmentVariables(cacheRestored, dependenciesChanged);
+        if (dependenciesChanged) {
+            baseVars.PIPER_MAVEN_FORCE_UPDATE = 'true';
+        }
+        return baseVars;
+    }
+}
+exports.MavenBuildTool = MavenBuildTool;
+class NpmBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'npm';
+        this.dependencyFiles = ['package-lock.json', 'package.json'];
+        this.cachePath = '.npm';
+        this.dockerMountPath = '/home/ubuntu/.npm';
+    }
+    extractDependencyContent(filePath) {
+        var _a, _b, _c;
+        if (!fs_1.default.existsSync(filePath))
+            return '';
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        if (filePath.endsWith('package.json')) {
+            try {
+                const pkg = JSON.parse(content);
+                return JSON.stringify({
+                    dependencies: (_a = pkg.dependencies) !== null && _a !== void 0 ? _a : {},
+                    devDependencies: (_b = pkg.devDependencies) !== null && _b !== void 0 ? _b : {},
+                    peerDependencies: (_c = pkg.peerDependencies) !== null && _c !== void 0 ? _c : {}
+                });
+            }
+            catch (_d) {
+                return content;
+            }
+        }
+        return content;
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        if (cacheRestored && !dependenciesChanged) {
+            envVars.push('npm_config_prefer_offline=true');
+            (0, core_1.info)('npm running with prefer-offline - using cached packages when available');
+        }
+        else if (dependenciesChanged) {
+            envVars.push('npm_config_update_notifier=false');
+            (0, core_1.info)('Dependencies changed - npm will re-download and update cache');
+        }
+        envVars.push('npm_config_cache=/home/ubuntu/.npm');
+        return envVars;
+    }
+}
+exports.NpmBuildTool = NpmBuildTool;
+class PnpmBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'pnpm';
+        this.dependencyFiles = ['pnpm-lock.yaml', 'package.json'];
+        this.cachePath = '.pnpm-store';
+        this.dockerMountPath = '/home/ubuntu/.pnpm-store';
+    }
+    extractDependencyContent(filePath) {
+        var _a, _b, _c;
+        if (!fs_1.default.existsSync(filePath))
+            return '';
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        if (filePath.endsWith('package.json')) {
+            try {
+                const pkg = JSON.parse(content);
+                return JSON.stringify({
+                    dependencies: (_a = pkg.dependencies) !== null && _a !== void 0 ? _a : {},
+                    devDependencies: (_b = pkg.devDependencies) !== null && _b !== void 0 ? _b : {},
+                    peerDependencies: (_c = pkg.peerDependencies) !== null && _c !== void 0 ? _c : {}
+                });
+            }
+            catch (_d) {
+                return content;
+            }
+        }
+        return content;
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        envVars.push('PNPM_HOME=/home/ubuntu/.pnpm-store');
+        if (cacheRestored && !dependenciesChanged) {
+            envVars.push('PNPM_OFFLINE=true');
+            (0, core_1.info)('pnpm running in offline mode - using cached packages only');
+        }
+        else if (dependenciesChanged) {
+            (0, core_1.info)('Dependencies changed - pnpm will re-download and update cache');
+        }
+        return envVars;
+    }
+}
+exports.PnpmBuildTool = PnpmBuildTool;
+class PipBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'pip';
+        this.dependencyFiles = ['requirements.txt', 'requirements-dev.txt', 'setup.py', 'pyproject.toml'];
+        this.cachePath = '.cache/pip';
+        this.dockerMountPath = '/home/ubuntu/.cache/pip';
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        envVars.push('PIP_CACHE_DIR=/home/ubuntu/.cache/pip');
+        if (cacheRestored && !dependenciesChanged) {
+            envVars.push('PIP_NO_INDEX=true');
+            envVars.push('PIP_FIND_LINKS=/home/ubuntu/.cache/pip');
+            (0, core_1.info)('pip running in offline mode - using cached packages only');
+        }
+        else if (dependenciesChanged) {
+            envVars.push('PIP_FORCE_REINSTALL=true');
+            (0, core_1.info)('Dependencies changed - pip will re-download and update cache');
+        }
+        return envVars;
+    }
+}
+exports.PipBuildTool = PipBuildTool;
+class GradleBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'gradle';
+        this.dependencyFiles = ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts'];
+        this.cachePath = '.gradle';
+        this.dockerMountPath = '/home/ubuntu/.gradle';
+    }
+    extractDependencyContent(filePath) {
+        if (!fs_1.default.existsSync(filePath))
+            return '';
+        const content = fs_1.default.readFileSync(filePath, 'utf8');
+        if (filePath.includes('build.gradle')) {
+            const dependenciesMatch = content.match(/dependencies\s*{[\s\S]*?}/g);
+            if (dependenciesMatch !== null) {
+                return dependenciesMatch.join('');
+            }
+        }
+        return content;
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        const gradleOpts = [
+            '-Dorg.gradle.daemon=false',
+            '-Dorg.gradle.parallel=true',
+            '-Dorg.gradle.caching=true',
+            '-Xmx2g',
+            '-Xms1g'
+        ];
+        if (cacheRestored && !dependenciesChanged) {
+            gradleOpts.push('--offline');
+            (0, core_1.info)('Gradle running in offline mode - using cached dependencies only');
+        }
+        else if (dependenciesChanged) {
+            gradleOpts.push('--refresh-dependencies');
+            (0, core_1.info)('Dependencies changed - Gradle will re-download and update cache');
+        }
+        envVars.push(`GRADLE_OPTS=${gradleOpts.join(' ')}`);
+        envVars.push('GRADLE_USER_HOME=/home/ubuntu/.gradle');
+        return envVars;
+    }
+}
+exports.GradleBuildTool = GradleBuildTool;
+class GoBuildTool extends BaseBuildTool {
+    constructor() {
+        super(...arguments);
+        this.name = 'go';
+        this.dependencyFiles = ['go.mod', 'go.sum'];
+        this.cachePath = '.go';
+        this.dockerMountPath = '/go';
+    }
+    getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
+        const envVars = [];
+        envVars.push('GOPATH=/go');
+        envVars.push('GOCACHE=/go/build-cache');
+        if (cacheRestored && !dependenciesChanged) {
+            envVars.push('GOPROXY=off');
+            (0, core_1.info)('Go running in offline mode - using cached modules only');
+        }
+        else if (dependenciesChanged) {
+            envVars.push('GOPROXY=https://proxy.golang.org,direct');
+            (0, core_1.info)('Dependencies changed - Go will re-download and update cache');
+        }
+        return envVars;
+    }
+}
+exports.GoBuildTool = GoBuildTool;
+class BuildToolManager {
+    constructor() {
+        this.buildTools = [
+            new MavenBuildTool(),
+            new NpmBuildTool(),
+            new PnpmBuildTool(),
+            new PipBuildTool(),
+            new GradleBuildTool(),
+            new GoBuildTool()
+        ];
+    }
+    detectBuildTool() {
+        for (const tool of this.buildTools) {
+            if (tool.detectTool()) {
+                (0, core_1.debug)(`Detected build tool: ${tool.name}`);
+                return tool;
+            }
+        }
+        (0, core_1.debug)('No supported build tool detected');
+        return null;
+    }
+    getBuildToolByName(name) {
+        var _a;
+        return (_a = this.buildTools.find(tool => tool.name === name)) !== null && _a !== void 0 ? _a : null;
+    }
+    getAllDependencyFiles() {
+        const allFiles = [];
+        for (const tool of this.buildTools) {
+            allFiles.push(...tool.getDependencyFiles());
+        }
+        return [...new Set(allFiles)];
+    }
+}
+exports.BuildToolManager = BuildToolManager;
+
+
+/***/ }),
+
 /***/ 64810:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -55039,6 +55347,7 @@ const core_1 = __nccwpck_require__(42186);
 const fs_1 = __importDefault(__nccwpck_require__(57147));
 const cache_1 = __nccwpck_require__(27799);
 const crypto_1 = __importDefault(__nccwpck_require__(6113));
+const buildTools_1 = __nccwpck_require__(59959);
 function saveDependencyCache(cacheConfig) {
     return __awaiter(this, void 0, void 0, function* () {
         if ((cacheConfig === null || cacheConfig === void 0 ? void 0 : cacheConfig.enabled) !== true || cacheConfig.paths.length === 0) {
@@ -55079,7 +55388,7 @@ function restoreDependencyCache(cacheConfig) {
     });
 }
 exports.restoreDependencyCache = restoreDependencyCache;
-function generateCacheKey(baseName, hashFiles) {
+function generateCacheKey(baseName, buildTool, hashFiles) {
     let key = `${baseName}-${process.platform}-${process.arch}`;
     if (hashFiles === undefined || hashFiles.length === 0) {
         return key;
@@ -55088,14 +55397,12 @@ function generateCacheKey(baseName, hashFiles) {
     for (const file of hashFiles) {
         if (!fs_1.default.existsSync(file))
             continue;
-        let content = fs_1.default.readFileSync(file, 'utf8');
-        // For pom.xml, only hash the dependencies section to avoid cache misses
-        // from unrelated changes like version bumps, descriptions, etc.
-        if (file.endsWith('pom.xml')) {
-            const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
-            if (dependenciesMatch !== null) {
-                content = dependenciesMatch.join('');
-            }
+        let content;
+        if (buildTool !== undefined) {
+            content = buildTool.extractDependencyContent(file);
+        }
+        else {
+            content = fs_1.default.readFileSync(file, 'utf8');
         }
         hash.update(content);
     }
@@ -55104,14 +55411,18 @@ function generateCacheKey(baseName, hashFiles) {
 }
 exports.generateCacheKey = generateCacheKey;
 function getHashFiles() {
-    const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'go.mod'];
-    return dependencyFiles.filter(file => fs_1.default.existsSync(file));
+    const manager = new buildTools_1.BuildToolManager();
+    return manager.getAllDependencyFiles();
 }
 exports.getHashFiles = getHashFiles;
 function saveCachedDependencies(stepName, cacheDir) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        const manager = new buildTools_1.BuildToolManager();
+        const buildTool = manager.detectBuildTool();
+        const actualCacheDir = (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
         // Save cache after successful step execution - only if cache wasn't restored and directory has content
-        const cacheDirHasContent = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0;
+        const cacheDirHasContent = fs_1.default.existsSync(actualCacheDir) && fs_1.default.readdirSync(actualCacheDir).length > 0;
         if (process.env.PIPER_CACHE_RESTORED === 'true') {
             (0, core_1.info)('Cache was restored - skipping cache save to avoid conflicts');
             return;
@@ -55121,17 +55432,23 @@ function saveCachedDependencies(stepName, cacheDir) {
             return;
         }
         (0, core_1.startGroup)('Cache Save');
-        // Use same dependency-aware cache key for save as restore
-        const dependencyFiles = ['pom.xml'];
-        const existingDepFiles = dependencyFiles.filter(file => fs_1.default.existsSync(file));
-        const cacheKey = existingDepFiles.length > 0
-            ? generateCacheKey(`piper-deps-${stepName}`, existingDepFiles)
-            : generateCacheKey(`piper-deps-${stepName}`, []);
-        (0, core_1.info)(`Saving dependencies cache with key: ${cacheKey}`);
-        (0, core_1.debug)(`Cache directory has ${fs_1.default.readdirSync(cacheDir).length} items`);
+        let cacheKey;
+        if (buildTool !== null) {
+            const depFiles = buildTool.getDependencyFiles();
+            const toolPrefix = `piper-${buildTool.name}-deps-${stepName}`;
+            cacheKey = depFiles.length > 0
+                ? generateCacheKey(toolPrefix, buildTool, depFiles)
+                : generateCacheKey(toolPrefix);
+            (0, core_1.info)(`Saving ${buildTool.name} dependencies cache with key: ${cacheKey}`);
+        }
+        else {
+            cacheKey = generateCacheKey(`piper-deps-${stepName}`);
+            (0, core_1.info)(`Saving generic dependencies cache with key: ${cacheKey}`);
+        }
+        (0, core_1.debug)(`Cache directory has ${fs_1.default.readdirSync(actualCacheDir).length} items`);
         yield saveDependencyCache({
             enabled: true,
-            paths: [cacheDir],
+            paths: [actualCacheDir],
             key: cacheKey
         });
         (0, core_1.endGroup)();
@@ -55139,74 +55456,88 @@ function saveCachedDependencies(stepName, cacheDir) {
 }
 exports.saveCachedDependencies = saveCachedDependencies;
 function restoreCachedDependencies(stepName, cacheDir) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.startGroup)('Cache Restoration');
+        const manager = new buildTools_1.BuildToolManager();
+        const buildTool = manager.detectBuildTool();
+        const actualCacheDir = (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
         // Create cache directory if it doesn't exist
-        if (!fs_1.default.existsSync(cacheDir)) {
-            fs_1.default.mkdirSync(cacheDir, { recursive: true });
+        if (!fs_1.default.existsSync(actualCacheDir)) {
+            fs_1.default.mkdirSync(actualCacheDir, { recursive: true });
         }
-        // Set the cache directory environment variable for docker volume mounting
-        process.env.PIPER_CACHE_DIR = cacheDir;
-        // Generate dependency-aware cache key based on pom.xml dependencies
-        const dependencyFiles = ['pom.xml'];
-        const existingDepFiles = dependencyFiles.filter(file => fs_1.default.existsSync(file));
-        if (existingDepFiles.length > 0) {
-            // Use dependency-aware cache key based only on dependencies hash
-            const cacheKey = generateCacheKey(`piper-deps-${stepName}`, existingDepFiles);
-            (0, core_1.info)(`Attempting dependency cache restore with key: ${cacheKey}`);
-            // Check cache directory before restore
-            const beforeCacheExists = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0;
-            (0, core_1.debug)(`Cache directory before restore - exists: ${fs_1.default.existsSync(cacheDir)}, populated: ${beforeCacheExists}`);
-            yield restoreDependencyCache({
-                enabled: true,
-                paths: [cacheDir],
-                key: cacheKey
-            });
-            // Check if cache was actually restored by looking at cache directory contents
-            const cacheRestored = fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0 && !beforeCacheExists;
-            // On cache miss, ensure clean state by removing any stale cache data
-            if (!cacheRestored && fs_1.default.existsSync(cacheDir)) {
-                const cacheContents = fs_1.default.readdirSync(cacheDir);
-                if (cacheContents.length > 0) {
-                    (0, core_1.info)('🧹 Cleaning stale cache data for fresh dependency download');
-                    // Remove all contents but keep the directory
-                    cacheContents.forEach(item => {
-                        const itemPath = `${cacheDir}/${item}`;
-                        try {
-                            if (fs_1.default.statSync(itemPath).isDirectory()) {
-                                fs_1.default.rmSync(itemPath, { recursive: true });
+        // Set the cache directory and build tool environment variables for docker volume mounting
+        process.env.PIPER_CACHE_DIR = actualCacheDir;
+        if (buildTool !== null) {
+            process.env.PIPER_BUILD_TOOL = buildTool.name;
+        }
+        if (buildTool !== null) {
+            const depFiles = buildTool.getDependencyFiles();
+            if (depFiles.length > 0) {
+                const toolPrefix = `piper-${buildTool.name}-deps-${stepName}`;
+                const cacheKey = generateCacheKey(toolPrefix, buildTool, depFiles);
+                (0, core_1.info)(`Attempting ${buildTool.name} dependency cache restore with key: ${cacheKey}`);
+                // Check cache directory before restore
+                const beforeCacheExists = fs_1.default.existsSync(actualCacheDir) && fs_1.default.readdirSync(actualCacheDir).length > 0;
+                (0, core_1.debug)(`Cache directory before restore - exists: ${fs_1.default.existsSync(actualCacheDir)}, populated: ${beforeCacheExists}`);
+                yield restoreDependencyCache({
+                    enabled: true,
+                    paths: [actualCacheDir],
+                    key: cacheKey
+                });
+                // Check if cache was actually restored by looking at cache directory contents
+                const cacheRestored = fs_1.default.existsSync(actualCacheDir) && fs_1.default.readdirSync(actualCacheDir).length > 0 && !beforeCacheExists;
+                // On cache miss, ensure clean state by removing any stale cache data
+                if (!cacheRestored && fs_1.default.existsSync(actualCacheDir)) {
+                    const cacheContents = fs_1.default.readdirSync(actualCacheDir);
+                    if (cacheContents.length > 0) {
+                        (0, core_1.info)('🧹 Cleaning stale cache data for fresh dependency download');
+                        // Remove all contents but keep the directory
+                        cacheContents.forEach(item => {
+                            const itemPath = `${actualCacheDir}/${item}`;
+                            try {
+                                if (fs_1.default.statSync(itemPath).isDirectory()) {
+                                    fs_1.default.rmSync(itemPath, { recursive: true });
+                                }
+                                else {
+                                    fs_1.default.unlinkSync(itemPath);
+                                }
                             }
-                            else {
-                                fs_1.default.unlinkSync(itemPath);
+                            catch (error) {
+                                (0, core_1.debug)(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`);
                             }
-                        }
-                        catch (error) {
-                            (0, core_1.debug)(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`);
-                        }
-                    });
+                        });
+                    }
+                }
+                // Set environment variables based on build tool
+                const cacheEnvVars = buildTool.getCacheEnvironmentVariables(cacheRestored, !cacheRestored);
+                for (const [key, value] of Object.entries(cacheEnvVars)) {
+                    process.env[key] = value;
+                }
+                (0, core_1.debug)(`Cache directory after restore - exists: ${fs_1.default.existsSync(actualCacheDir)}, populated: ${fs_1.default.existsSync(actualCacheDir) && fs_1.default.readdirSync(actualCacheDir).length > 0}`);
+                (0, core_1.debug)(`Cache was restored: ${cacheRestored}`);
+                if (cacheRestored) {
+                    (0, core_1.info)(`✅ Dependencies cache FOUND for ${buildTool.name}`);
+                }
+                else {
+                    (0, core_1.info)(`❌ Dependencies cache MISS for ${buildTool.name} - will download ALL dependencies fresh`);
                 }
             }
-            // Set environment variables for Maven offline mode decision
-            process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false';
-            process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true';
-            (0, core_1.debug)(`Cache directory after restore - exists: ${fs_1.default.existsSync(cacheDir)}, populated: ${fs_1.default.existsSync(cacheDir) && fs_1.default.readdirSync(cacheDir).length > 0}`);
-            (0, core_1.debug)(`Cache was restored: ${cacheRestored}`);
-            if (cacheRestored) {
-                (0, core_1.info)('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode');
-            }
             else {
-                (0, core_1.info)('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh');
+                (0, core_1.info)(`No dependency files found for ${buildTool.name} - skipping cache`);
+                process.env.PIPER_CACHE_RESTORED = 'false';
+                process.env.PIPER_DEPENDENCIES_CHANGED = 'false';
             }
         }
         else {
-            // No dependency files found, use stable key
-            const cacheKey = generateCacheKey(`piper-deps-${stepName}`, []);
+            // No build tool detected, use generic cache
+            const cacheKey = generateCacheKey(`piper-deps-${stepName}`);
+            (0, core_1.info)('No specific build tool detected - using generic cache');
             yield restoreDependencyCache({
                 enabled: true,
-                paths: [cacheDir],
+                paths: [actualCacheDir],
                 key: cacheKey
             });
-            // Default to online mode for non-Maven projects
             process.env.PIPER_CACHE_RESTORED = 'false';
             process.env.PIPER_DEPENDENCIES_CHANGED = 'false';
         }
@@ -55579,6 +55910,7 @@ const exec_1 = __nccwpck_require__(71514);
 const uuid_1 = __nccwpck_require__(33663);
 const sidecar_1 = __nccwpck_require__(29124);
 const piper_1 = __nccwpck_require__(10309);
+const buildTools_1 = __nccwpck_require__(59959);
 function runContainers(actionCfg, ctxConfig) {
     return __awaiter(this, void 0, void 0, function* () {
         const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage;
@@ -55591,7 +55923,7 @@ function runContainers(actionCfg, ctxConfig) {
 }
 exports.runContainers = runContainers;
 function startContainer(actionCfg, ctxConfig) {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         const dockerImage = actionCfg.dockerImage !== '' ? actionCfg.dockerImage : ctxConfig.dockerImage;
         if (dockerImage === undefined || dockerImage === '')
@@ -55630,73 +55962,47 @@ function startContainer(actionCfg, ctxConfig) {
         const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true';
         // Add cache directory volumes if specified
         const cacheDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : '';
-        if (cacheDir !== '') {
-            // Mount cache directory for Maven repository only
-            // The repository subdirectory contains the actual Maven artifacts
-            dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.m2`);
-            // Set Maven options for better performance with cached dependencies
-            const mavenOpts = [
-                // Parallel artifact resolution
-                '-Dmaven.artifact.threads=10',
-                // JVM performance optimizations
-                '-Xmx2g',
-                '-Xms1g',
-                '-XX:+UseG1GC',
-                '-XX:+UseStringDeduplication',
-                // Maven daemon for faster builds (reuse JVM)
-                '-Dmvnd.enabled=true',
-                // Incremental compilation
-                '-Dmaven.compiler.useIncrementalCompilation=true',
-                // Parallel test execution
-                '-Dmaven.test.parallel=all',
-                '-Dmaven.test.perCoreThreadCount=2',
-                // Faster dependency resolution
-                '-Dmaven.repo.local.recordReverseTree=true',
-                // Skip unnecessary plugin goals in multi-module builds
-                '-Dmaven.javadoc.skip=true',
-                '-Dmaven.source.skip=true',
-                // CycloneDX BOM optimization - use cached dependency info
-                '-Dcyclonedx.skipAttach=false',
-                '-Dcyclonedx.outputReactor=false',
-                '-Dcyclonedx.verbose=false'
-            ];
-            // Add offline mode if cache was restored and dependencies haven't changed
-            if (cacheRestored && !dependenciesChanged) {
-                mavenOpts.push(
-                // Run in offline mode - no network dependency resolution
-                '-Dmaven.offline=true', 
-                // Don't check for updated snapshots
-                '-Dmaven.snapshot.updatePolicy=never', 
-                // Don't check for updated releases
-                '-Dmaven.release.updatePolicy=never');
-                (0, core_1.info)('Maven running in OFFLINE mode - using cached dependencies only');
-            }
-            else if (dependenciesChanged) {
-                mavenOpts.push(
-                // Update snapshots when dependencies changed
-                '-Dmaven.snapshot.updatePolicy=always');
-                // Set environment variable to signal Maven command should use -U flag
-                process.env.PIPER_MAVEN_FORCE_UPDATE = 'true';
-                (0, core_1.info)('Dependencies changed - Maven will re-download and update cache');
+        const buildToolName = (_b = process.env.PIPER_BUILD_TOOL) !== null && _b !== void 0 ? _b : '';
+        if (cacheDir !== '' && buildToolName !== '') {
+            const manager = new buildTools_1.BuildToolManager();
+            const buildTool = manager.getBuildToolByName(buildToolName);
+            if (buildTool !== null) {
+                // Mount cache directory based on build tool
+                dockerRunArgs.push('--volume', `${cacheDir}:${buildTool.dockerMountPath}`);
+                // Get build tool specific environment variables
+                const envVars = buildTool.getDockerEnvironmentVariables(cacheRestored, dependenciesChanged);
+                for (const envVar of envVars) {
+                    if (envVar.includes('=')) {
+                        const [key, value] = envVar.split('=', 2);
+                        dockerRunArgs.push('--env', `${key}=${value}`);
+                    }
+                    else {
+                        dockerRunArgs.push('--env', envVar);
+                    }
+                }
+                (0, core_1.debug)(`Mounted ${buildTool.name} cache: ${cacheDir} to ${buildTool.dockerMountPath}`);
+                (0, core_1.debug)(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`);
+                (0, core_1.debug)(`${buildTool.name} optimized for cached dependencies`);
             }
             else {
-                (0, core_1.info)('Maven running in ONLINE mode - will download missing dependencies');
+                (0, core_1.debug)(`Build tool ${buildToolName} not found in manager`);
             }
-            dockerRunArgs.push('--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`);
-            (0, core_1.debug)(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`);
-            (0, core_1.debug)(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`);
-            (0, core_1.debug)('Maven optimized for cached dependencies');
+        }
+        else if (cacheDir !== '') {
+            // Fallback: mount as generic cache if no specific build tool detected
+            dockerRunArgs.push('--volume', `${cacheDir}:/home/ubuntu/.cache`);
+            (0, core_1.debug)(`Mounted generic cache: ${cacheDir} to /home/ubuntu/.cache`);
         }
         // Always pass cache state environment variables to container for Piper to read
         dockerRunArgs.push('--env', `PIPER_CACHE_RESTORED=${cacheRestored ? 'true' : 'false'}`, '--env', `PIPER_DEPENDENCIES_CHANGED=${dependenciesChanged ? 'true' : 'false'}`);
-        // Pass force update flag to container if dependencies changed
-        if (dependenciesChanged) {
-            dockerRunArgs.push('--env', 'PIPER_MAVEN_FORCE_UPDATE=true');
+        // Pass build tool name to container if available
+        if (buildToolName !== '') {
+            dockerRunArgs.push('--env', `PIPER_BUILD_TOOL=${buildToolName}`);
         }
         const networkID = piper_1.internalActionVariables.sidecarNetworkID;
         if (networkID !== '') {
             dockerRunArgs.push('--network', networkID);
-            const networkAlias = (_b = ctxConfig.dockerName) !== null && _b !== void 0 ? _b : '';
+            const networkAlias = (_c = ctxConfig.dockerName) !== null && _c !== void 0 ? _c : '';
             if (networkAlias !== '') {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }

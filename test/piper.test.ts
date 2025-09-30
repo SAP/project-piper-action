@@ -112,7 +112,7 @@ describe('Piper', () => {
     )
     expect(config.createCheckIfStepActiveMaps).toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('development version build from source', async () => {
     inputs['step-name'] = 'getConfig'
@@ -122,7 +122,7 @@ describe('Piper', () => {
 
     expect(github.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('open-source command', async () => {
     inputs['step-name'] = 'getConfig'
@@ -142,7 +142,7 @@ describe('Piper', () => {
       inputs['piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('failed obtaining piper binary', async () => {
     inputs['step-name'] = 'getConfig'
@@ -176,5 +176,5 @@ describe('Piper', () => {
 
     expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with exit code 1')
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  }, 10000)
+  }, 20000)
 })

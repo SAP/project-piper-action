@@ -2,6 +2,7 @@ import { debug, endGroup, info, startGroup } from '@actions/core'
 import fs from 'fs'
 import { restoreCache, saveCache } from '@actions/cache'
 import crypto from 'crypto'
+import { BuildToolManager, type BuildTool } from './buildTools'
 
 interface CacheConfig {
   enabled: boolean
@@ -52,7 +53,7 @@ export async function restoreDependencyCache (cacheConfig?: CacheConfig): Promis
   }
 }
 
-export function generateCacheKey (baseName: string, hashFiles?: string[]): string {
+export function generateCacheKey (baseName: string, buildTool?: BuildTool, hashFiles?: string[]): string {
   let key = `${baseName}-${process.platform}-${process.arch}`
   if (hashFiles === undefined || hashFiles.length === 0) {
     return key
@@ -61,14 +62,11 @@ export function generateCacheKey (baseName: string, hashFiles?: string[]): strin
   for (const file of hashFiles) {
     if (!fs.existsSync(file)) continue
 
-    let content: string = fs.readFileSync(file, 'utf8')
-    // For pom.xml, only hash the dependencies section to avoid cache misses
-    // from unrelated changes like version bumps, descriptions, etc.
-    if (file.endsWith('pom.xml')) {
-      const dependenciesMatch: RegExpMatchArray | null = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g)
-      if (dependenciesMatch !== null) {
-        content = dependenciesMatch.join('')
-      }
+    let content: string
+    if (buildTool !== undefined) {
+      content = buildTool.extractDependencyContent(file)
+    } else {
+      content = fs.readFileSync(file, 'utf8')
     }
 
     hash.update(content)
@@ -78,12 +76,16 @@ export function generateCacheKey (baseName: string, hashFiles?: string[]): strin
 }
 
 export function getHashFiles (): string[] {
-  const dependencyFiles = ['package.json', 'pom.xml', 'build.gradle', 'requirements.txt', 'go.mod']
-  return dependencyFiles.filter(file => fs.existsSync(file))
+  const manager = new BuildToolManager()
+  return manager.getAllDependencyFiles()
 }
-export async function saveCachedDependencies (stepName: string, cacheDir: string): Promise<void> {
+export async function saveCachedDependencies (stepName: string, cacheDir?: string): Promise<void> {
+  const manager = new BuildToolManager()
+  const buildTool = manager.detectBuildTool()
+
+  const actualCacheDir = cacheDir ?? buildTool?.cachePath ?? '.cache'
   // Save cache after successful step execution - only if cache wasn't restored and directory has content
-  const cacheDirHasContent = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
+  const cacheDirHasContent = fs.existsSync(actualCacheDir) && fs.readdirSync(actualCacheDir).length > 0
 
   if (process.env.PIPER_CACHE_RESTORED === 'true') {
     info('Cache was restored - skipping cache save to avoid conflicts')
@@ -95,99 +97,120 @@ export async function saveCachedDependencies (stepName: string, cacheDir: string
   }
   startGroup('Cache Save')
 
-  // Use same dependency-aware cache key for save as restore
-  const dependencyFiles = ['pom.xml']
-  const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
-  const cacheKey = existingDepFiles.length > 0
-    ? generateCacheKey(`piper-deps-${stepName}`, existingDepFiles)
-    : generateCacheKey(`piper-deps-${stepName}`, [])
+  let cacheKey: string
+  if (buildTool !== null) {
+    const depFiles = buildTool.getDependencyFiles()
+    const toolPrefix = `piper-${buildTool.name}-deps-${stepName}`
+    cacheKey = depFiles.length > 0
+      ? generateCacheKey(toolPrefix, buildTool, depFiles)
+      : generateCacheKey(toolPrefix)
+    info(`Saving ${buildTool.name} dependencies cache with key: ${cacheKey}`)
+  } else {
+    cacheKey = generateCacheKey(`piper-deps-${stepName}`)
+    info(`Saving generic dependencies cache with key: ${cacheKey}`)
+  }
 
-  info(`Saving dependencies cache with key: ${cacheKey}`)
-  debug(`Cache directory has ${fs.readdirSync(cacheDir).length} items`)
+  debug(`Cache directory has ${fs.readdirSync(actualCacheDir).length} items`)
 
   await saveDependencyCache({
     enabled: true,
-    paths: [cacheDir],
+    paths: [actualCacheDir],
     key: cacheKey
   })
   endGroup()
 }
 
-export async function restoreCachedDependencies (stepName: string, cacheDir: string): Promise<void> {
+export async function restoreCachedDependencies (stepName: string, cacheDir?: string): Promise<void> {
   startGroup('Cache Restoration')
+
+  const manager = new BuildToolManager()
+  const buildTool = manager.detectBuildTool()
+
+  const actualCacheDir = cacheDir ?? buildTool?.cachePath ?? '.cache'
   // Create cache directory if it doesn't exist
-  if (!fs.existsSync(cacheDir)) {
-    fs.mkdirSync(cacheDir, { recursive: true })
+  if (!fs.existsSync(actualCacheDir)) {
+    fs.mkdirSync(actualCacheDir, { recursive: true })
   }
-  // Set the cache directory environment variable for docker volume mounting
-  process.env.PIPER_CACHE_DIR = cacheDir
 
-  // Generate dependency-aware cache key based on pom.xml dependencies
-  const dependencyFiles = ['pom.xml']
-  const existingDepFiles = dependencyFiles.filter(file => fs.existsSync(file))
+  // Set the cache directory and build tool environment variables for docker volume mounting
+  process.env.PIPER_CACHE_DIR = actualCacheDir
+  if (buildTool !== null) {
+    process.env.PIPER_BUILD_TOOL = buildTool.name
+  }
 
-  if (existingDepFiles.length > 0) {
-    // Use dependency-aware cache key based only on dependencies hash
-    const cacheKey = generateCacheKey(`piper-deps-${stepName}`, existingDepFiles)
+  if (buildTool !== null) {
+    const depFiles = buildTool.getDependencyFiles()
 
-    info(`Attempting dependency cache restore with key: ${cacheKey}`)
+    if (depFiles.length > 0) {
+      const toolPrefix = `piper-${buildTool.name}-deps-${stepName}`
+      const cacheKey = generateCacheKey(toolPrefix, buildTool, depFiles)
 
-    // Check cache directory before restore
-    const beforeCacheExists = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0
-    debug(`Cache directory before restore - exists: ${fs.existsSync(cacheDir)}, populated: ${beforeCacheExists}`)
+      info(`Attempting ${buildTool.name} dependency cache restore with key: ${cacheKey}`)
 
-    await restoreDependencyCache({
-      enabled: true,
-      paths: [cacheDir],
-      key: cacheKey
-    })
+      // Check cache directory before restore
+      const beforeCacheExists = fs.existsSync(actualCacheDir) && fs.readdirSync(actualCacheDir).length > 0
+      debug(`Cache directory before restore - exists: ${fs.existsSync(actualCacheDir)}, populated: ${beforeCacheExists}`)
 
-    // Check if cache was actually restored by looking at cache directory contents
-    const cacheRestored = fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0 && !beforeCacheExists
+      await restoreDependencyCache({
+        enabled: true,
+        paths: [actualCacheDir],
+        key: cacheKey
+      })
 
-    // On cache miss, ensure clean state by removing any stale cache data
-    if (!cacheRestored && fs.existsSync(cacheDir)) {
-      const cacheContents = fs.readdirSync(cacheDir)
-      if (cacheContents.length > 0) {
-        info('🧹 Cleaning stale cache data for fresh dependency download')
-        // Remove all contents but keep the directory
-        cacheContents.forEach(item => {
-          const itemPath = `${cacheDir}/${item}`
-          try {
-            if (fs.statSync(itemPath).isDirectory()) {
-              fs.rmSync(itemPath, { recursive: true })
-            } else {
-              fs.unlinkSync(itemPath)
+      // Check if cache was actually restored by looking at cache directory contents
+      const cacheRestored = fs.existsSync(actualCacheDir) && fs.readdirSync(actualCacheDir).length > 0 && !beforeCacheExists
+
+      // On cache miss, ensure clean state by removing any stale cache data
+      if (!cacheRestored && fs.existsSync(actualCacheDir)) {
+        const cacheContents = fs.readdirSync(actualCacheDir)
+        if (cacheContents.length > 0) {
+          info('🧹 Cleaning stale cache data for fresh dependency download')
+          // Remove all contents but keep the directory
+          cacheContents.forEach(item => {
+            const itemPath = `${actualCacheDir}/${item}`
+            try {
+              if (fs.statSync(itemPath).isDirectory()) {
+                fs.rmSync(itemPath, { recursive: true })
+              } else {
+                fs.unlinkSync(itemPath)
+              }
+            } catch (error) {
+              debug(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`)
             }
-          } catch (error) {
-            debug(`Failed to clean cache item ${item}: ${error instanceof Error ? error.message : String(error)}`)
-          }
-        })
+          })
+        }
       }
-    }
 
-    // Set environment variables for Maven offline mode decision
-    process.env.PIPER_CACHE_RESTORED = cacheRestored ? 'true' : 'false'
-    process.env.PIPER_DEPENDENCIES_CHANGED = cacheRestored ? 'false' : 'true'
+      // Set environment variables based on build tool
+      const cacheEnvVars = buildTool.getCacheEnvironmentVariables(cacheRestored, !cacheRestored)
+      for (const [key, value] of Object.entries(cacheEnvVars)) {
+        process.env[key] = value
+      }
 
-    debug(`Cache directory after restore - exists: ${fs.existsSync(cacheDir)}, populated: ${fs.existsSync(cacheDir) && fs.readdirSync(cacheDir).length > 0}`)
-    debug(`Cache was restored: ${cacheRestored}`)
+      debug(`Cache directory after restore - exists: ${fs.existsSync(actualCacheDir)}, populated: ${fs.existsSync(actualCacheDir) && fs.readdirSync(actualCacheDir).length > 0}`)
+      debug(`Cache was restored: ${cacheRestored}`)
 
-    if (cacheRestored) {
-      info('✅ Dependencies cache FOUND - Maven will run in OFFLINE mode')
+      if (cacheRestored) {
+        info(`✅ Dependencies cache FOUND for ${buildTool.name}`)
+      } else {
+        info(`❌ Dependencies cache MISS for ${buildTool.name} - will download ALL dependencies fresh`)
+      }
     } else {
-      info('❌ Dependencies cache MISS - Maven will download ALL dependencies fresh')
+      info(`No dependency files found for ${buildTool.name} - skipping cache`)
+      process.env.PIPER_CACHE_RESTORED = 'false'
+      process.env.PIPER_DEPENDENCIES_CHANGED = 'false'
     }
   } else {
-    // No dependency files found, use stable key
-    const cacheKey: string = generateCacheKey(`piper-deps-${stepName}`, [])
+    // No build tool detected, use generic cache
+    const cacheKey: string = generateCacheKey(`piper-deps-${stepName}`)
+    info('No specific build tool detected - using generic cache')
+
     await restoreDependencyCache({
       enabled: true,
-      paths: [cacheDir],
+      paths: [actualCacheDir],
       key: cacheKey
     })
 
-    // Default to online mode for non-Maven projects
     process.env.PIPER_CACHE_RESTORED = 'false'
     process.env.PIPER_DEPENDENCIES_CHANGED = 'false'
   }

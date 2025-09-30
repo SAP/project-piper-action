@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { ActionConfiguration } from './config'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
+import { BuildToolManager } from './buildTools'
 
 export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
@@ -58,70 +59,41 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 
   // Add cache directory volumes if specified
   const cacheDir = process.env.PIPER_CACHE_DIR ?? ''
-  if (cacheDir !== '') {
-    // Mount cache directory for Maven repository only
-    // The repository subdirectory contains the actual Maven artifacts
-    dockerRunArgs.push(
-      '--volume', `${cacheDir}:/home/ubuntu/.m2`
-    )
+  const buildToolName = process.env.PIPER_BUILD_TOOL ?? ''
 
-    // Set Maven options for better performance with cached dependencies
-    const mavenOpts = [
-      // Parallel artifact resolution
-      '-Dmaven.artifact.threads=10',
-      // JVM performance optimizations
-      '-Xmx2g',
-      '-Xms1g',
-      '-XX:+UseG1GC',
-      '-XX:+UseStringDeduplication',
-      // Maven daemon for faster builds (reuse JVM)
-      '-Dmvnd.enabled=true',
-      // Incremental compilation
-      '-Dmaven.compiler.useIncrementalCompilation=true',
-      // Parallel test execution
-      '-Dmaven.test.parallel=all',
-      '-Dmaven.test.perCoreThreadCount=2',
-      // Faster dependency resolution
-      '-Dmaven.repo.local.recordReverseTree=true',
-      // Skip unnecessary plugin goals in multi-module builds
-      '-Dmaven.javadoc.skip=true',
-      '-Dmaven.source.skip=true',
-      // CycloneDX BOM optimization - use cached dependency info
-      '-Dcyclonedx.skipAttach=false',
-      '-Dcyclonedx.outputReactor=false',
-      '-Dcyclonedx.verbose=false'
-    ]
+  if (cacheDir !== '' && buildToolName !== '') {
+    const manager = new BuildToolManager()
+    const buildTool = manager.getBuildToolByName(buildToolName)
 
-    // Add offline mode if cache was restored and dependencies haven't changed
-    if (cacheRestored && !dependenciesChanged) {
-      mavenOpts.push(
-        // Run in offline mode - no network dependency resolution
-        '-Dmaven.offline=true',
-        // Don't check for updated snapshots
-        '-Dmaven.snapshot.updatePolicy=never',
-        // Don't check for updated releases
-        '-Dmaven.release.updatePolicy=never'
+    if (buildTool !== null) {
+      // Mount cache directory based on build tool
+      dockerRunArgs.push(
+        '--volume', `${cacheDir}:${buildTool.dockerMountPath}`
       )
-      info('Maven running in OFFLINE mode - using cached dependencies only')
-    } else if (dependenciesChanged) {
-      mavenOpts.push(
-        // Update snapshots when dependencies changed
-        '-Dmaven.snapshot.updatePolicy=always'
-      )
-      // Set environment variable to signal Maven command should use -U flag
-      process.env.PIPER_MAVEN_FORCE_UPDATE = 'true'
-      info('Dependencies changed - Maven will re-download and update cache')
+
+      // Get build tool specific environment variables
+      const envVars = buildTool.getDockerEnvironmentVariables(cacheRestored, dependenciesChanged)
+      for (const envVar of envVars) {
+        if (envVar.includes('=')) {
+          const [key, value] = envVar.split('=', 2)
+          dockerRunArgs.push('--env', `${key}=${value}`)
+        } else {
+          dockerRunArgs.push('--env', envVar)
+        }
+      }
+
+      debug(`Mounted ${buildTool.name} cache: ${cacheDir} to ${buildTool.dockerMountPath}`)
+      debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
+      debug(`${buildTool.name} optimized for cached dependencies`)
     } else {
-      info('Maven running in ONLINE mode - will download missing dependencies')
+      debug(`Build tool ${buildToolName} not found in manager`)
     }
-
+  } else if (cacheDir !== '') {
+    // Fallback: mount as generic cache if no specific build tool detected
     dockerRunArgs.push(
-      '--env', `MAVEN_OPTS=${mavenOpts.join(' ')}`
+      '--volume', `${cacheDir}:/home/ubuntu/.cache`
     )
-
-    debug(`Mounted Maven cache: ${cacheDir} to /home/ubuntu/.m2`)
-    debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
-    debug('Maven optimized for cached dependencies')
+    debug(`Mounted generic cache: ${cacheDir} to /home/ubuntu/.cache`)
   }
 
   // Always pass cache state environment variables to container for Piper to read
@@ -130,11 +102,9 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--env', `PIPER_DEPENDENCIES_CHANGED=${dependenciesChanged ? 'true' : 'false'}`
   )
 
-  // Pass force update flag to container if dependencies changed
-  if (dependenciesChanged) {
-    dockerRunArgs.push(
-      '--env', 'PIPER_MAVEN_FORCE_UPDATE=true'
-    )
+  // Pass build tool name to container if available
+  if (buildToolName !== '') {
+    dockerRunArgs.push('--env', `PIPER_BUILD_TOOL=${buildToolName}`)
   }
 
   const networkID = internalActionVariables.sidecarNetworkID

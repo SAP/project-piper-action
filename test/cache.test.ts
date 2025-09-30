@@ -153,7 +153,7 @@ describe('Cache', () => {
       jest.spyOn(fs, 'existsSync').mockReturnValue(true)
       jest.spyOn(fs, 'readFileSync').mockReturnValue('file content')
 
-      const key = generateCacheKey('test-base', ['package.json'])
+      const key = generateCacheKey('test-base', undefined, ['package.json'])
       expect(key).toMatch(/^test-base-\w+-\w+-[a-f0-9]{16}$/)
     })
 
@@ -161,7 +161,7 @@ describe('Cache', () => {
       jest.spyOn(fs, 'existsSync').mockImplementation((path) => path === 'package.json')
       jest.spyOn(fs, 'readFileSync').mockReturnValue('file content')
 
-      const key = generateCacheKey('test-base', ['package.json', 'missing.json'])
+      const key = generateCacheKey('test-base', undefined, ['package.json', 'missing.json'])
       expect(key).toMatch(/^test-base-\w+-\w+-[a-f0-9]{16}$/)
       expect(fs.readFileSync).toHaveBeenCalledTimes(1)
     })
@@ -178,7 +178,9 @@ describe('Cache', () => {
       })
 
       const files = getHashFiles()
-      expect(files).toEqual(['package.json', 'pom.xml'])
+      expect(files).toHaveLength(2)
+      expect(files).toContain('package.json')
+      expect(files).toContain('pom.xml')
     })
 
     test('should return empty array when no dependency files exist', () => {
