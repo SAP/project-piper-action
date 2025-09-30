@@ -29,8 +29,7 @@ abstract class BaseBuildTool implements BuildTool {
   }
 
   extractDependencyContent (filePath: string): string {
-    if (!fs.existsSync(filePath)) return ''
-    return fs.readFileSync(filePath, 'utf8')
+    return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : ''
   }
 
   getCacheEnvironmentVariables (cacheRestored: boolean, dependenciesChanged: boolean): Record<string, string> {
@@ -53,11 +52,12 @@ export class MavenBuildTool extends BaseBuildTool {
     if (!fs.existsSync(filePath)) return ''
 
     const content = fs.readFileSync(filePath, 'utf8')
-    if (filePath.endsWith('pom.xml')) {
-      const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g)
-      if (dependenciesMatch !== null) {
-        return dependenciesMatch.join('')
-      }
+    if (!filePath.endsWith('pom.xml')) {
+      return content
+    }
+    const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g)
+    if (dependenciesMatch !== null) {
+      return dependenciesMatch.join('')
     }
     return content
   }
@@ -117,24 +117,7 @@ export class NpmBuildTool extends BaseBuildTool {
   cachePath = '.npm'
   dockerMountPath = '/home/ubuntu/.npm'
 
-  extractDependencyContent (filePath: string): string {
-    if (!fs.existsSync(filePath)) return ''
-
-    const content = fs.readFileSync(filePath, 'utf8')
-    if (filePath.endsWith('package.json')) {
-      try {
-        const pkg = JSON.parse(content) as Record<string, any>
-        return JSON.stringify({
-          dependencies: pkg.dependencies ?? {},
-          devDependencies: pkg.devDependencies ?? {},
-          peerDependencies: pkg.peerDependencies ?? {}
-        })
-      } catch {
-        return content
-      }
-    }
-    return content
-  }
+  extractDependencyContent = extractDependencyContentNode
 
   getDockerEnvironmentVariables (cacheRestored: boolean, dependenciesChanged: boolean): string[] {
     const envVars: string[] = []
@@ -158,24 +141,7 @@ export class PnpmBuildTool extends BaseBuildTool {
   cachePath = '.pnpm-store'
   dockerMountPath = '/home/ubuntu/.pnpm-store'
 
-  extractDependencyContent (filePath: string): string {
-    if (!fs.existsSync(filePath)) return ''
-
-    const content = fs.readFileSync(filePath, 'utf8')
-    if (filePath.endsWith('package.json')) {
-      try {
-        const pkg = JSON.parse(content) as Record<string, any>
-        return JSON.stringify({
-          dependencies: pkg.dependencies ?? {},
-          devDependencies: pkg.devDependencies ?? {},
-          peerDependencies: pkg.peerDependencies ?? {}
-        })
-      } catch {
-        return content
-      }
-    }
-    return content
-  }
+  extractDependencyContent = extractDependencyContentNode
 
   getDockerEnvironmentVariables (cacheRestored: boolean, dependenciesChanged: boolean): string[] {
     const envVars: string[] = []
@@ -316,5 +282,22 @@ export class BuildToolManager {
       allFiles.push(...tool.getDependencyFiles())
     }
     return [...new Set(allFiles)]
+  }
+}
+
+function extractDependencyContentNode (filePath: string): string {
+  if (!fs.existsSync(filePath)) return ''
+
+  const content = fs.readFileSync(filePath, 'utf8')
+  if (!filePath.endsWith('package.json')) { return content }
+  try {
+    const pkg = JSON.parse(content) as Record<string, any>
+    return JSON.stringify({
+      dependencies: pkg.dependencies ?? {},
+      devDependencies: pkg.devDependencies ?? {},
+      peerDependencies: pkg.peerDependencies ?? {}
+    })
+  } catch {
+    return content
   }
 }
