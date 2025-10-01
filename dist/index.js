@@ -56746,6 +56746,7 @@ function run() {
                 (0, core_1.endGroup)();
                 // Setup cache directory for dependencies
                 const cacheEnabled = process.env.PIPER_ENABLE_CACHE !== 'false';
+                (0, core_1.info)(`Cache is ${cacheEnabled ? 'enabled' : 'disabled'}`);
                 const cacheDir = process.env.RUNNER_TEMP !== undefined
                     ? `${process.env.RUNNER_TEMP}/piper-cache`
                     : '/tmp/piper-cache';

@@ -69,6 +69,7 @@ export async function run (): Promise<void> {
 
       // Setup cache directory for dependencies
       const cacheEnabled: boolean = process.env.PIPER_ENABLE_CACHE !== 'false'
+      info(`Cache is ${cacheEnabled ? 'enabled' : 'disabled'}`)
       const cacheDir: string = process.env.RUNNER_TEMP !== undefined
         ? `${process.env.RUNNER_TEMP}/piper-cache`
         : '/tmp/piper-cache'
