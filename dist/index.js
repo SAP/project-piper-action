@@ -55036,9 +55036,7 @@ class BaseBuildTool {
         return this.dependencyFiles.filter(file => fs_1.default.existsSync(file));
     }
     extractDependencyContent(filePath) {
-        if (!fs_1.default.existsSync(filePath))
-            return '';
-        return fs_1.default.readFileSync(filePath, 'utf8');
+        return fs_1.default.existsSync(filePath) ? fs_1.default.readFileSync(filePath, 'utf8') : '';
     }
     getCacheEnvironmentVariables(cacheRestored, dependenciesChanged) {
         return {
@@ -55059,11 +55057,12 @@ class MavenBuildTool extends BaseBuildTool {
         if (!fs_1.default.existsSync(filePath))
             return '';
         const content = fs_1.default.readFileSync(filePath, 'utf8');
-        if (filePath.endsWith('pom.xml')) {
-            const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
-            if (dependenciesMatch !== null) {
-                return dependenciesMatch.join('');
-            }
+        if (!filePath.endsWith('pom.xml')) {
+            return content;
+        }
+        const dependenciesMatch = content.match(/<dependencies>[\s\S]*?<\/dependencies>/g);
+        if (dependenciesMatch !== null) {
+            return dependenciesMatch.join('');
         }
         return content;
     }
@@ -55117,26 +55116,7 @@ class NpmBuildTool extends BaseBuildTool {
         this.dependencyFiles = ['package-lock.json', 'package.json'];
         this.cachePath = '.npm';
         this.dockerMountPath = '/home/ubuntu/.npm';
-    }
-    extractDependencyContent(filePath) {
-        var _a, _b, _c;
-        if (!fs_1.default.existsSync(filePath))
-            return '';
-        const content = fs_1.default.readFileSync(filePath, 'utf8');
-        if (filePath.endsWith('package.json')) {
-            try {
-                const pkg = JSON.parse(content);
-                return JSON.stringify({
-                    dependencies: (_a = pkg.dependencies) !== null && _a !== void 0 ? _a : {},
-                    devDependencies: (_b = pkg.devDependencies) !== null && _b !== void 0 ? _b : {},
-                    peerDependencies: (_c = pkg.peerDependencies) !== null && _c !== void 0 ? _c : {}
-                });
-            }
-            catch (_d) {
-                return content;
-            }
-        }
-        return content;
+        this.extractDependencyContent = extractDependencyContentNode;
     }
     getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
         const envVars = [];
@@ -55160,26 +55140,7 @@ class PnpmBuildTool extends BaseBuildTool {
         this.dependencyFiles = ['pnpm-lock.yaml', 'package.json'];
         this.cachePath = '.pnpm-store';
         this.dockerMountPath = '/home/ubuntu/.pnpm-store';
-    }
-    extractDependencyContent(filePath) {
-        var _a, _b, _c;
-        if (!fs_1.default.existsSync(filePath))
-            return '';
-        const content = fs_1.default.readFileSync(filePath, 'utf8');
-        if (filePath.endsWith('package.json')) {
-            try {
-                const pkg = JSON.parse(content);
-                return JSON.stringify({
-                    dependencies: (_a = pkg.dependencies) !== null && _a !== void 0 ? _a : {},
-                    devDependencies: (_b = pkg.devDependencies) !== null && _b !== void 0 ? _b : {},
-                    peerDependencies: (_c = pkg.peerDependencies) !== null && _c !== void 0 ? _c : {}
-                });
-            }
-            catch (_d) {
-                return content;
-            }
-        }
-        return content;
+        this.extractDependencyContent = extractDependencyContentNode;
     }
     getDockerEnvironmentVariables(cacheRestored, dependenciesChanged) {
         const envVars = [];
@@ -55307,6 +55268,33 @@ class BuildToolManager {
         (0, core_1.debug)('No supported build tool detected');
         return null;
     }
+    detectBuildToolForStep(stepName) {
+        // Map step names to preferred build tools
+        const stepToolMapping = {
+            golangBuild: 'go',
+            mavenBuild: 'maven',
+            mavenExecute: 'maven',
+            mavenExecuteIntegration: 'maven',
+            mavenExecuteStaticCodeChecks: 'maven',
+            npmExecuteScripts: 'npm',
+            npmExecuteLint: 'npm',
+            gradleBuild: 'gradle',
+            gradleExecuteBuild: 'gradle',
+            pythonBuild: 'pip',
+            pipInstall: 'pip'
+        };
+        // Check if step has a preferred tool
+        const preferredTool = stepToolMapping[stepName];
+        if (preferredTool !== undefined) {
+            const tool = this.getBuildToolByName(preferredTool);
+            if (tool !== null && tool.detectTool()) {
+                (0, core_1.debug)(`Using preferred build tool ${tool.name} for step ${stepName}`);
+                return tool;
+            }
+        }
+        // Fall back to generic detection
+        return this.detectBuildTool();
+    }
     getBuildToolByName(name) {
         var _a;
         return (_a = this.buildTools.find(tool => tool.name === name)) !== null && _a !== void 0 ? _a : null;
@@ -55320,6 +55308,26 @@ class BuildToolManager {
     }
 }
 exports.BuildToolManager = BuildToolManager;
+function extractDependencyContentNode(filePath) {
+    var _a, _b, _c;
+    if (!fs_1.default.existsSync(filePath))
+        return '';
+    const content = fs_1.default.readFileSync(filePath, 'utf8');
+    if (!filePath.endsWith('package.json')) {
+        return content;
+    }
+    try {
+        const pkg = JSON.parse(content);
+        return JSON.stringify({
+            dependencies: (_a = pkg.dependencies) !== null && _a !== void 0 ? _a : {},
+            devDependencies: (_b = pkg.devDependencies) !== null && _b !== void 0 ? _b : {},
+            peerDependencies: (_c = pkg.peerDependencies) !== null && _c !== void 0 ? _c : {}
+        });
+    }
+    catch (_d) {
+        return content;
+    }
+}
 
 
 /***/ }),
@@ -55419,8 +55427,11 @@ function saveCachedDependencies(stepName, cacheDir) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const manager = new buildTools_1.BuildToolManager();
-        const buildTool = manager.detectBuildTool();
-        const actualCacheDir = (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
+        const buildTool = manager.detectBuildToolForStep(stepName);
+        // If cacheDir is provided and buildTool is detected, create a subdirectory for the tool
+        const actualCacheDir = buildTool !== null && cacheDir !== undefined
+            ? `${cacheDir}/${buildTool.cachePath}`
+            : (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
         // Save cache after successful step execution - only if cache wasn't restored and directory has content
         const cacheDirHasContent = fs_1.default.existsSync(actualCacheDir) && fs_1.default.readdirSync(actualCacheDir).length > 0;
         if (process.env.PIPER_CACHE_RESTORED === 'true') {
@@ -55460,8 +55471,11 @@ function restoreCachedDependencies(stepName, cacheDir) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.startGroup)('Cache Restoration');
         const manager = new buildTools_1.BuildToolManager();
-        const buildTool = manager.detectBuildTool();
-        const actualCacheDir = (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
+        const buildTool = manager.detectBuildToolForStep(stepName);
+        // If cacheDir is provided and buildTool is detected, create a subdirectory for the tool
+        const actualCacheDir = buildTool !== null && cacheDir !== undefined
+            ? `${cacheDir}/${buildTool.cachePath}`
+            : (_a = cacheDir !== null && cacheDir !== void 0 ? cacheDir : buildTool === null || buildTool === void 0 ? void 0 : buildTool.cachePath) !== null && _a !== void 0 ? _a : '.cache';
         // Create cache directory if it doesn't exist
         if (!fs_1.default.existsSync(actualCacheDir)) {
             fs_1.default.mkdirSync(actualCacheDir, { recursive: true });

@@ -81,9 +81,12 @@ export function getHashFiles (): string[] {
 }
 export async function saveCachedDependencies (stepName: string, cacheDir?: string): Promise<void> {
   const manager = new BuildToolManager()
-  const buildTool = manager.detectBuildTool()
+  const buildTool = manager.detectBuildToolForStep(stepName)
 
-  const actualCacheDir = cacheDir ?? buildTool?.cachePath ?? '.cache'
+  // If cacheDir is provided and buildTool is detected, create a subdirectory for the tool
+  const actualCacheDir = buildTool !== null && cacheDir !== undefined
+    ? `${cacheDir}/${buildTool.cachePath}`
+    : cacheDir ?? buildTool?.cachePath ?? '.cache'
   // Save cache after successful step execution - only if cache wasn't restored and directory has content
   const cacheDirHasContent = fs.existsSync(actualCacheDir) && fs.readdirSync(actualCacheDir).length > 0
 
@@ -124,9 +127,12 @@ export async function restoreCachedDependencies (stepName: string, cacheDir?: st
   startGroup('Cache Restoration')
 
   const manager = new BuildToolManager()
-  const buildTool = manager.detectBuildTool()
+  const buildTool = manager.detectBuildToolForStep(stepName)
 
-  const actualCacheDir = cacheDir ?? buildTool?.cachePath ?? '.cache'
+  // If cacheDir is provided and buildTool is detected, create a subdirectory for the tool
+  const actualCacheDir = buildTool !== null && cacheDir !== undefined
+    ? `${cacheDir}/${buildTool.cachePath}`
+    : cacheDir ?? buildTool?.cachePath ?? '.cache'
   // Create cache directory if it doesn't exist
   if (!fs.existsSync(actualCacheDir)) {
     fs.mkdirSync(actualCacheDir, { recursive: true })

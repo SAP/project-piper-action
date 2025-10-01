@@ -2,6 +2,7 @@ import * as cache from '@actions/cache'
 import * as core from '@actions/core'
 import fs from 'fs'
 import { restoreDependencyCache, saveDependencyCache, generateCacheKey, getHashFiles } from '../src/cache'
+import { BuildToolManager } from '../src/buildTools'
 
 jest.mock('@actions/cache')
 jest.mock('@actions/core')
@@ -188,6 +189,36 @@ describe('Cache', () => {
 
       const files = getHashFiles()
       expect(files).toEqual([])
+    })
+  })
+
+  describe('BuildToolManager', () => {
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    test('should detect Go build tool for golangBuild step', () => {
+      jest.spyOn(fs, 'existsSync').mockImplementation((path) => {
+        return path === 'go.mod' || path === 'package.json'
+      })
+
+      const manager = new BuildToolManager()
+      const buildTool = manager.detectBuildToolForStep('golangBuild')
+      
+      expect(buildTool).not.toBeNull()
+      expect(buildTool?.name).toBe('go')
+    })
+
+    test('should fall back to generic detection for unknown steps', () => {
+      jest.spyOn(fs, 'existsSync').mockImplementation((path) => {
+        return path === 'pom.xml'
+      })
+
+      const manager = new BuildToolManager()
+      const buildTool = manager.detectBuildToolForStep('unknownStep')
+      
+      expect(buildTool).not.toBeNull()
+      expect(buildTool?.name).toBe('maven')
     })
   })
 })

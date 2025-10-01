@@ -272,6 +272,36 @@ export class BuildToolManager {
     return null
   }
 
+  detectBuildToolForStep (stepName: string): BuildTool | null {
+    // Map step names to preferred build tools
+    const stepToolMapping: Record<string, string> = {
+      golangBuild: 'go',
+      mavenBuild: 'maven',
+      mavenExecute: 'maven',
+      mavenExecuteIntegration: 'maven',
+      mavenExecuteStaticCodeChecks: 'maven',
+      npmExecuteScripts: 'npm',
+      npmExecuteLint: 'npm',
+      gradleBuild: 'gradle',
+      gradleExecuteBuild: 'gradle',
+      pythonBuild: 'pip',
+      pipInstall: 'pip'
+    }
+
+    // Check if step has a preferred tool
+    const preferredTool = stepToolMapping[stepName]
+    if (preferredTool !== undefined) {
+      const tool = this.getBuildToolByName(preferredTool)
+      if (tool !== null && tool.detectTool()) {
+        debug(`Using preferred build tool ${tool.name} for step ${stepName}`)
+        return tool
+      }
+    }
+
+    // Fall back to generic detection
+    return this.detectBuildTool()
+  }
+
   getBuildToolByName (name: string): BuildTool | null {
     return this.buildTools.find(tool => tool.name === name) ?? null
   }
