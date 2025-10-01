@@ -238,6 +238,8 @@ export class GoBuildTool extends BaseBuildTool {
 
     envVars.push('GOPATH=/go')
     envVars.push('GOCACHE=/go/build-cache')
+    envVars.push('GOTMPDIR=/go/tmp')
+    envVars.push('GOOS=linux')
 
     if (cacheRestored && !dependenciesChanged) {
       envVars.push('GOPROXY=off')

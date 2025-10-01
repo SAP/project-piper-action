@@ -55235,6 +55235,8 @@ class GoBuildTool extends BaseBuildTool {
         const envVars = [];
         envVars.push('GOPATH=/go');
         envVars.push('GOCACHE=/go/build-cache');
+        envVars.push('GOTMPDIR=/go/tmp');
+        envVars.push('GOOS=linux');
         if (cacheRestored && !dependenciesChanged) {
             envVars.push('GOPROXY=off');
             (0, core_1.info)('Go running in offline mode - using cached modules only');
@@ -55983,6 +55985,10 @@ function startContainer(actionCfg, ctxConfig) {
             if (buildTool !== null) {
                 // Mount cache directory based on build tool
                 dockerRunArgs.push('--volume', `${cacheDir}:${buildTool.dockerMountPath}`);
+                // Special handling for Go to ensure proper permissions
+                if (buildTool.name === 'go') {
+                    dockerRunArgs.push('--tmpfs', '/go/tmp:rw,exec,size=1g');
+                }
                 // Get build tool specific environment variables
                 const envVars = buildTool.getDockerEnvironmentVariables(cacheRestored, dependenciesChanged);
                 for (const envVar of envVars) {

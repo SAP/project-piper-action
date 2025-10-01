@@ -71,6 +71,13 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
         '--volume', `${cacheDir}:${buildTool.dockerMountPath}`
       )
 
+      // Special handling for Go to ensure proper permissions
+      if (buildTool.name === 'go') {
+        dockerRunArgs.push(
+          '--tmpfs', '/go/tmp:rw,exec,size=1g'
+        )
+      }
+
       // Get build tool specific environment variables
       const envVars = buildTool.getDockerEnvironmentVariables(cacheRestored, dependenciesChanged)
       for (const envVar of envVars) {

@@ -204,7 +204,7 @@ describe('Cache', () => {
 
       const manager = new BuildToolManager()
       const buildTool = manager.detectBuildToolForStep('golangBuild')
-      
+
       expect(buildTool).not.toBeNull()
       expect(buildTool?.name).toBe('go')
     })
@@ -216,7 +216,7 @@ describe('Cache', () => {
 
       const manager = new BuildToolManager()
       const buildTool = manager.detectBuildToolForStep('unknownStep')
-      
+
       expect(buildTool).not.toBeNull()
       expect(buildTool?.name).toBe('maven')
     })
