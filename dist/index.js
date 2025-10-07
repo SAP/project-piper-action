@@ -38644,7 +38644,7 @@ function downloadWorkhorseBinary(artifactoryUrl, version) {
             return workhorsePath;
         }
         (0, core_1.info)(`Downloading '${artifactoryUrl}' as '${workhorsePath}'`);
-        yield (0, tool_cache_1.downloadTool)(artifactoryUrl, workhorsePath);
+        yield (0, tool_cache_1.downloadTool)(`${artifactoryUrl}/${version}/sap-piper`, workhorsePath);
         return workhorsePath;
     });
 }
