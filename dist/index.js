@@ -38398,6 +38398,7 @@ function startContainer(actionCfg, ctxConfig) {
         if (dockerImage === undefined || dockerImage === '')
             return;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
+        const workhorsePath = piper_1.internalActionVariables.workhorseBinPath;
         const containerID = (0, uuid_1.v4)();
         const cwd = process.cwd();
         piper_1.internalActionVariables.dockerContainerID = containerID;
@@ -38417,6 +38418,7 @@ function startContainer(actionCfg, ctxConfig) {
             '--user', '1000:1000',
             '--volume', `${cwd}:${cwd}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
+            '--volume', `${(0, path_1.dirname)(workhorsePath)}:/workhorse`,
             '--workdir', cwd,
             ...dockerOptionsArray,
             '--name', containerID
@@ -39200,9 +39202,9 @@ function run() {
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 (0, core_1.startGroup)(actionCfg.stepName);
-                const result = yield (0, execute_1.executeWorkhorse)(actionCfg.stepName, flags);
+                const result = yield (0, execute_1.executeWorkhorse)(actionCfg.itemName, flags);
                 if (result.exitCode !== 0) {
-                    throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
+                    throw new Error(`Step ${actionCfg.itemName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
             }

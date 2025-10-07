@@ -73,9 +73,9 @@ export async function run (): Promise<void> {
       await runContainers(actionCfg, contextConfig)
 
       startGroup(actionCfg.stepName)
-      const result = await executeWorkhorse(actionCfg.stepName, flags)
+      const result = await executeWorkhorse(actionCfg.itemName, flags)
       if (result.exitCode !== 0) {
-        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+        throw new Error(`Step ${actionCfg.itemName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
     } else if (actionCfg.stepName !== '') {
