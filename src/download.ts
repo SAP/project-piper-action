@@ -58,8 +58,7 @@ export async function downloadWorkhorseBinary (artifactoryUrl: string, version: 
 
   debug('Fetching workhorse binary from URL')
 
-  version = version.replace(/\./g, '_')
-  const workhorsePath = `${process.cwd()}/${version}/${workhorseBinaryName}`
+  const workhorsePath = `${process.cwd()}/${version.replace(/\./g, '_')}/${workhorseBinaryName}`
   if (fs.existsSync(workhorsePath)) {
     return workhorsePath
   }

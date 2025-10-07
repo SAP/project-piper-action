@@ -38638,8 +38638,7 @@ function downloadWorkhorseBinary(artifactoryUrl, version) {
         const workhorseBinaryName = 'workhorse';
         (0, core_1.debug)(`version: ${version}`);
         (0, core_1.debug)('Fetching workhorse binary from URL');
-        version = version.replace(/\./g, '_');
-        const workhorsePath = `${process.cwd()}/${version}/${workhorseBinaryName}`;
+        const workhorsePath = `${process.cwd()}/${version.replace(/\./g, '_')}/${workhorseBinaryName}`;
         if (fs.existsSync(workhorsePath)) {
             return workhorsePath;
         }
