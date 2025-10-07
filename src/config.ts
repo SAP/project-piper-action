@@ -25,9 +25,12 @@ export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
 export interface ActionConfiguration {
+  itemName: string
   stepName: string
   flags: string
   piperVersion: string
+  workhorseVersion: string
+  artifactoryUrl: string
   piperOwner: string
   piperRepo: string
   sapPiperVersion: string
@@ -84,9 +87,12 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
   }
 
   return {
+    itemName: getValue('item-name', ''),
     stepName: stepNameValue,
     flags: getValue('flags'),
     piperVersion: getValue('piper-version'),
+    workhorseVersion: getValue('workhorse-version'),
+    artifactoryUrl: getValue('artifactory-url', ''),
     piperOwner: getValue('piper-owner', PIPER_OWNER),
     piperRepo: getValue('piper-repository', PIPER_REPOSITORY),
     sapPiperVersion: getValue('sap-piper-version'),

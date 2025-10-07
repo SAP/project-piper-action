@@ -36,3 +36,37 @@ export async function executePiper (
 
   return await getExecOutput(binaryPath, args, options)
 }
+
+export async function executeWorkhorse (
+  stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
+): Promise<ExecOutput> {
+  if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
+
+  flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
+    ? flags.concat(JSON.parse(process.env.defaultsFlags))
+    : flags
+
+  const workhorsePath = internalActionVariables.workhorseBinPath
+  const containerID = internalActionVariables.dockerContainerID
+
+  // Default to Piper
+  let binaryPath = workhorsePath
+  let args: string[] = [stepName, ...flags]
+
+  if (containerID !== '') { // Running in a container
+    debug(`containerID: ${containerID}, running in docker`)
+    binaryPath = 'docker'
+    args = [
+      'exec',
+      containerID,
+      `/workhorse/${path.basename(workhorsePath)}`,
+      stepName,
+      ...flags
+    ]
+  }
+
+  let options: ExecOptions = { ignoreReturnCode: true }
+  options = Object.assign({}, options, execOptions)
+
+  return await getExecOutput(binaryPath, args, options)
+}

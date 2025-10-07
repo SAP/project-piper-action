@@ -1,7 +1,7 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
-import { executePiper } from './execute'
+import { executePiper, executeWorkhorse } from './execute'
 import {
   type ActionConfiguration,
   getDefaultConfig,
@@ -14,11 +14,12 @@ import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import { tokenize } from './utils'
 import { buildPiperInnerSource } from './build'
-import { downloadPiperBinary } from './download'
+import { downloadPiperBinary, downloadWorkhorseBinary } from './download'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
   piperBinPath: '',
+  workhorseBinPath: '',
   dockerContainerID: '',
   sidecarNetworkID: '',
   sidecarContainerID: ''
@@ -30,6 +31,9 @@ export async function run (): Promise<void> {
     info('Getting action configuration')
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
+
+    // Prepare Workhorse binary
+    await prepareWorkhorseBinary(actionCfg)
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
@@ -60,7 +64,21 @@ export async function run (): Promise<void> {
       }
       endGroup()
     }
-    if (actionCfg.stepName !== '') {
+    if (actionCfg.itemName !== '') {
+      startGroup('Step Configuration')
+      const flags = tokenize(actionCfg.flags)
+      const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+      endGroup()
+
+      await runContainers(actionCfg, contextConfig)
+
+      startGroup(actionCfg.stepName)
+      const result = await executeWorkhorse(actionCfg.stepName, flags)
+      if (result.exitCode !== 0) {
+        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+      }
+      endGroup()
+    } else if (actionCfg.stepName !== '') {
       startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
@@ -96,6 +114,18 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
   chmodSync(piperPath, 0o775)
 }
 
+async function prepareWorkhorseBinary (actionCfg: ActionConfiguration): Promise<void> {
+  const workhorsePath: string = await prepareWorkhorsePath(actionCfg)
+
+  if (workhorsePath === undefined || workhorsePath === '') {
+    throw new Error('Piper binary path is empty. Please check your action inputs.')
+  }
+
+  internalActionVariables.workhorseBinPath = workhorsePath
+  debug('obtained workhorse binary at '.concat(workhorsePath))
+  chmodSync(workhorsePath, 0o775)
+}
+
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
@@ -116,4 +146,17 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
+
+async function prepareWorkhorsePath (actionCfg: ActionConfiguration): Promise<string> {
+  debug('Preparing Workhorse binary path with configuration '.concat(JSON.stringify(actionCfg)))
+
+  // devel:project-piper:workhorse:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+
+  // if (actionCfg.piperVersion.startsWith('devel:')) {
+  //   info('Building OS Piper from source')
+  //   return await buildWorkhorseFromSource(actionCfg.workhorseVersion)
+  // }
+  info('Downloading Piper OS binary')
+  return await downloadWorkhorseBinary(actionCfg.artifactoryUrl, actionCfg.workhorseVersion)
 }
