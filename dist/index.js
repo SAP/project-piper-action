@@ -38643,7 +38643,7 @@ function downloadWorkhorseBinary(artifactoryUrl, version) {
         if (fs.existsSync(workhorsePath)) {
             return workhorsePath;
         }
-        (0, core_1.info)(`Downloading '${artifactoryUrl}' as '${workhorsePath}'`);
+        (0, core_1.info)(`Downloading '${artifactoryUrl}/${version}/sap-piper' as '${workhorsePath}'`);
         yield (0, tool_cache_1.downloadTool)(`${artifactoryUrl}/${version}/sap-piper`, workhorsePath);
         return workhorsePath;
     });
