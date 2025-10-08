@@ -16962,12 +16962,8 @@ function run() {
                 (0, core_1.endGroup)();
             }
             if (actionCfg.itemName !== '') {
-                (0, core_1.startGroup)('Step Configuration');
+                (0, core_1.startGroup)('Engine execution');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
-                const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
-                (0, core_1.endGroup)();
-                yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executeWorkhorse)(actionCfg.itemName, flags);
                 if (result.exitCode !== 0) {
                     throw new Error(`Step ${actionCfg.itemName} failed with exit code ${result.exitCode}`);
