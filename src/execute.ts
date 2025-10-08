@@ -40,12 +40,6 @@ export async function executePiper (
 export async function executeWorkhorse (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
 ): Promise<ExecOutput> {
-  if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
-
-  flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
-    ? flags.concat(JSON.parse(process.env.defaultsFlags))
-    : flags
-
   const workhorsePath = internalActionVariables.workhorseBinPath
   const containerID = internalActionVariables.dockerContainerID
 

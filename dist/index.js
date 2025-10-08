@@ -16564,11 +16564,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
 exports.executePiper = executePiper;
 function executeWorkhorse(stepName, flags = [], ignoreDefaults = false, execOptions) {
     return __awaiter(this, void 0, void 0, function* () {
-        if (process.env.GITHUB_JOB !== undefined)
-            flags.push('--stageName', process.env.GITHUB_JOB);
-        flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
-            ? flags.concat(JSON.parse(process.env.defaultsFlags))
-            : flags;
         const workhorsePath = piper_1.internalActionVariables.workhorseBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
         // Default to Piper
