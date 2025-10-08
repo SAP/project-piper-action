@@ -4,6 +4,15 @@ inputs:
   step-name:
     description: 'Name of Piper step to execute'
     required: false
+  item-name:
+    description: 'Name of Piper v2 step to execute'
+    required: false
+  workhorse-version:
+    description: 'version of the engine'
+    required: false
+  artifactory-url:
+    description: 'url of engine in artifactory'
+    required: false
   command:
     description: 'Name of Piper step to execute'
     deprecationMessage: 'Deprecated, use step-name'
