@@ -63,8 +63,8 @@ export async function downloadWorkhorseBinary (artifactoryUrl: string, version: 
     return workhorsePath
   }
 
-  info(`Downloading '${artifactoryUrl}/${version}/sap-piper' as '${workhorsePath}'`)
-  await downloadTool(`${artifactoryUrl}/${version}/sap-piper`, workhorsePath)
+  info(`Downloading '${artifactoryUrl}/${version}/engine' as '${workhorsePath}'`)
+  await downloadTool(`${artifactoryUrl}/${version}/engine`, workhorsePath)
 
   return workhorsePath
 }
