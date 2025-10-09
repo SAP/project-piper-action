@@ -60,7 +60,6 @@ export async function run (): Promise<void> {
     await loadPipelineEnv()
     endGroup()
 
-
     startGroup('version')
     info('Getting version')
     await executePiper('version')
@@ -83,20 +82,21 @@ export async function run (): Promise<void> {
       }
       endGroup()
     }
+    if (actionCfg.stepName !== '') {
+      startGroup('Step Configuration')
+      const flags = tokenize(actionCfg.flags)
+      const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+      endGroup()
 
-    startGroup('Step Configuration')
-    const flags = tokenize(actionCfg.flags)
-    const contextConfig = await readContextConfig(actionCfg.stepName, flags)
-    endGroup()
+      await runContainers(actionCfg, contextConfig)
 
-    await runContainers(actionCfg, contextConfig)
-
-    startGroup(actionCfg.stepName)
-    const result = await executePiper(actionCfg.stepName, flags)
-    if (result.exitCode !== 0) {
-      throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+      startGroup(actionCfg.stepName)
+      const result = await executePiper(actionCfg.stepName, flags)
+      if (result.exitCode !== 0) {
+        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+      }
+      endGroup()
     }
-    endGroup()
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {
@@ -139,4 +139,3 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
-
