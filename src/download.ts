@@ -52,23 +52,6 @@ export async function downloadPiperBinary (
   return piperPath
 }
 
-export async function downloadWorkhorseBinary (artifactoryUrl: string, version: string): Promise<string> {
-  const workhorseBinaryName: string = 'workhorse'
-  debug(`version: ${version}`)
-
-  debug('Fetching workhorse binary from URL')
-
-  const workhorsePath = `${process.cwd()}/${version.replace(/\./g, '_')}/${workhorseBinaryName}`
-  if (fs.existsSync(workhorsePath)) {
-    return workhorsePath
-  }
-
-  info(`Downloading '${artifactoryUrl}/${version}/engine' as '${workhorsePath}'`)
-  await downloadTool(`${artifactoryUrl}/${version}/engine`, workhorsePath)
-
-  return workhorsePath
-}
-
 export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
   try {
     const urlByTag = getDownloadUrlByTag(version)
