@@ -83,22 +83,20 @@ export async function run (): Promise<void> {
       }
       endGroup()
     }
-    if (actionCfg.itemName !== '') {
-    } else if (actionCfg.stepName !== '') {
-      startGroup('Step Configuration')
-      const flags = tokenize(actionCfg.flags)
-      const contextConfig = await readContextConfig(actionCfg.stepName, flags)
-      endGroup()
 
-      await runContainers(actionCfg, contextConfig)
+    startGroup('Step Configuration')
+    const flags = tokenize(actionCfg.flags)
+    const contextConfig = await readContextConfig(actionCfg.stepName, flags)
+    endGroup()
 
-      startGroup(actionCfg.stepName)
-      const result = await executePiper(actionCfg.stepName, flags)
-      if (result.exitCode !== 0) {
-        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
-      }
-      endGroup()
+    await runContainers(actionCfg, contextConfig)
+
+    startGroup(actionCfg.stepName)
+    const result = await executePiper(actionCfg.stepName, flags)
+    if (result.exitCode !== 0) {
+      throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
     }
+    endGroup()
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
   } catch (error: unknown) {

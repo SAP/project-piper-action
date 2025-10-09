@@ -43,7 +43,6 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--user', '1000:1000',
     '--volume', `${cwd}:${cwd}`,
     '--volume', `${dirname(piperPath)}:/piper`,
-    '--volume', `${dirname(workhorsePath)}:/workhorse`,
     '--workdir', cwd,
     ...dockerOptionsArray,
     '--name', containerID
