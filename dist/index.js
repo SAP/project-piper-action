@@ -15862,7 +15862,6 @@ function getActionConfig(options) {
             stepNameValue = getValue('command');
         }
         return {
-            itemName: getValue('item-name', ''),
             stepName: stepNameValue,
             flags: getValue('flags'),
             piperVersion: getValue('piper-version'),
@@ -16184,7 +16183,6 @@ function startContainer(actionCfg, ctxConfig) {
             '--user', '1000:1000',
             '--volume', `${cwd}:${cwd}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
-            '--volume', `${(0, path_1.dirname)(workhorsePath)}:/workhorse`,
             '--workdir', cwd,
             ...dockerOptionsArray,
             '--name', containerID
@@ -16355,7 +16353,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPiperDownloadURL = exports.downloadWorkhorseBinary = exports.downloadPiperBinary = void 0;
+exports.getPiperDownloadURL = exports.downloadPiperBinary = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(2186);
 const tool_cache_1 = __nccwpck_require__(7784);
@@ -16401,21 +16399,6 @@ function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
     });
 }
 exports.downloadPiperBinary = downloadPiperBinary;
-function downloadWorkhorseBinary(artifactoryUrl, version) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const workhorseBinaryName = 'workhorse';
-        (0, core_1.debug)(`version: ${version}`);
-        (0, core_1.debug)('Fetching workhorse binary from URL');
-        const workhorsePath = `${process.cwd()}/${version.replace(/\./g, '_')}/${workhorseBinaryName}`;
-        if (fs.existsSync(workhorsePath)) {
-            return workhorsePath;
-        }
-        (0, core_1.info)(`Downloading '${artifactoryUrl}/${version}/engine' as '${workhorsePath}'`);
-        yield (0, tool_cache_1.downloadTool)(`${artifactoryUrl}/${version}/engine`, workhorsePath);
-        return workhorsePath;
-    });
-}
-exports.downloadWorkhorseBinary = downloadWorkhorseBinary;
 function getPiperDownloadURL(piper, version) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -16528,7 +16511,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.executeWorkhorse = exports.executePiper = void 0;
+exports.executePiper = void 0;
 const exec_1 = __nccwpck_require__(1514);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
@@ -16562,30 +16545,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
     });
 }
 exports.executePiper = executePiper;
-function executeWorkhorse(stepName, flags = [], ignoreDefaults = false, execOptions) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const workhorsePath = piper_1.internalActionVariables.workhorseBinPath;
-        const containerID = piper_1.internalActionVariables.dockerContainerID;
-        // Default to Piper
-        let binaryPath = workhorsePath;
-        let args = [stepName, ...flags];
-        if (containerID !== '') { // Running in a container
-            (0, core_1.debug)(`containerID: ${containerID}, running in docker`);
-            binaryPath = 'docker';
-            args = [
-                'exec',
-                containerID,
-                `/workhorse/${path_1.default.basename(workhorsePath)}`,
-                stepName,
-                ...flags
-            ];
-        }
-        let options = { ignoreReturnCode: true };
-        options = Object.assign({}, options, execOptions);
-        return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
-    });
-}
-exports.executeWorkhorse = executeWorkhorse;
 
 
 /***/ }),
@@ -16909,7 +16868,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = exports.internalActionVariables = void 0;
+exports.run = exports.v2StepsList = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(2186);
 const github_1 = __nccwpck_require__(978);
 const fs_1 = __nccwpck_require__(7147);
@@ -16921,6 +16880,7 @@ const enterprise_1 = __nccwpck_require__(4340);
 const utils_1 = __nccwpck_require__(1314);
 const build_1 = __nccwpck_require__(6793);
 const download_1 = __nccwpck_require__(6232);
+const workhorse_1 = __nccwpck_require__(5646);
 // Global runtime variables that is accessible within a single action execution
 exports.internalActionVariables = {
     piperBinPath: '',
@@ -16929,15 +16889,29 @@ exports.internalActionVariables = {
     sidecarNetworkID: '',
     sidecarContainerID: ''
 };
+exports.v2StepsList = new Map([
+    ['mavenBuild', ''],
+    ['someOtherStep', '']
+]);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            (0, core_1.startGroup)('Setup');
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
-            // Prepare Workhorse binary
-            yield prepareWorkhorseBinary(actionCfg);
+            if (actionCfg.stepName && exports.v2StepsList.has(actionCfg.stepName)) {
+                (0, core_1.info)(`Step "${actionCfg.stepName}" is transeffered to v2 step. Executing via Engine.`);
+                (0, core_1.startGroup)('Engine execution');
+                // Prepare Workhorse binary
+                yield (0, workhorse_1.prepareWorkhorseBinary)(actionCfg);
+                const result = yield (0, workhorse_1.executeWorkhorse)(actionCfg.stepName, (0, utils_1.tokenize)(actionCfg.flags));
+                if (result.exitCode !== 0) {
+                    throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
+                }
+                (0, core_1.endGroup)();
+                return;
+            }
+            (0, core_1.startGroup)('Setup');
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
@@ -16956,16 +16930,7 @@ function run() {
                 }
                 (0, core_1.endGroup)();
             }
-            if (actionCfg.itemName !== '') {
-                (0, core_1.startGroup)('Engine execution');
-                const flags = (0, utils_1.tokenize)(actionCfg.flags);
-                const result = yield (0, execute_1.executeWorkhorse)(actionCfg.itemName, flags);
-                if (result.exitCode !== 0) {
-                    throw new Error(`Step ${actionCfg.itemName} failed with exit code ${result.exitCode}`);
-                }
-                (0, core_1.endGroup)();
-            }
-            else if (actionCfg.stepName !== '') {
+            if (actionCfg.stepName !== '') {
                 (0, core_1.startGroup)('Step Configuration');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
@@ -17000,17 +16965,6 @@ function preparePiperBinary(actionCfg) {
         (0, fs_1.chmodSync)(piperPath, 0o775);
     });
 }
-function prepareWorkhorseBinary(actionCfg) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const workhorsePath = yield prepareWorkhorsePath(actionCfg);
-        if (workhorsePath === undefined || workhorsePath === '') {
-            throw new Error('Piper binary path is empty. Please check your action inputs.');
-        }
-        exports.internalActionVariables.workhorseBinPath = workhorsePath;
-        (0, core_1.debug)('obtained workhorse binary at '.concat(workhorsePath));
-        (0, fs_1.chmodSync)(workhorsePath, 0o775);
-    });
-}
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
@@ -17031,18 +16985,6 @@ function preparePiperPath(actionCfg) {
         }
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-    });
-}
-function prepareWorkhorsePath(actionCfg) {
-    return __awaiter(this, void 0, void 0, function* () {
-        (0, core_1.debug)('Preparing Workhorse binary path with configuration '.concat(JSON.stringify(actionCfg)));
-        // devel:project-piper:workhorse:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-        // if (actionCfg.piperVersion.startsWith('devel:')) {
-        //   info('Building OS Piper from source')
-        //   return await buildWorkhorseFromSource(actionCfg.workhorseVersion)
-        // }
-        (0, core_1.info)('Downloading Piper OS binary');
-        return yield (0, download_1.downloadWorkhorseBinary)(actionCfg.artifactoryUrl, actionCfg.workhorseVersion);
     });
 }
 
@@ -17182,6 +17124,71 @@ function tokenize(input) {
     });
 }
 exports.tokenize = tokenize;
+
+
+/***/ }),
+
+/***/ 5646:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.executeWorkhorse = exports.prepareWorkhorseBinary = void 0;
+const piper_1 = __nccwpck_require__(309);
+const tool_cache_1 = __nccwpck_require__(7784);
+const core_1 = __nccwpck_require__(2186);
+const fs_1 = __nccwpck_require__(7147);
+const exec_1 = __nccwpck_require__(1514);
+function prepareWorkhorseBinary(actionCfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.debug)('Preparing Workhorse binary');
+        const workhorsePath = yield downloadWorkhorseBinary(actionCfg.artifactoryUrl, actionCfg.workhorseVersion);
+        if (workhorsePath === undefined || workhorsePath === '') {
+            throw new Error('Piper binary path is empty. Please check your action inputs.');
+        }
+        piper_1.internalActionVariables.workhorseBinPath = workhorsePath;
+        (0, core_1.debug)('obtained workhorse binary at '.concat(workhorsePath));
+        (0, fs_1.chmodSync)(workhorsePath, 0o775);
+    });
+}
+exports.prepareWorkhorseBinary = prepareWorkhorseBinary;
+function downloadWorkhorseBinary(artifactoryUrl, version) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const workhorseBinaryName = 'workhorse';
+        const workhorsePath = `${process.cwd()}/${version.replace(/\./g, '_')}/${workhorseBinaryName}`;
+        if ((0, fs_1.existsSync)(workhorsePath)) {
+            return workhorsePath;
+        }
+        if (artifactoryUrl === '') {
+            throw new Error('Artifactory URL for workhorse is not provided. Set it via input "artifactory-url" or environment variable "PIPER_ACTION_ARTIFACTORY_URL"');
+        }
+        if (version === '') {
+            throw new Error('Version for workhorse is not provided. Set it via input "workhorse-version" or environment variable "PIPER_ACTION_WORKHORSE_VERSION"');
+        }
+        const downloadUrl = `${artifactoryUrl}/${version}/engine`;
+        (0, core_1.info)(`Downloading '${downloadUrl}' as '${workhorsePath}'`);
+        yield (0, tool_cache_1.downloadTool)(downloadUrl, workhorsePath);
+        return workhorsePath;
+    });
+}
+function executeWorkhorse(stepName, flags = []) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let args = [stepName, ...flags];
+        let options = { ignoreReturnCode: true };
+        return yield (0, exec_1.getExecOutput)(piper_1.internalActionVariables.workhorseBinPath, args, options);
+    });
+}
+exports.executeWorkhorse = executeWorkhorse;
 
 
 /***/ }),
