@@ -16891,6 +16891,7 @@ exports.internalActionVariables = {
 };
 exports.v2StepsList = new Map([
     ['mavenBuild', ''],
+    ['detectExecuteScan', ''],
     ['someOtherStep', '']
 ]);
 function run() {
