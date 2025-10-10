@@ -28,7 +28,9 @@ export const internalActionVariables = {
 
 export const v2StepsList: Map<string, any> = new Map<string, any>([
   ['mavenBuild', ''],
+  ['detectExecuteScan', ''],
   ['someOtherStep', '']
+  
 ])
 
 export async function run (): Promise<void> {
