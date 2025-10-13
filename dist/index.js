@@ -16136,7 +16136,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.getDockerImageFromEnvVar = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16192,7 +16192,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(dockerImage), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16272,23 +16272,37 @@ function getTelemetryEnvVars() {
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
+function getDockerImageFromEnvVar(dockerImage) {
+    return [
+        '--env', `PIPER_dockerImage=${dockerImage}`
+    ];
+}
+exports.getDockerImageFromEnvVar = getDockerImageFromEnvVar;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
+        let dockerError = '';
         const options = {
             listeners: {
                 stdout: (data) => {
                     dockerOutput += data.toString();
+                },
+                stderr: (data) => {
+                    dockerError += data.toString();
                 }
             },
-            ignoreReturnCode: true,
-            silent: true
+            ignoreReturnCode: true
         };
-        dockerOutput = dockerOutput.trim();
         const exitCode = yield (0, exec_1.exec)('docker', dockerRunArgs, options);
+        dockerOutput = dockerOutput.trim();
+        dockerError = dockerError.trim();
         if (exitCode !== 0) {
-            yield Promise.reject(new Error('docker execute failed: ' + dockerOutput));
-            return '';
+            const errorMessage = dockerError.length > 0
+                ? dockerError
+                : dockerOutput.length > 0
+                    ? dockerOutput
+                    : 'Unknown error';
+            throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`);
         }
         return dockerOutput;
     });

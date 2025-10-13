@@ -15,7 +15,8 @@ import {
   runContainers,
   startContainer,
   stopContainer,
-  dockerExecReadOutput
+  dockerExecReadOutput,
+  getDockerImageFromEnvVar
 } from '../src/docker'
 
 jest.mock('@actions/core')
@@ -110,6 +111,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(actionConfig.dockerImage),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -140,6 +142,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(actionConfig.dockerImage),
       actionConfig.dockerImage,
       'cat'
     ]
@@ -174,6 +177,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(ctxCfg.dockerImage),
       ctxCfg.dockerImage,
       'cat'
     ]
@@ -213,6 +217,7 @@ describe('Docker', () => {
       ...getVaultEnvVars(),
       ...getSystemTrustEnvVars(),
       ...getTelemetryEnvVars(),
+      ...getDockerImageFromEnvVar(ctxCfg.dockerImage),
       ctxCfg.dockerImage,
       'cat'
     ]
@@ -277,11 +282,10 @@ describe('Docker', () => {
     expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
   })
 
-  test('dockerExecReadOutput with ignoreReturnCode and silent options', async () => {
+  test('dockerExecReadOutput with ignoreReturnCode', async () => {
     const dockerArgs = ['ps', '-a']
     const expectedOptions = expect.objectContaining({
       ignoreReturnCode: true,
-      silent: true,
       listeners: expect.objectContaining({
         stdout: expect.any(Function)
       })
@@ -299,6 +303,6 @@ describe('Docker', () => {
 
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(1))
 
-    await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed:')
+    await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed with exit code')
   })
 })
