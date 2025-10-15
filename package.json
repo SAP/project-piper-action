@@ -35,7 +35,8 @@
   },
   "homepage": "https://sap.github.io/jenkins-library/",
   "dependencies": {
-    "@actions/artifact": "1.1.0",
+    "@actions/artifact": "1.1.2",
+    "@actions/cache": "^4.1.0",
     "@actions/core": "1.10.0",
     "@actions/exec": "1.1.1",
     "@actions/github": "5.1.1",
@@ -72,5 +73,6 @@
   },
   "engines": {
     "node": ">=v16.17.1"
-  }
+  },
+  "packageManager": "pnpm@10.12.4+sha512.5ea8b0deed94ed68691c9bad4c955492705c5eeb8a87ef86bc62c74a26b037b08ff9570f108b2e4dbd1dd1a9186fea925e527f141c648e85af45631074680184"
 }

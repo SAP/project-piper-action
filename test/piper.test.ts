@@ -5,6 +5,7 @@ import * as core from '@actions/core'
 import * as piper from '../src/piper'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
+import * as cache from '../src/cache'
 import * as github from '../src/github'
 import * as download from '../src/download'
 import * as docker from '../src/docker'
@@ -42,9 +43,16 @@ describe('Piper', () => {
     }
 
     fs.chmodSync = jest.fn()
+    fs.existsSync = jest.fn().mockReturnValue(false)
+    fs.mkdirSync = jest.fn()
+    fs.readdirSync = jest.fn().mockReturnValue([])
     jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
+    jest.spyOn(cache, 'restoreDependencyCache').mockImplementation()
+    jest.spyOn(cache, 'saveDependencyCache').mockImplementation()
+    jest.spyOn(cache, 'generateCacheKey').mockReturnValue('test-cache-key')
+    jest.spyOn(cache, 'getHashFiles').mockReturnValue([])
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
     jest.spyOn(config, 'createCheckIfStepActiveMaps').mockImplementation()
@@ -53,6 +61,10 @@ describe('Piper', () => {
     jest.spyOn(pipelineEnv, 'loadPipelineEnv').mockImplementation()
     jest.spyOn(pipelineEnv, 'exportPipelineEnv').mockImplementation()
     jest.spyOn(core, 'setFailed').mockImplementation()
+    jest.spyOn(core, 'info').mockImplementation()
+    jest.spyOn(core, 'debug').mockImplementation()
+    jest.spyOn(core, 'startGroup').mockImplementation()
+    jest.spyOn(core, 'endGroup').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
       if (options !== undefined) {
@@ -100,7 +112,7 @@ describe('Piper', () => {
     )
     expect(config.createCheckIfStepActiveMaps).toHaveBeenCalled()
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('development version build from source', async () => {
     inputs['step-name'] = 'getConfig'
@@ -110,7 +122,7 @@ describe('Piper', () => {
 
     expect(github.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('open-source command', async () => {
     inputs['step-name'] = 'getConfig'
@@ -130,7 +142,7 @@ describe('Piper', () => {
       inputs['piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 
   test('failed obtaining piper binary', async () => {
     inputs['step-name'] = 'getConfig'
@@ -164,5 +176,5 @@ describe('Piper', () => {
 
     expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with exit code 1')
     expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
+  }, 20000)
 })

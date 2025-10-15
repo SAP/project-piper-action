@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { ActionConfiguration } from './config'
 import { createNetwork, parseDockerEnvVars, removeNetwork, startSidecar } from './sidecar'
 import { internalActionVariables } from './piper'
+import { BuildToolManager } from './buildTools'
 
 export async function runContainers (actionCfg: ActionConfiguration, ctxConfig: any): Promise<void> {
   const sidecarImage = actionCfg.sidecarImage !== '' ? actionCfg.sidecarImage : ctxConfig.sidecarImage as string
@@ -43,9 +44,75 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--volume', `${cwd}:${cwd}`,
     '--volume', `${dirname(piperPath)}:/piper`,
     '--workdir', cwd,
+    // Docker performance optimizations
+    '--memory', '4g',
+    '--cpus', '2.0',
+    '--shm-size', '1g', // Increase shared memory for parallel compilation
+    '--tmpfs', '/tmp:rw,nosuid,size=1g', // Fast temporary filesystem
     ...dockerOptionsArray,
     '--name', containerID
   ]
+
+  // Check cache state from environment variables
+  const cacheRestored = process.env.PIPER_CACHE_RESTORED === 'true'
+  const dependenciesChanged = process.env.PIPER_DEPENDENCIES_CHANGED === 'true'
+
+  // Add cache directory volumes if specified
+  const cacheDir = process.env.PIPER_CACHE_DIR ?? ''
+  const buildToolName = process.env.PIPER_BUILD_TOOL ?? ''
+
+  if (cacheDir !== '' && buildToolName !== '') {
+    const manager = new BuildToolManager()
+    const buildTool = manager.getBuildToolByName(buildToolName)
+
+    if (buildTool !== null) {
+      // Mount cache directory based on build tool
+      dockerRunArgs.push(
+        '--volume', `${cacheDir}:${buildTool.dockerMountPath}`
+      )
+
+      // Special handling for Go to ensure proper permissions
+      if (buildTool.name === 'go') {
+        dockerRunArgs.push(
+          '--tmpfs', '/go/tmp:rw,exec,size=1g'
+        )
+      }
+
+      // Get build tool specific environment variables
+      const envVars = buildTool.getDockerEnvironmentVariables(cacheRestored, dependenciesChanged)
+      for (const envVar of envVars) {
+        if (envVar.includes('=')) {
+          const [key, value] = envVar.split('=', 2)
+          dockerRunArgs.push('--env', `${key}=${value}`)
+        } else {
+          dockerRunArgs.push('--env', envVar)
+        }
+      }
+
+      debug(`Mounted ${buildTool.name} cache: ${cacheDir} to ${buildTool.dockerMountPath}`)
+      debug(`Cache restored: ${cacheRestored}, Dependencies changed: ${dependenciesChanged}`)
+      debug(`${buildTool.name} optimized for cached dependencies`)
+    } else {
+      debug(`Build tool ${buildToolName} not found in manager`)
+    }
+  } else if (cacheDir !== '') {
+    // Fallback: mount as generic cache if no specific build tool detected
+    dockerRunArgs.push(
+      '--volume', `${cacheDir}:/home/ubuntu/.cache`
+    )
+    debug(`Mounted generic cache: ${cacheDir} to /home/ubuntu/.cache`)
+  }
+
+  // Always pass cache state environment variables to container for Piper to read
+  dockerRunArgs.push(
+    '--env', `PIPER_CACHE_RESTORED=${cacheRestored ? 'true' : 'false'}`,
+    '--env', `PIPER_DEPENDENCIES_CHANGED=${dependenciesChanged ? 'true' : 'false'}`
+  )
+
+  // Pass build tool name to container if available
+  if (buildToolName !== '') {
+    dockerRunArgs.push('--env', `PIPER_BUILD_TOOL=${buildToolName}`)
+  }
 
   const networkID = internalActionVariables.sidecarNetworkID
   if (networkID !== '') {

@@ -2,6 +2,7 @@ import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
+import { saveCachedDependencies, restoreCachedDependencies } from './cache'
 import {
   type ActionConfiguration,
   getDefaultConfig,
@@ -66,6 +67,17 @@ export async function run (): Promise<void> {
       const contextConfig = await readContextConfig(actionCfg.stepName, flags)
       endGroup()
 
+      // Setup cache directory for dependencies
+      const cacheEnabled: boolean = process.env.PIPER_ENABLE_CACHE !== 'false'
+      info(`Cache is ${cacheEnabled ? 'enabled' : 'disabled'}`)
+      const cacheDir: string = process.env.RUNNER_TEMP !== undefined
+        ? `${process.env.RUNNER_TEMP}/piper-cache`
+        : '/tmp/piper-cache'
+
+      if (cacheEnabled) {
+        await restoreCachedDependencies(actionCfg.stepName, cacheDir)
+      }
+
       await runContainers(actionCfg, contextConfig)
 
       startGroup(actionCfg.stepName)
@@ -74,6 +86,11 @@ export async function run (): Promise<void> {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      if (cacheEnabled) {
+        // Save cache after successful step execution - only if cache wasn't restored and directory has content
+        await saveCachedDependencies(actionCfg.stepName, cacheDir)
+      }
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
