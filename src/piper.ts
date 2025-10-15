@@ -6,6 +6,7 @@ import {
   type ActionConfiguration,
   getDefaultConfig,
   readContextConfig,
+  readVerboseFromConfig,
   createCheckIfStepActiveMaps,
   getActionConfig
 } from './config'
@@ -33,6 +34,15 @@ export async function run (): Promise<void> {
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
+
+    // Check if verbose is enabled in config file and enable debug logging early
+    const isVerbose = readVerboseFromConfig()
+    if (isVerbose) {
+      info('Verbose mode enabled in config - enabling debug logging for action')
+      // Enable runner debug logging to show all debug output
+      process.env.ACTIONS_RUNNER_DEBUG = 'true'
+      process.env.ACTIONS_STEP_DEBUG = 'true'
+    }
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
