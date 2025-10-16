@@ -1,8 +1,10 @@
 name: Trigger Change Management
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Release Piper Action"]
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -11,7 +13,25 @@ jobs:
   trigger_change_management:
     name: Trigger Change Management Workflow
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Get latest release info
+        id: release
+        run: |
+          gh release view --json tagName,url,name > release.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Parse release info
+        id: parse
+        run: |
+          tag_name=$(jq -r .tagName release.json)
+          release_url=$(jq -r .url release.json)
+          release_name=$(jq -r .name release.json)
+          echo "tag_name=$tag_name" >> $GITHUB_OUTPUT
+          echo "release_url=$release_url" >> $GITHUB_OUTPUT
+          echo "release_name=$release_name" >> $GITHUB_OUTPUT
+
       - name: Trigger change-management workflow in private repo
         run: |
           set -e
@@ -25,9 +45,9 @@ jobs:
             -d '{
                   "event_type": "change-management",
                   "client_payload": {
-                    "tag_name": "${{ github.event.release.tag_name }}",
-                    "release_url": "${{ github.event.release.html_url }}",
-                    "release_name": "${{ github.event.release.name }}"
+                    "tag_name": "${{ steps.parse.outputs.tag_name }}",
+                    "release_url": "${{ steps.parse.outputs.release_url }}",
+                    "release_name": "${{ steps.parse.outputs.release_name }}"
                   }
                 }')
 
