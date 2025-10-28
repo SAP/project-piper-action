@@ -1,6 +1,6 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync, existsSync, cpSync, mkdirSync } from 'fs'
+import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync } from 'fs'
 import * as path from 'path'
 import { executePiper } from './execute'
 import {
@@ -65,8 +65,12 @@ export async function run (): Promise<void> {
         await createCheckIfStepActiveMaps(actionCfg)
       }
 
+      debugDirectoryStructure('Before copying .pipeline folder', actionCfg.workingDir)
+
       info('Copying .pipeline folder to working directory')
       copyPipelineFolder(actionCfg.workingDir)
+
+      debugDirectoryStructure('After copying .pipeline folder', actionCfg.workingDir)
 
       endGroup()
     }
@@ -77,6 +81,8 @@ export async function run (): Promise<void> {
       endGroup()
 
       await runContainers(actionCfg, contextConfig)
+
+      debugDirectoryStructure('Before executing step', actionCfg.workingDir)
 
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
@@ -126,6 +132,69 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
+
+function printDirectoryTree (dirPath: string, prefix: string = '', maxDepth: number = 3, currentDepth: number = 0): void {
+  if (currentDepth >= maxDepth) return
+
+  try {
+    const items = readdirSync(dirPath)
+    items.forEach((item, index) => {
+      const itemPath = path.join(dirPath, item)
+      const isLast = index === items.length - 1
+      const connector = isLast ? '└── ' : '├── '
+
+      try {
+        const stats = statSync(itemPath)
+        const itemType = stats.isDirectory() ? '📁' : '📄'
+        info(`${prefix}${connector}${itemType} ${item}`)
+
+        if (stats.isDirectory() && !item.startsWith('.git') && item !== 'node_modules') {
+          const newPrefix = prefix + (isLast ? '    ' : '│   ')
+          printDirectoryTree(itemPath, newPrefix, maxDepth, currentDepth + 1)
+        }
+      } catch (err) {
+        debug(`Cannot access ${itemPath}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    })
+  } catch (error) {
+    debug(`Cannot read directory ${dirPath}: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+function debugDirectoryStructure (label: string, workingDir: string): void {
+  info(`\n=== ${label} ===`)
+  info(`Current working directory: ${process.cwd()}`)
+  if (workingDir !== '.' && workingDir !== '') {
+    info(`Target working directory: ${path.join(process.cwd(), workingDir)}`)
+  }
+
+  info('\nRoot .pipeline directory:')
+  const rootPipelineDir = path.join(process.cwd(), '.pipeline')
+  if (existsSync(rootPipelineDir)) {
+    printDirectoryTree(rootPipelineDir, '', 2, 0)
+  } else {
+    info('  (does not exist)')
+  }
+
+  if (workingDir !== '.' && workingDir !== '') {
+    info(`\n${workingDir}/.pipeline directory:`)
+    const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline')
+    if (existsSync(targetPipelineDir)) {
+      printDirectoryTree(targetPipelineDir, '', 2, 0)
+    } else {
+      info('  (does not exist)')
+    }
+
+    info(`\n${workingDir} directory contents:`)
+    const targetDir = path.join(process.cwd(), workingDir)
+    if (existsSync(targetDir)) {
+      printDirectoryTree(targetDir, '', 1, 0)
+    } else {
+      info('  (does not exist)')
+    }
+  }
+  info('=== End Directory Debug ===\n')
 }
 
 function copyPipelineFolder (workingDir: string): void {

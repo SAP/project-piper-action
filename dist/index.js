@@ -39300,8 +39300,10 @@ function run() {
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
+                debugDirectoryStructure('Before copying .pipeline folder', actionCfg.workingDir);
                 (0, core_1.info)('Copying .pipeline folder to working directory');
                 copyPipelineFolder(actionCfg.workingDir);
+                debugDirectoryStructure('After copying .pipeline folder', actionCfg.workingDir);
                 (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
@@ -39310,6 +39312,7 @@ function run() {
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
+                debugDirectoryStructure('Before executing step', actionCfg.workingDir);
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
@@ -39360,6 +39363,67 @@ function preparePiperPath(actionCfg) {
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
+}
+function printDirectoryTree(dirPath, prefix = '', maxDepth = 3, currentDepth = 0) {
+    if (currentDepth >= maxDepth)
+        return;
+    try {
+        const items = (0, fs_1.readdirSync)(dirPath);
+        items.forEach((item, index) => {
+            const itemPath = path.join(dirPath, item);
+            const isLast = index === items.length - 1;
+            const connector = isLast ? '└── ' : '├── ';
+            try {
+                const stats = (0, fs_1.statSync)(itemPath);
+                const itemType = stats.isDirectory() ? '📁' : '📄';
+                (0, core_1.info)(`${prefix}${connector}${itemType} ${item}`);
+                if (stats.isDirectory() && !item.startsWith('.git') && item !== 'node_modules') {
+                    const newPrefix = prefix + (isLast ? '    ' : '│   ');
+                    printDirectoryTree(itemPath, newPrefix, maxDepth, currentDepth + 1);
+                }
+            }
+            catch (err) {
+                (0, core_1.debug)(`Cannot access ${itemPath}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        });
+    }
+    catch (error) {
+        (0, core_1.debug)(`Cannot read directory ${dirPath}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+function debugDirectoryStructure(label, workingDir) {
+    (0, core_1.info)(`\n=== ${label} ===`);
+    (0, core_1.info)(`Current working directory: ${process.cwd()}`);
+    if (workingDir !== '.' && workingDir !== '') {
+        (0, core_1.info)(`Target working directory: ${path.join(process.cwd(), workingDir)}`);
+    }
+    (0, core_1.info)('\nRoot .pipeline directory:');
+    const rootPipelineDir = path.join(process.cwd(), '.pipeline');
+    if ((0, fs_1.existsSync)(rootPipelineDir)) {
+        printDirectoryTree(rootPipelineDir, '', 2, 0);
+    }
+    else {
+        (0, core_1.info)('  (does not exist)');
+    }
+    if (workingDir !== '.' && workingDir !== '') {
+        (0, core_1.info)(`\n${workingDir}/.pipeline directory:`);
+        const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline');
+        if ((0, fs_1.existsSync)(targetPipelineDir)) {
+            printDirectoryTree(targetPipelineDir, '', 2, 0);
+        }
+        else {
+            (0, core_1.info)('  (does not exist)');
+        }
+        (0, core_1.info)(`\n${workingDir} directory contents:`);
+        const targetDir = path.join(process.cwd(), workingDir);
+        if ((0, fs_1.existsSync)(targetDir)) {
+            printDirectoryTree(targetDir, '', 1, 0);
+        }
+        else {
+            (0, core_1.info)('  (does not exist)');
+        }
+    }
+    (0, core_1.info)('=== End Directory Debug ===\n');
 }
 function copyPipelineFolder(workingDir) {
     // Only copy if working directory is different from current directory
