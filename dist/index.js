@@ -39220,6 +39220,29 @@ exports.exportPipelineEnv = exportPipelineEnv;
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -39234,6 +39257,7 @@ exports.run = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(2186);
 const github_1 = __nccwpck_require__(978);
 const fs_1 = __nccwpck_require__(7147);
+const path = __importStar(__nccwpck_require__(1017));
 const execute_1 = __nccwpck_require__(5938);
 const config_1 = __nccwpck_require__(6373);
 const pipelineEnv_1 = __nccwpck_require__(269);
@@ -39262,6 +39286,8 @@ function run() {
             (0, core_1.info)('Setting working directory');
             exports.internalActionVariables.workingDir = actionCfg.workingDir;
             (0, core_1.debug)(`Working directory: ${exports.internalActionVariables.workingDir}`);
+            (0, core_1.info)('Copying .pipeline folder to working directory');
+            copyPipelineFolder(actionCfg.workingDir);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -39334,6 +39360,41 @@ function preparePiperPath(actionCfg) {
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
+}
+function copyPipelineFolder(workingDir) {
+    // Only copy if working directory is different from current directory
+    if (workingDir === '.' || workingDir === '') {
+        (0, core_1.debug)('Working directory is root, skipping .pipeline folder copy');
+        return;
+    }
+    const sourcePipelineDir = path.join(process.cwd(), '.pipeline');
+    const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline');
+    // Check if source .pipeline folder exists
+    if (!(0, fs_1.existsSync)(sourcePipelineDir)) {
+        (0, core_1.debug)('Source .pipeline folder does not exist, skipping copy');
+        return;
+    }
+    // Check if target directory already has .pipeline folder
+    if ((0, fs_1.existsSync)(targetPipelineDir)) {
+        (0, core_1.info)('.pipeline folder already exists in working directory, skipping copy');
+        return;
+    }
+    (0, core_1.info)(`Copying .pipeline folder from root to ${workingDir}`);
+    (0, core_1.debug)(`Source: ${sourcePipelineDir}`);
+    (0, core_1.debug)(`Target: ${targetPipelineDir}`);
+    try {
+        // Ensure parent directory of target exists
+        const targetParent = path.join(process.cwd(), workingDir);
+        if (!(0, fs_1.existsSync)(targetParent)) {
+            (0, fs_1.mkdirSync)(targetParent, { recursive: true });
+        }
+        // Copy the .pipeline folder
+        (0, fs_1.cpSync)(sourcePipelineDir, targetPipelineDir, { recursive: true });
+        (0, core_1.info)('.pipeline folder copied successfully');
+    }
+    catch (error) {
+        throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 

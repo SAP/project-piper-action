@@ -1,6 +1,7 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync } from 'fs'
+import { chmodSync, existsSync, cpSync, mkdirSync } from 'fs'
+import * as path from 'path'
 import { executePiper } from './execute'
 import {
   type ActionConfiguration,
@@ -38,6 +39,9 @@ export async function run (): Promise<void> {
     info('Setting working directory')
     internalActionVariables.workingDir = actionCfg.workingDir
     debug(`Working directory: ${internalActionVariables.workingDir}`)
+
+    info('Copying .pipeline folder to working directory')
+    copyPipelineFolder(actionCfg.workingDir)
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
@@ -121,4 +125,45 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
+
+function copyPipelineFolder (workingDir: string): void {
+  // Only copy if working directory is different from current directory
+  if (workingDir === '.' || workingDir === '') {
+    debug('Working directory is root, skipping .pipeline folder copy')
+    return
+  }
+
+  const sourcePipelineDir = path.join(process.cwd(), '.pipeline')
+  const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline')
+
+  // Check if source .pipeline folder exists
+  if (!existsSync(sourcePipelineDir)) {
+    debug('Source .pipeline folder does not exist, skipping copy')
+    return
+  }
+
+  // Check if target directory already has .pipeline folder
+  if (existsSync(targetPipelineDir)) {
+    info('.pipeline folder already exists in working directory, skipping copy')
+    return
+  }
+
+  info(`Copying .pipeline folder from root to ${workingDir}`)
+  debug(`Source: ${sourcePipelineDir}`)
+  debug(`Target: ${targetPipelineDir}`)
+
+  try {
+    // Ensure parent directory of target exists
+    const targetParent = path.join(process.cwd(), workingDir)
+    if (!existsSync(targetParent)) {
+      mkdirSync(targetParent, { recursive: true })
+    }
+
+    // Copy the .pipeline folder
+    cpSync(sourcePipelineDir, targetPipelineDir, { recursive: true })
+    info('.pipeline folder copied successfully')
+  } catch (error) {
+    throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
