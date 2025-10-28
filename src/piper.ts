@@ -1,6 +1,6 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync, readFileSync } from 'fs'
+import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync, readFileSync, writeFileSync } from 'fs'
 import * as path from 'path'
 import { executePiper } from './execute'
 import {
@@ -365,8 +365,58 @@ function copyBackPipelineMetadata (workingDir: string): void {
       debug(`stepReports directory does not exist in ${workingDir}`)
     }
 
+    // Synthesize missing golang CPE metadata if needed (piper bug workaround for monorepo)
+    synthesizeGolangCPEIfMissing(workingDir)
+
     info('Pipeline metadata copied back successfully')
   } catch (error) {
     throw new Error(`Failed to copy pipeline metadata back: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+function synthesizeGolangCPEIfMissing (workingDir: string): void {
+  const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang')
+
+  // Check if golang CPE metadata already exists
+  if (existsSync(golangCPEDir)) {
+    debug('Golang CPE metadata already exists')
+    return
+  }
+
+  info('Golang CPE metadata missing - synthesizing from go.mod')
+
+  try {
+    // Read go.mod from working directory
+    const goModPath = path.join(process.cwd(), workingDir, 'go.mod')
+    if (!existsSync(goModPath)) {
+      debug(`go.mod not found at ${goModPath}`)
+      return
+    }
+
+    const goModContent = readFileSync(goModPath, 'utf8')
+
+    // Extract module path from go.mod (first line: "module <path>")
+    const moduleMatch = goModContent.match(/^module\s+(.+)$/m)
+    if (!moduleMatch) {
+      debug('Could not extract module path from go.mod')
+      return
+    }
+
+    const modulePath = moduleMatch[1].trim()
+    const artifactId = path.basename(modulePath)
+
+    info(`Detected Go module: ${modulePath}, artifact: ${artifactId}`)
+
+    // Create golang CPE directory at root
+    mkdirSync(golangCPEDir, { recursive: true })
+
+    // Write golang CPE files (required by sapDownloadArtifact)
+    writeFileSync(path.join(golangCPEDir, 'packageName.json'), JSON.stringify(modulePath), 'utf8')
+    writeFileSync(path.join(golangCPEDir, 'goModulePath.json'), JSON.stringify(modulePath), 'utf8')
+    writeFileSync(path.join(golangCPEDir, 'artifactId.json'), JSON.stringify(artifactId), 'utf8')
+
+    info('Golang CPE metadata synthesized successfully')
+  } catch (error) {
+    info(`Warning: Failed to synthesize golang CPE metadata: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
