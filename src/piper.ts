@@ -91,6 +91,9 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
+      info('Copying pipeline metadata back to root')
+      copyBackPipelineMetadata(actionCfg.workingDir)
+
       debugDirectoryStructure('After executing step', actionCfg.workingDir)
     }
 
@@ -291,5 +294,63 @@ function copyPipelineFolder (workingDir: string): void {
     info('.pipeline folder copied/merged successfully')
   } catch (error) {
     throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+function copyBackPipelineMetadata (workingDir: string): void {
+  // Only copy back if working directory is different from current directory
+  if (workingDir === '.' || workingDir === '') {
+    debug('Working directory is root, no need to copy metadata back')
+    return
+  }
+
+  info(`Copying pipeline metadata from ${workingDir} back to root`)
+
+  try {
+    // Copy commonPipelineEnvironment back to root
+    const sourceCPEDir = path.join(process.cwd(), workingDir, '.pipeline', 'commonPipelineEnvironment')
+    const targetCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+
+    if (existsSync(sourceCPEDir)) {
+      info('Copying commonPipelineEnvironment back to root')
+      if (!existsSync(targetCPEDir)) {
+        mkdirSync(targetCPEDir, { recursive: true })
+      }
+      cpSync(sourceCPEDir, targetCPEDir, { recursive: true, force: true })
+      debug(`Copied: ${sourceCPEDir} -> ${targetCPEDir}`)
+    } else {
+      debug(`Source CPE directory does not exist: ${sourceCPEDir}`)
+    }
+
+    // Copy url-log.json back to root (contains artifact URLs)
+    const sourceUrlLog = path.join(process.cwd(), workingDir, 'url-log.json')
+    const targetUrlLog = path.join(process.cwd(), 'url-log.json')
+
+    if (existsSync(sourceUrlLog)) {
+      info('Copying url-log.json back to root')
+      cpSync(sourceUrlLog, targetUrlLog, { force: true })
+      debug(`Copied: ${sourceUrlLog} -> ${targetUrlLog}`)
+    } else {
+      debug(`url-log.json does not exist in ${workingDir}`)
+    }
+
+    // Copy stepReports back to root
+    const sourceReportsDir = path.join(process.cwd(), workingDir, '.pipeline', 'stepReports')
+    const targetReportsDir = path.join(process.cwd(), '.pipeline', 'stepReports')
+
+    if (existsSync(sourceReportsDir)) {
+      info('Copying stepReports back to root')
+      if (!existsSync(targetReportsDir)) {
+        mkdirSync(targetReportsDir, { recursive: true })
+      }
+      cpSync(sourceReportsDir, targetReportsDir, { recursive: true, force: true })
+      debug(`Copied: ${sourceReportsDir} -> ${targetReportsDir}`)
+    } else {
+      debug(`stepReports directory does not exist in ${workingDir}`)
+    }
+
+    info('Pipeline metadata copied back successfully')
+  } catch (error) {
+    throw new Error(`Failed to copy pipeline metadata back: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
