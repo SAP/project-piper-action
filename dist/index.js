@@ -38893,13 +38893,20 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         if (containerID !== '') { // Running in a container
             (0, core_1.debug)(`containerID: ${containerID}, running in docker`);
             binaryPath = 'docker';
+            // Build the path inside the container
+            // The container mounts process.cwd() to itself, so we need to build the full path
+            const containerWorkDir = workingDir === '.'
+                ? process.cwd()
+                : path_1.default.join(process.cwd(), workingDir);
             args = [
                 'exec',
+                '--workdir', containerWorkDir,
                 containerID,
                 `/piper/${path_1.default.basename(piperPath)}`,
                 stepName,
                 ...flags
             ];
+            (0, core_1.debug)(`Docker exec working directory: ${containerWorkDir}`);
         }
         let options = { ignoreReturnCode: true, cwd: workingDir };
         options = Object.assign({}, options, execOptions);
