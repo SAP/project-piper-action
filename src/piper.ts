@@ -1,6 +1,6 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync } from 'fs'
+import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync, readFileSync } from 'fs'
 import * as path from 'path'
 import { executePiper } from './execute'
 import {
@@ -90,6 +90,8 @@ export async function run (): Promise<void> {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      debugDirectoryStructure('After executing step', actionCfg.workingDir)
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
@@ -162,6 +164,48 @@ function printDirectoryTree (dirPath: string, prefix: string = '', maxDepth: num
   }
 }
 
+function debugCPEFiles (): void {
+  info('\n=== CPE (Common Pipeline Environment) Files ===')
+
+  // Check for CPE metadata files that piper creates
+  const cpeFiles = [
+    'commonPipelineEnvironment/custom/buildSettingsInfo.json',
+    'commonPipelineEnvironment/custom/repositoryUrl.json',
+    'commonPipelineEnvironment/artifactVersion.json',
+    'commonPipelineEnvironment/git/commitId.json',
+    'commonPipelineEnvironment/golang/packageName.json',
+    'commonPipelineEnvironment/golang/artifactId.json'
+  ]
+
+  cpeFiles.forEach(cpeFile => {
+    const filePath = path.join(process.cwd(), cpeFile)
+    if (existsSync(filePath)) {
+      try {
+        const content = readFileSync(filePath, 'utf8')
+        info(`📄 ${cpeFile}:`)
+        info(`   ${content.trim()}`)
+      } catch (err) {
+        debug(`Cannot read ${cpeFile}: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+  })
+
+  // Also check for url-log.json which contains artifact URLs
+  const urlLogPath = path.join(process.cwd(), 'url-log.json')
+  if (existsSync(urlLogPath)) {
+    try {
+      const content = readFileSync(urlLogPath, 'utf8')
+      info('\n📄 url-log.json (artifact URLs):')
+      const parsed = JSON.parse(content)
+      info(`   ${JSON.stringify(parsed, null, 2)}`)
+    } catch (err) {
+      debug(`Cannot read url-log.json: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  info('=== End CPE Debug ===\n')
+}
+
 function debugDirectoryStructure (label: string, workingDir: string): void {
   info(`\n=== ${label} ===`)
   info(`Current working directory: ${process.cwd()}`)
@@ -197,11 +241,15 @@ function debugDirectoryStructure (label: string, workingDir: string): void {
     info(`\n${workingDir} directory contents:`)
     const targetDir = path.join(process.cwd(), workingDir)
     if (existsSync(targetDir)) {
-      printDirectoryTree(targetDir, '', 1, 0)
+      printDirectoryTree(targetDir, '', 2, 0)
     } else {
       info('  (does not exist)')
     }
   }
+
+  // Add CPE debugging
+  debugCPEFiles()
+
   info('=== End Directory Debug ===\n')
 }
 

@@ -39326,6 +39326,7 @@ function run() {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
+                debugDirectoryStructure('After executing step', actionCfg.workingDir);
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
@@ -39398,6 +39399,45 @@ function printDirectoryTree(dirPath, prefix = '', maxDepth = 3, currentDepth = 0
         (0, core_1.debug)(`Cannot read directory ${dirPath}: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
+function debugCPEFiles() {
+    (0, core_1.info)('\n=== CPE (Common Pipeline Environment) Files ===');
+    // Check for CPE metadata files that piper creates
+    const cpeFiles = [
+        'commonPipelineEnvironment/custom/buildSettingsInfo.json',
+        'commonPipelineEnvironment/custom/repositoryUrl.json',
+        'commonPipelineEnvironment/artifactVersion.json',
+        'commonPipelineEnvironment/git/commitId.json',
+        'commonPipelineEnvironment/golang/packageName.json',
+        'commonPipelineEnvironment/golang/artifactId.json'
+    ];
+    cpeFiles.forEach(cpeFile => {
+        const filePath = path.join(process.cwd(), cpeFile);
+        if ((0, fs_1.existsSync)(filePath)) {
+            try {
+                const content = (0, fs_1.readFileSync)(filePath, 'utf8');
+                (0, core_1.info)(`📄 ${cpeFile}:`);
+                (0, core_1.info)(`   ${content.trim()}`);
+            }
+            catch (err) {
+                (0, core_1.debug)(`Cannot read ${cpeFile}: ${err instanceof Error ? err.message : String(err)}`);
+            }
+        }
+    });
+    // Also check for url-log.json which contains artifact URLs
+    const urlLogPath = path.join(process.cwd(), 'url-log.json');
+    if ((0, fs_1.existsSync)(urlLogPath)) {
+        try {
+            const content = (0, fs_1.readFileSync)(urlLogPath, 'utf8');
+            (0, core_1.info)('\n📄 url-log.json (artifact URLs):');
+            const parsed = JSON.parse(content);
+            (0, core_1.info)(`   ${JSON.stringify(parsed, null, 2)}`);
+        }
+        catch (err) {
+            (0, core_1.debug)(`Cannot read url-log.json: ${err instanceof Error ? err.message : String(err)}`);
+        }
+    }
+    (0, core_1.info)('=== End CPE Debug ===\n');
+}
 function debugDirectoryStructure(label, workingDir) {
     (0, core_1.info)(`\n=== ${label} ===`);
     (0, core_1.info)(`Current working directory: ${process.cwd()}`);
@@ -39432,12 +39472,14 @@ function debugDirectoryStructure(label, workingDir) {
         (0, core_1.info)(`\n${workingDir} directory contents:`);
         const targetDir = path.join(process.cwd(), workingDir);
         if ((0, fs_1.existsSync)(targetDir)) {
-            printDirectoryTree(targetDir, '', 1, 0);
+            printDirectoryTree(targetDir, '', 2, 0);
         }
         else {
             (0, core_1.info)('  (does not exist)');
         }
     }
+    // Add CPE debugging
+    debugCPEFiles();
     (0, core_1.info)('=== End Directory Debug ===\n');
 }
 function copyPipelineFolder(workingDir) {
