@@ -39397,6 +39397,14 @@ function debugDirectoryStructure(label, workingDir) {
     if (workingDir !== '.' && workingDir !== '') {
         (0, core_1.info)(`Target working directory: ${path.join(process.cwd(), workingDir)}`);
     }
+    (0, core_1.info)('\nRoot directory tree:');
+    const rootDir = process.cwd();
+    if ((0, fs_1.existsSync)(rootDir)) {
+        printDirectoryTree(rootDir, '', 1, 0);
+    }
+    else {
+        (0, core_1.info)('  (does not exist)');
+    }
     (0, core_1.info)('\nRoot .pipeline directory:');
     const rootPipelineDir = path.join(process.cwd(), '.pipeline');
     if ((0, fs_1.existsSync)(rootPipelineDir)) {

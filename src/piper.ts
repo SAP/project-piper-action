@@ -169,6 +169,14 @@ function debugDirectoryStructure (label: string, workingDir: string): void {
     info(`Target working directory: ${path.join(process.cwd(), workingDir)}`)
   }
 
+  info('\nRoot directory tree:')
+  const rootDir = process.cwd()
+  if (existsSync(rootDir)) {
+    printDirectoryTree(rootDir, '', 1, 0)
+  } else {
+    info('  (does not exist)')
+  }
+
   info('\nRoot .pipeline directory:')
   const rootPipelineDir = path.join(process.cwd(), '.pipeline')
   if (existsSync(rootPipelineDir)) {
