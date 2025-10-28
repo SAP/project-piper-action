@@ -21,7 +21,8 @@ export const internalActionVariables = {
   piperBinPath: '',
   dockerContainerID: '',
   sidecarNetworkID: '',
-  sidecarContainerID: ''
+  sidecarContainerID: '',
+  workingDir: '.'
 }
 
 export async function run (): Promise<void> {
@@ -33,6 +34,10 @@ export async function run (): Promise<void> {
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
+
+    info('Setting working directory')
+    internalActionVariables.workingDir = actionCfg.workingDir
+    debug(`Working directory: ${internalActionVariables.workingDir}`)
 
     info('Loading pipeline environment')
     await loadPipelineEnv()

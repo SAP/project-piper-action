@@ -51,6 +51,7 @@ export interface ActionConfiguration {
   customStageConditionsPath: string
   createCheckIfStepActiveMaps: boolean
   exportPipelineEnvironment: boolean
+  workingDir: string
 }
 
 export async function getActionConfig (options: InputOptions): Promise<ActionConfiguration> {
@@ -109,7 +110,8 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     customDefaultsPaths: getValue('custom-defaults-paths'),
     customStageConditionsPath: getValue('custom-stage-conditions-path'),
     createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
-    exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
+    exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true',
+    workingDir: getValue('working-dir', '.')
   }
 }
 

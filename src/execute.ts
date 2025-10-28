@@ -14,6 +14,7 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
+  const workingDir = internalActionVariables.workingDir
 
   // Default to Piper
   let binaryPath = piperPath
@@ -31,7 +32,7 @@ export async function executePiper (
     ]
   }
 
-  let options: ExecOptions = { ignoreReturnCode: true }
+  let options: ExecOptions = { ignoreReturnCode: true, cwd: workingDir }
   options = Object.assign({}, options, execOptions)
 
   return await getExecOutput(binaryPath, args, options)
