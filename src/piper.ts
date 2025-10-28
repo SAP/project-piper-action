@@ -40,9 +40,6 @@ export async function run (): Promise<void> {
     internalActionVariables.workingDir = actionCfg.workingDir
     debug(`Working directory: ${internalActionVariables.workingDir}`)
 
-    info('Copying .pipeline folder to working directory')
-    copyPipelineFolder(actionCfg.workingDir)
-
     info('Loading pipeline environment')
     await loadPipelineEnv()
     endGroup()
@@ -67,6 +64,10 @@ export async function run (): Promise<void> {
       if (actionCfg.createCheckIfStepActiveMaps) {
         await createCheckIfStepActiveMaps(actionCfg)
       }
+
+      info('Copying .pipeline folder to working directory')
+      copyPipelineFolder(actionCfg.workingDir)
+
       endGroup()
     }
     if (actionCfg.stepName !== '') {
@@ -143,26 +144,26 @@ function copyPipelineFolder (workingDir: string): void {
     return
   }
 
-  // Check if target directory already has .pipeline folder
-  if (existsSync(targetPipelineDir)) {
-    info('.pipeline folder already exists in working directory, skipping copy')
-    return
-  }
-
   info(`Copying .pipeline folder from root to ${workingDir}`)
   debug(`Source: ${sourcePipelineDir}`)
   debug(`Target: ${targetPipelineDir}`)
 
   try {
-    // Ensure parent directory of target exists
+    // Ensure target parent directory exists
     const targetParent = path.join(process.cwd(), workingDir)
     if (!existsSync(targetParent)) {
       mkdirSync(targetParent, { recursive: true })
     }
 
-    // Copy the .pipeline folder
-    cpSync(sourcePipelineDir, targetPipelineDir, { recursive: true })
-    info('.pipeline folder copied successfully')
+    // Ensure target .pipeline directory exists
+    if (!existsSync(targetPipelineDir)) {
+      mkdirSync(targetPipelineDir, { recursive: true })
+    }
+
+    // Copy/merge the .pipeline folder contents
+    // The 'force' option will overwrite existing files, and 'recursive' will copy subdirectories
+    cpSync(sourcePipelineDir, targetPipelineDir, { recursive: true, force: true })
+    info('.pipeline folder copied/merged successfully')
   } catch (error) {
     throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
   }

@@ -39286,8 +39286,6 @@ function run() {
             (0, core_1.info)('Setting working directory');
             exports.internalActionVariables.workingDir = actionCfg.workingDir;
             (0, core_1.debug)(`Working directory: ${exports.internalActionVariables.workingDir}`);
-            (0, core_1.info)('Copying .pipeline folder to working directory');
-            copyPipelineFolder(actionCfg.workingDir);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -39302,6 +39300,8 @@ function run() {
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
+                (0, core_1.info)('Copying .pipeline folder to working directory');
+                copyPipelineFolder(actionCfg.workingDir);
                 (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
@@ -39374,23 +39374,23 @@ function copyPipelineFolder(workingDir) {
         (0, core_1.debug)('Source .pipeline folder does not exist, skipping copy');
         return;
     }
-    // Check if target directory already has .pipeline folder
-    if ((0, fs_1.existsSync)(targetPipelineDir)) {
-        (0, core_1.info)('.pipeline folder already exists in working directory, skipping copy');
-        return;
-    }
     (0, core_1.info)(`Copying .pipeline folder from root to ${workingDir}`);
     (0, core_1.debug)(`Source: ${sourcePipelineDir}`);
     (0, core_1.debug)(`Target: ${targetPipelineDir}`);
     try {
-        // Ensure parent directory of target exists
+        // Ensure target parent directory exists
         const targetParent = path.join(process.cwd(), workingDir);
         if (!(0, fs_1.existsSync)(targetParent)) {
             (0, fs_1.mkdirSync)(targetParent, { recursive: true });
         }
-        // Copy the .pipeline folder
-        (0, fs_1.cpSync)(sourcePipelineDir, targetPipelineDir, { recursive: true });
-        (0, core_1.info)('.pipeline folder copied successfully');
+        // Ensure target .pipeline directory exists
+        if (!(0, fs_1.existsSync)(targetPipelineDir)) {
+            (0, fs_1.mkdirSync)(targetPipelineDir, { recursive: true });
+        }
+        // Copy/merge the .pipeline folder contents
+        // The 'force' option will overwrite existing files, and 'recursive' will copy subdirectories
+        (0, fs_1.cpSync)(sourcePipelineDir, targetPipelineDir, { recursive: true, force: true });
+        (0, core_1.info)('.pipeline folder copied/merged successfully');
     }
     catch (error) {
         throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`);
