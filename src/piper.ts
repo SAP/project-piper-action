@@ -170,26 +170,40 @@ function printDirectoryTree (dirPath: string, prefix: string = '', maxDepth: num
 function debugCPEFiles (): void {
   info('\n=== CPE (Common Pipeline Environment) Files ===')
 
+  // Check ALL files in .pipeline/commonPipelineEnvironment recursively
+  const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+  if (existsSync(cpeDir)) {
+    info('📁 .pipeline/commonPipelineEnvironment structure:')
+    printDirectoryTree(cpeDir, '  ', 3, 0)
+  } else {
+    info('.pipeline/commonPipelineEnvironment does not exist')
+  }
+
   // Check for CPE metadata files that piper creates
   const cpeFiles = [
-    'commonPipelineEnvironment/custom/buildSettingsInfo.json',
-    'commonPipelineEnvironment/custom/repositoryUrl.json',
-    'commonPipelineEnvironment/artifactVersion.json',
-    'commonPipelineEnvironment/git/commitId.json',
-    'commonPipelineEnvironment/golang/packageName.json',
-    'commonPipelineEnvironment/golang/artifactId.json'
+    '.pipeline/commonPipelineEnvironment/custom/buildSettingsInfo.json',
+    '.pipeline/commonPipelineEnvironment/custom/repositoryUrl.json',
+    '.pipeline/commonPipelineEnvironment/custom/artifacts.json',
+    '.pipeline/commonPipelineEnvironment/artifactVersion.json',
+    '.pipeline/commonPipelineEnvironment/git/commitId.json',
+    '.pipeline/commonPipelineEnvironment/golang/packageName.json',
+    '.pipeline/commonPipelineEnvironment/golang/artifactId.json',
+    '.pipeline/commonPipelineEnvironment/golang/goModulePath.json'
   ]
 
+  info('\n📄 CPE File Contents:')
   cpeFiles.forEach(cpeFile => {
     const filePath = path.join(process.cwd(), cpeFile)
     if (existsSync(filePath)) {
       try {
         const content = readFileSync(filePath, 'utf8')
-        info(`📄 ${cpeFile}:`)
-        info(`   ${content.trim()}`)
+        info(`  ${cpeFile}:`)
+        info(`    ${content.trim()}`)
       } catch (err) {
         debug(`Cannot read ${cpeFile}: ${err instanceof Error ? err.message : String(err)}`)
       }
+    } else {
+      debug(`  ${cpeFile}: NOT FOUND`)
     }
   })
 
@@ -204,6 +218,8 @@ function debugCPEFiles (): void {
     } catch (err) {
       debug(`Cannot read url-log.json: ${err instanceof Error ? err.message : String(err)}`)
     }
+  } else {
+    info('\n📄 url-log.json: NOT FOUND')
   }
 
   info('=== End CPE Debug ===\n')

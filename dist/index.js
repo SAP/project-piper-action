@@ -39403,26 +39403,41 @@ function printDirectoryTree(dirPath, prefix = '', maxDepth = 3, currentDepth = 0
 }
 function debugCPEFiles() {
     (0, core_1.info)('\n=== CPE (Common Pipeline Environment) Files ===');
+    // Check ALL files in .pipeline/commonPipelineEnvironment recursively
+    const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+    if ((0, fs_1.existsSync)(cpeDir)) {
+        (0, core_1.info)('📁 .pipeline/commonPipelineEnvironment structure:');
+        printDirectoryTree(cpeDir, '  ', 3, 0);
+    }
+    else {
+        (0, core_1.info)('.pipeline/commonPipelineEnvironment does not exist');
+    }
     // Check for CPE metadata files that piper creates
     const cpeFiles = [
-        'commonPipelineEnvironment/custom/buildSettingsInfo.json',
-        'commonPipelineEnvironment/custom/repositoryUrl.json',
-        'commonPipelineEnvironment/artifactVersion.json',
-        'commonPipelineEnvironment/git/commitId.json',
-        'commonPipelineEnvironment/golang/packageName.json',
-        'commonPipelineEnvironment/golang/artifactId.json'
+        '.pipeline/commonPipelineEnvironment/custom/buildSettingsInfo.json',
+        '.pipeline/commonPipelineEnvironment/custom/repositoryUrl.json',
+        '.pipeline/commonPipelineEnvironment/custom/artifacts.json',
+        '.pipeline/commonPipelineEnvironment/artifactVersion.json',
+        '.pipeline/commonPipelineEnvironment/git/commitId.json',
+        '.pipeline/commonPipelineEnvironment/golang/packageName.json',
+        '.pipeline/commonPipelineEnvironment/golang/artifactId.json',
+        '.pipeline/commonPipelineEnvironment/golang/goModulePath.json'
     ];
+    (0, core_1.info)('\n📄 CPE File Contents:');
     cpeFiles.forEach(cpeFile => {
         const filePath = path.join(process.cwd(), cpeFile);
         if ((0, fs_1.existsSync)(filePath)) {
             try {
                 const content = (0, fs_1.readFileSync)(filePath, 'utf8');
-                (0, core_1.info)(`📄 ${cpeFile}:`);
-                (0, core_1.info)(`   ${content.trim()}`);
+                (0, core_1.info)(`  ${cpeFile}:`);
+                (0, core_1.info)(`    ${content.trim()}`);
             }
             catch (err) {
                 (0, core_1.debug)(`Cannot read ${cpeFile}: ${err instanceof Error ? err.message : String(err)}`);
             }
+        }
+        else {
+            (0, core_1.debug)(`  ${cpeFile}: NOT FOUND`);
         }
     });
     // Also check for url-log.json which contains artifact URLs
@@ -39437,6 +39452,9 @@ function debugCPEFiles() {
         catch (err) {
             (0, core_1.debug)(`Cannot read url-log.json: ${err instanceof Error ? err.message : String(err)}`);
         }
+    }
+    else {
+        (0, core_1.info)('\n📄 url-log.json: NOT FOUND');
     }
     (0, core_1.info)('=== End CPE Debug ===\n');
 }
