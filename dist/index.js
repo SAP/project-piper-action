@@ -16855,8 +16855,9 @@ function loadPipelineEnv() {
         catch (err) {
             (0, core_1.debug)(`Failed to parse pipeline environment JSON: ${err}`);
         }
-        // Don't specify cwd - let executePiper use the default workingDir from internalActionVariables
-        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } };
+        // Always write to root .pipeline directory (root is source of truth)
+        // Then copy to working directory if needed
+        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' };
         (0, core_1.debug)('Executing writePipelineEnv...');
         yield (0, execute_1.executePiper)('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
             throw new Error(`Can't load pipeline environment: ${err}`);
@@ -16871,7 +16872,8 @@ function exportPipelineEnv(exportPipelineEnvironment) {
             return;
         }
         (0, core_1.debug)('Exporting pipeline environment...');
-        const piperExec = yield (0, execute_1.executePiper)('readPipelineEnv').catch(err => {
+        // Always read from root .pipeline directory (root is source of truth)
+        const piperExec = yield (0, execute_1.executePiper)('readPipelineEnv', undefined, undefined, { cwd: '.' }).catch(err => {
             throw new Error(`Can't export pipeline environment: ${err}`);
         });
         try {
@@ -17295,13 +17297,9 @@ function ensureGolangCPEFromPipelineEnv() {
             return;
         }
         (0, core_1.info)('Found golang metadata in pipeline environment, creating CPE files');
-        // Calculate absolute path based on working directory
-        // We stay in root directory, but write files to working directory for symlink to work
-        const workingDir = exports.internalActionVariables.workingDir;
-        const baseDir = (workingDir === '.' || workingDir === '')
-            ? process.cwd()
-            : path.join(process.cwd(), workingDir);
-        const golangCPEDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment', 'golang');
+        // Always write to root .pipeline directory (root is source of truth)
+        // Files will be copied to working directory by copyPipelineEnvToWorkingDir
+        const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang');
         // Create directory if it doesn't exist
         if (!(0, fs_1.existsSync)(golangCPEDir)) {
             (0, fs_1.mkdirSync)(golangCPEDir, { recursive: true });
@@ -17336,8 +17334,9 @@ function ensureGolangCPEFromPipelineEnv() {
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
  */
 function normalizeCPEFileExtensions() {
-    // Use relative path - we've already changed to the correct directory
-    const cpeDir = path.join('.pipeline', 'commonPipelineEnvironment');
+    // Always normalize in root .pipeline directory (root is source of truth)
+    // Files will be copied to working directory by copyPipelineEnvToWorkingDir
+    const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
     if (!(0, fs_1.existsSync)(cpeDir)) {
         (0, core_1.debug)(`CPE directory does not exist at ${cpeDir}, skipping normalization`);
         return;

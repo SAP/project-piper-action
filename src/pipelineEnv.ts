@@ -28,8 +28,9 @@ export async function loadPipelineEnv (): Promise<void> {
     debug(`Failed to parse pipeline environment JSON: ${err}`)
   }
 
-  // Don't specify cwd - let executePiper use the default workingDir from internalActionVariables
-  const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } }
+  // Always write to root .pipeline directory (root is source of truth)
+  // Then copy to working directory if needed
+  const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' }
 
   debug('Executing writePipelineEnv...')
   await executePiper('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
@@ -44,7 +45,8 @@ export async function exportPipelineEnv (exportPipelineEnvironment: boolean): Pr
   }
 
   debug('Exporting pipeline environment...')
-  const piperExec = await executePiper('readPipelineEnv').catch(err => {
+  // Always read from root .pipeline directory (root is source of truth)
+  const piperExec = await executePiper('readPipelineEnv', undefined, undefined, { cwd: '.' }).catch(err => {
     throw new Error(`Can't export pipeline environment: ${err as string}`)
   })
 
