@@ -8,9 +8,30 @@ export async function executePiper (
 ): Promise<ExecOutput> {
   if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
 
-  flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
-    ? flags.concat(JSON.parse(process.env.defaultsFlags))
-    : flags
+  // If working directory is a subdirectory, adjust paths to point to root .pipeline
+  const workingDir = internalActionVariables.workingDir
+  if (workingDir !== '.' && workingDir !== '') {
+    // Set envRootPath to ../.pipeline so Piper writes CPE files to root .pipeline
+    flags.push('--envRootPath', '../.pipeline')
+    debug(`Set envRootPath to ../.pipeline for subdirectory execution`)
+  }
+
+  if (!ignoreDefaults && process.env.defaultsFlags !== undefined) {
+    let defaultFlags: string[] = JSON.parse(process.env.defaultsFlags)
+
+    // Adjust .pipeline paths in default flags
+    if (workingDir !== '.' && workingDir !== '') {
+      defaultFlags = defaultFlags.map(flag => {
+        if (flag.startsWith('.pipeline/')) {
+          return '../' + flag
+        }
+        return flag
+      })
+      debug(`Adjusted default config paths for subdirectory: ${JSON.stringify(defaultFlags)}`)
+    }
+
+    flags = flags.concat(defaultFlags)
+  }
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID

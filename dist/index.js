@@ -16530,9 +16530,27 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
             flags.push('--stageName', process.env.GITHUB_JOB);
-        flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
-            ? flags.concat(JSON.parse(process.env.defaultsFlags))
-            : flags;
+        // If working directory is a subdirectory, adjust paths to point to root .pipeline
+        const workingDir = piper_1.internalActionVariables.workingDir;
+        if (workingDir !== '.' && workingDir !== '') {
+            // Set envRootPath to ../.pipeline so Piper writes CPE files to root .pipeline
+            flags.push('--envRootPath', '../.pipeline');
+            (0, core_1.debug)(`Set envRootPath to ../.pipeline for subdirectory execution`);
+        }
+        if (!ignoreDefaults && process.env.defaultsFlags !== undefined) {
+            let defaultFlags = JSON.parse(process.env.defaultsFlags);
+            // Adjust .pipeline paths in default flags
+            if (workingDir !== '.' && workingDir !== '') {
+                defaultFlags = defaultFlags.map(flag => {
+                    if (flag.startsWith('.pipeline/')) {
+                        return '../' + flag;
+                    }
+                    return flag;
+                });
+                (0, core_1.debug)(`Adjusted default config paths for subdirectory: ${JSON.stringify(defaultFlags)}`);
+            }
+            flags = flags.concat(defaultFlags);
+        }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = piper_1.internalActionVariables.dockerContainerID;
         // Default to Piper
@@ -16919,7 +16937,8 @@ exports.internalActionVariables = {
     piperBinPath: '',
     dockerContainerID: '',
     sidecarNetworkID: '',
-    sidecarContainerID: ''
+    sidecarContainerID: '',
+    workingDir: '.'
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -16930,6 +16949,9 @@ function run() {
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
+            (0, core_1.info)('Setting working directory');
+            exports.internalActionVariables.workingDir = actionCfg.workingDir;
+            (0, core_1.debug)(`Working directory: ${actionCfg.workingDir}`);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
