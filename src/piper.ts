@@ -1,6 +1,6 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync, readFileSync, writeFileSync } from 'fs'
+import { chmodSync, existsSync, cpSync, mkdirSync, readdirSync, statSync, readFileSync, writeFileSync, symlinkSync, unlinkSync, rmSync } from 'fs'
 import * as path from 'path'
 import { executePiper } from './execute'
 import {
@@ -71,18 +71,12 @@ export async function run (): Promise<void> {
         await createCheckIfStepActiveMaps(actionCfg)
       }
 
-      debugDirectoryStructure('Before copying .pipeline folder', actionCfg.workingDir)
+      debugDirectoryStructure('Before symlinking .pipeline folder', actionCfg.workingDir)
 
-      info('Copying .pipeline folder to working directory')
-      copyPipelineFolder(actionCfg.workingDir)
+      info('Creating symlink to .pipeline folder in working directory')
+      symlinkPipelineFolder(actionCfg.workingDir)
 
-      // Normalize CPE file extensions in the working directory too
-      if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '') {
-        info('Normalizing CPE file extensions in working directory')
-        normalizeCPEFileExtensions(actionCfg.workingDir)
-      }
-
-      debugDirectoryStructure('After copying .pipeline folder', actionCfg.workingDir)
+      debugDirectoryStructure('After symlinking .pipeline folder', actionCfg.workingDir)
 
       endGroup()
     }
@@ -103,9 +97,7 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
-      info('Copying pipeline metadata back to root')
-      copyBackPipelineMetadata(actionCfg.workingDir)
-
+      // No need to copy back - symlink keeps everything in sync!
       debugDirectoryStructure('After executing step', actionCfg.workingDir)
     }
 
@@ -284,10 +276,14 @@ function debugDirectoryStructure (label: string, workingDir: string): void {
   info('=== End Directory Debug ===\n')
 }
 
-function copyPipelineFolder (workingDir: string): void {
-  // Only copy if working directory is different from current directory
+/**
+ * Creates a symlink from working directory to root .pipeline folder.
+ * This avoids file copying and keeps everything synchronized automatically.
+ */
+function symlinkPipelineFolder (workingDir: string): void {
+  // Only symlink if working directory is different from current directory
   if (workingDir === '.' || workingDir === '') {
-    debug('Working directory is root, skipping .pipeline folder copy')
+    debug('Working directory is root, no symlink needed')
     return
   }
 
@@ -296,13 +292,11 @@ function copyPipelineFolder (workingDir: string): void {
 
   // Check if source .pipeline folder exists
   if (!existsSync(sourcePipelineDir)) {
-    debug('Source .pipeline folder does not exist, skipping copy')
+    debug('Source .pipeline folder does not exist, skipping symlink')
     return
   }
 
-  info(`Copying .pipeline folder from root to ${workingDir}`)
-  debug(`Source: ${sourcePipelineDir}`)
-  debug(`Target: ${targetPipelineDir}`)
+  info(`Creating symlink: ${targetPipelineDir} -> ${sourcePipelineDir}`)
 
   try {
     // Ensure target parent directory exists
@@ -311,78 +305,29 @@ function copyPipelineFolder (workingDir: string): void {
       mkdirSync(targetParent, { recursive: true })
     }
 
-    // Ensure target .pipeline directory exists
-    if (!existsSync(targetPipelineDir)) {
-      mkdirSync(targetPipelineDir, { recursive: true })
-    }
-
-    // Copy/merge the .pipeline folder contents
-    // The 'force' option will overwrite existing files, and 'recursive' will copy subdirectories
-    cpSync(sourcePipelineDir, targetPipelineDir, { recursive: true, force: true })
-    info('.pipeline folder copied/merged successfully')
-  } catch (error) {
-    throw new Error(`Failed to copy .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
-  }
-}
-
-function copyBackPipelineMetadata (workingDir: string): void {
-  // Only copy back if working directory is different from current directory
-  if (workingDir === '.' || workingDir === '') {
-    debug('Working directory is root, no need to copy metadata back')
-    return
-  }
-
-  info(`Copying pipeline metadata from ${workingDir} back to root`)
-
-  try {
-    // Copy commonPipelineEnvironment back to root
-    const sourceCPEDir = path.join(process.cwd(), workingDir, '.pipeline', 'commonPipelineEnvironment')
-    const targetCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
-
-    if (existsSync(sourceCPEDir)) {
-      info('Copying commonPipelineEnvironment back to root')
-      if (!existsSync(targetCPEDir)) {
-        mkdirSync(targetCPEDir, { recursive: true })
+    // Remove existing .pipeline if it exists (might be a directory or symlink)
+    if (existsSync(targetPipelineDir)) {
+      const stats = statSync(targetPipelineDir)
+      if (stats.isSymbolicLink() || stats.isDirectory()) {
+        debug(`Removing existing .pipeline at ${targetPipelineDir}`)
+        // Use rmSync with recursive for directories, unlinkSync for symlinks
+        if (stats.isDirectory() && !stats.isSymbolicLink()) {
+          // It's a real directory, need recursive removal
+          rmSync(targetPipelineDir, { recursive: true, force: true })
+        } else {
+          // It's a symlink, just unlink it
+          unlinkSync(targetPipelineDir)
+        }
       }
-      cpSync(sourceCPEDir, targetCPEDir, { recursive: true, force: true })
-      debug(`Copied: ${sourceCPEDir} -> ${targetCPEDir}`)
-    } else {
-      debug(`Source CPE directory does not exist: ${sourceCPEDir}`)
     }
 
-    // Copy url-log.json back to root (contains artifact URLs)
-    const sourceUrlLog = path.join(process.cwd(), workingDir, 'url-log.json')
-    const targetUrlLog = path.join(process.cwd(), 'url-log.json')
+    // Create relative symlink (more portable than absolute)
+    const relativeSource = path.relative(path.dirname(targetPipelineDir), sourcePipelineDir)
+    symlinkSync(relativeSource, targetPipelineDir, 'dir')
 
-    if (existsSync(sourceUrlLog)) {
-      info('Copying url-log.json back to root')
-      cpSync(sourceUrlLog, targetUrlLog, { force: true })
-      debug(`Copied: ${sourceUrlLog} -> ${targetUrlLog}`)
-    } else {
-      debug(`url-log.json does not exist in ${workingDir}`)
-    }
-
-    // Copy stepReports back to root
-    const sourceReportsDir = path.join(process.cwd(), workingDir, '.pipeline', 'stepReports')
-    const targetReportsDir = path.join(process.cwd(), '.pipeline', 'stepReports')
-
-    if (existsSync(sourceReportsDir)) {
-      info('Copying stepReports back to root')
-      if (!existsSync(targetReportsDir)) {
-        mkdirSync(targetReportsDir, { recursive: true })
-      }
-      cpSync(sourceReportsDir, targetReportsDir, { recursive: true, force: true })
-      debug(`Copied: ${sourceReportsDir} -> ${targetReportsDir}`)
-    } else {
-      debug(`stepReports directory does not exist in ${workingDir}`)
-    }
-
-    // Synthesize missing golang CPE metadata if needed (piper bug workaround for monorepo)
-    synthesizeGolangCPEIfMissing(workingDir)
-
-    info('Pipeline metadata copied back successfully')
+    info('Symlink created successfully')
   } catch (error) {
-    throw new Error(`Failed to copy pipeline metadata back: ${error instanceof Error ? error.message : String(error)}`)
+    throw new Error(`Failed to create symlink for .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -454,81 +399,3 @@ function normalizeCPEFileExtensions (workingDir: string = '.'): void {
   }
 }
 
-function synthesizeGolangCPEIfMissing (workingDir: string): void {
-  const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang')
-
-  // Check if golang CPE metadata files exist with .json extension (required by sapDownloadArtifact)
-  const packageNameFile = path.join(golangCPEDir, 'packageName.json')
-  const goModulePathFile = path.join(golangCPEDir, 'goModulePath.json')
-  const artifactIdFile = path.join(golangCPEDir, 'artifactId.json')
-
-  if (existsSync(packageNameFile) && existsSync(goModulePathFile) && existsSync(artifactIdFile)) {
-    debug('Golang CPE metadata already exists with correct extensions')
-    return
-  }
-
-  info('Golang CPE metadata missing or incomplete - synthesizing')
-
-  try {
-    // First, try to read from pipeline environment JSON
-    let modulePath: string | undefined
-    let artifactId: string | undefined
-
-    if (process.env.PIPER_ACTION_PIPELINE_ENV !== undefined) {
-      try {
-        const pipelineEnv = JSON.parse(process.env.PIPER_ACTION_PIPELINE_ENV)
-        modulePath = pipelineEnv['golang/packageName'] ?? pipelineEnv['golang/goModulePath']
-        artifactId = pipelineEnv['golang/artifactId']
-        debug(`Found golang metadata in pipeline env: modulePath=${modulePath}, artifactId=${artifactId}`)
-      } catch (err) {
-        debug('Could not parse pipeline environment JSON')
-      }
-    }
-
-    // If not in pipeline env, check if files exist without .json extension (created by writePipelineEnv)
-    if (modulePath === undefined || artifactId === undefined) {
-      const packageNameFileNoExt = path.join(golangCPEDir, 'packageName')
-      const artifactIdFileNoExt = path.join(golangCPEDir, 'artifactId')
-
-      if (existsSync(packageNameFileNoExt) && existsSync(artifactIdFileNoExt)) {
-        modulePath = JSON.parse(readFileSync(packageNameFileNoExt, 'utf8'))
-        artifactId = JSON.parse(readFileSync(artifactIdFileNoExt, 'utf8'))
-        info('Found golang metadata in files without .json extension')
-      }
-    }
-
-    // If still not found, try to read from go.mod
-    if (modulePath === undefined || artifactId === undefined) {
-      const goModPath = path.join(process.cwd(), workingDir, 'go.mod')
-      if (!existsSync(goModPath)) {
-        debug(`go.mod not found at ${goModPath}`)
-        return
-      }
-
-      const goModContent = readFileSync(goModPath, 'utf8')
-      const moduleMatch = goModContent.match(/^module\s+(.+)$/m)
-      if (!moduleMatch) {
-        debug('Could not extract module path from go.mod')
-        return
-      }
-
-      modulePath = moduleMatch[1].trim()
-      artifactId = path.basename(modulePath)
-      info(`Detected Go module from go.mod: ${modulePath}, artifact: ${artifactId}`)
-    }
-
-    // Create golang CPE directory at root if it doesn't exist
-    if (!existsSync(golangCPEDir)) {
-      mkdirSync(golangCPEDir, { recursive: true })
-    }
-
-    // Write golang CPE files with .json extension (required by sapDownloadArtifact)
-    writeFileSync(packageNameFile, JSON.stringify(modulePath), 'utf8')
-    writeFileSync(goModulePathFile, JSON.stringify(modulePath), 'utf8')
-    writeFileSync(artifactIdFile, JSON.stringify(artifactId), 'utf8')
-
-    info('Golang CPE metadata synthesized successfully')
-  } catch (error) {
-    info(`Warning: Failed to synthesize golang CPE metadata: ${error instanceof Error ? error.message : String(error)}`)
-  }
-}
