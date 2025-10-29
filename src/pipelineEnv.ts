@@ -1,9 +1,8 @@
-import { existsSync } from 'fs'
 import { debug, setOutput } from '@actions/core'
 import { executePiper } from './execute'
 
 export async function loadPipelineEnv (): Promise<void> {
-  if (existsSync('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+  if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
     return
   }
 
