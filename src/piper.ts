@@ -292,8 +292,8 @@ function debugDirectoryStructure (label: string, workingDir: string): void {
  * This avoids file copying and keeps everything synchronized automatically.
  */
 /**
- * Copies commonPipelineEnvironment directory from root to working directory.
- * This allows piper steps to access CPE data when executing with cwd set to working directory.
+ * Copies commonPipelineEnvironment directory and defaults files from root to working directory.
+ * This allows piper steps to access CPE data and config defaults when executing with cwd set to working directory.
  * Preserves existing config files in working directory.
  */
 function copyPipelineEnvToWorkingDir (workingDir: string): void {
@@ -303,17 +303,16 @@ function copyPipelineEnvToWorkingDir (workingDir: string): void {
     return
   }
 
-  const sourceCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+  const sourcePipelineDir = path.join(process.cwd(), '.pipeline')
   const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline')
-  const targetCPEDir = path.join(targetPipelineDir, 'commonPipelineEnvironment')
 
-  // Check if source CPE directory exists
-  if (!existsSync(sourceCPEDir)) {
-    debug('Source commonPipelineEnvironment does not exist, skipping copy')
+  // Check if source .pipeline directory exists
+  if (!existsSync(sourcePipelineDir)) {
+    debug('Source .pipeline directory does not exist, skipping copy')
     return
   }
 
-  info(`Copying commonPipelineEnvironment from root to ${workingDir}`)
+  info(`Copying .pipeline files from root to ${workingDir}`)
 
   try {
     // Ensure target .pipeline directory exists (but don't remove existing files!)
@@ -322,16 +321,47 @@ function copyPipelineEnvToWorkingDir (workingDir: string): void {
       debug(`Created target .pipeline directory: ${targetPipelineDir}`)
     }
 
-    // Copy commonPipelineEnvironment directory recursively
-    if (existsSync(targetCPEDir)) {
-      debug(`Target CPE directory already exists, removing: ${targetCPEDir}`)
-      rmSync(targetCPEDir, { recursive: true, force: true })
+    // 1. Copy commonPipelineEnvironment directory
+    const sourceCPEDir = path.join(sourcePipelineDir, 'commonPipelineEnvironment')
+    const targetCPEDir = path.join(targetPipelineDir, 'commonPipelineEnvironment')
+
+    if (existsSync(sourceCPEDir)) {
+      if (existsSync(targetCPEDir)) {
+        debug(`Target CPE directory already exists, removing: ${targetCPEDir}`)
+        rmSync(targetCPEDir, { recursive: true, force: true })
+      }
+      cpSync(sourceCPEDir, targetCPEDir, { recursive: true })
+      info(`Copied commonPipelineEnvironment to ${workingDir}`)
     }
 
-    cpSync(sourceCPEDir, targetCPEDir, { recursive: true })
-    info(`Copied ${sourceCPEDir} to ${targetCPEDir}`)
+    // 2. Copy defaults files (numbered files like 125237, stepReports, etc.)
+    // These are needed by getConfig and other piper commands
+    const files = readdirSync(sourcePipelineDir)
+    for (const file of files) {
+      const sourcePath = path.join(sourcePipelineDir, file)
+      const targetPath = path.join(targetPipelineDir, file)
+      const stat = statSync(sourcePath)
+
+      // Skip config.yml (working directory has its own)
+      // Skip commonPipelineEnvironment (already copied)
+      if (file === 'config.yml' || file === 'commonPipelineEnvironment') {
+        continue
+      }
+
+      // Copy files and directories (defaults files, stepReports, etc.)
+      if (stat.isFile()) {
+        cpSync(sourcePath, targetPath)
+        debug(`Copied file: ${file}`)
+      } else if (stat.isDirectory() && !existsSync(targetPath)) {
+        // Only copy directories if they don't exist (preserve any existing ones)
+        cpSync(sourcePath, targetPath, { recursive: true })
+        debug(`Copied directory: ${file}`)
+      }
+    }
+
+    info(`Successfully copied .pipeline files to ${workingDir}`)
   } catch (error) {
-    throw new Error(`Failed to copy commonPipelineEnvironment: ${error instanceof Error ? error.message : String(error)}`)
+    throw new Error(`Failed to copy .pipeline files: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

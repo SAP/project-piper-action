@@ -17185,8 +17185,8 @@ function debugDirectoryStructure(label, workingDir) {
  * This avoids file copying and keeps everything synchronized automatically.
  */
 /**
- * Copies commonPipelineEnvironment directory from root to working directory.
- * This allows piper steps to access CPE data when executing with cwd set to working directory.
+ * Copies commonPipelineEnvironment directory and defaults files from root to working directory.
+ * This allows piper steps to access CPE data and config defaults when executing with cwd set to working directory.
  * Preserves existing config files in working directory.
  */
 function copyPipelineEnvToWorkingDir(workingDir) {
@@ -17195,31 +17195,58 @@ function copyPipelineEnvToWorkingDir(workingDir) {
         (0, core_1.debug)('Working directory is root, no need to copy CPE files');
         return;
     }
-    const sourceCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+    const sourcePipelineDir = path.join(process.cwd(), '.pipeline');
     const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline');
-    const targetCPEDir = path.join(targetPipelineDir, 'commonPipelineEnvironment');
-    // Check if source CPE directory exists
-    if (!(0, fs_1.existsSync)(sourceCPEDir)) {
-        (0, core_1.debug)('Source commonPipelineEnvironment does not exist, skipping copy');
+    // Check if source .pipeline directory exists
+    if (!(0, fs_1.existsSync)(sourcePipelineDir)) {
+        (0, core_1.debug)('Source .pipeline directory does not exist, skipping copy');
         return;
     }
-    (0, core_1.info)(`Copying commonPipelineEnvironment from root to ${workingDir}`);
+    (0, core_1.info)(`Copying .pipeline files from root to ${workingDir}`);
     try {
         // Ensure target .pipeline directory exists (but don't remove existing files!)
         if (!(0, fs_1.existsSync)(targetPipelineDir)) {
             (0, fs_1.mkdirSync)(targetPipelineDir, { recursive: true });
             (0, core_1.debug)(`Created target .pipeline directory: ${targetPipelineDir}`);
         }
-        // Copy commonPipelineEnvironment directory recursively
-        if ((0, fs_1.existsSync)(targetCPEDir)) {
-            (0, core_1.debug)(`Target CPE directory already exists, removing: ${targetCPEDir}`);
-            (0, fs_1.rmSync)(targetCPEDir, { recursive: true, force: true });
+        // 1. Copy commonPipelineEnvironment directory
+        const sourceCPEDir = path.join(sourcePipelineDir, 'commonPipelineEnvironment');
+        const targetCPEDir = path.join(targetPipelineDir, 'commonPipelineEnvironment');
+        if ((0, fs_1.existsSync)(sourceCPEDir)) {
+            if ((0, fs_1.existsSync)(targetCPEDir)) {
+                (0, core_1.debug)(`Target CPE directory already exists, removing: ${targetCPEDir}`);
+                (0, fs_1.rmSync)(targetCPEDir, { recursive: true, force: true });
+            }
+            (0, fs_1.cpSync)(sourceCPEDir, targetCPEDir, { recursive: true });
+            (0, core_1.info)(`Copied commonPipelineEnvironment to ${workingDir}`);
         }
-        (0, fs_1.cpSync)(sourceCPEDir, targetCPEDir, { recursive: true });
-        (0, core_1.info)(`Copied ${sourceCPEDir} to ${targetCPEDir}`);
+        // 2. Copy defaults files (numbered files like 125237, stepReports, etc.)
+        // These are needed by getConfig and other piper commands
+        const files = (0, fs_1.readdirSync)(sourcePipelineDir);
+        for (const file of files) {
+            const sourcePath = path.join(sourcePipelineDir, file);
+            const targetPath = path.join(targetPipelineDir, file);
+            const stat = (0, fs_1.statSync)(sourcePath);
+            // Skip config.yml (working directory has its own)
+            // Skip commonPipelineEnvironment (already copied)
+            if (file === 'config.yml' || file === 'commonPipelineEnvironment') {
+                continue;
+            }
+            // Copy files and directories (defaults files, stepReports, etc.)
+            if (stat.isFile()) {
+                (0, fs_1.cpSync)(sourcePath, targetPath);
+                (0, core_1.debug)(`Copied file: ${file}`);
+            }
+            else if (stat.isDirectory() && !(0, fs_1.existsSync)(targetPath)) {
+                // Only copy directories if they don't exist (preserve any existing ones)
+                (0, fs_1.cpSync)(sourcePath, targetPath, { recursive: true });
+                (0, core_1.debug)(`Copied directory: ${file}`);
+            }
+        }
+        (0, core_1.info)(`Successfully copied .pipeline files to ${workingDir}`);
     }
     catch (error) {
-        throw new Error(`Failed to copy commonPipelineEnvironment: ${error instanceof Error ? error.message : String(error)}`);
+        throw new Error(`Failed to copy .pipeline files: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 /**
