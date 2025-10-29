@@ -43,10 +43,10 @@ export async function run (): Promise<void> {
     info('Loading pipeline environment')
     await loadPipelineEnv()
 
-    // Synthesize golang CPE metadata from pipeline environment if needed
-    // (writePipelineEnv creates files without .json extension, but sapDownloadArtifact expects .json)
-    info('Ensuring golang CPE metadata has correct file extensions')
-    synthesizeGolangCPEIfMissing(actionCfg.workingDir)
+    // Fix CPE file extensions: writePipelineEnv creates files without .json extension,
+    // but many Piper steps (sapDownloadArtifact, etc.) expect .json extension
+    info('Normalizing CPE file extensions')
+    normalizeCPEFileExtensions()
 
     endGroup()
 
@@ -377,6 +377,70 @@ function copyBackPipelineMetadata (workingDir: string): void {
     info('Pipeline metadata copied back successfully')
   } catch (error) {
     throw new Error(`Failed to copy pipeline metadata back: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Normalizes CPE file extensions by ensuring all JSON files have .json extension.
+ * writePipelineEnv creates files without .json extension, but many Piper steps
+ * (sapDownloadArtifact, etc.) expect .json extension.
+ * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
+ */
+function normalizeCPEFileExtensions (): void {
+  const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+
+  if (!existsSync(cpeDir)) {
+    debug('CPE directory does not exist, skipping normalization')
+    return
+  }
+
+  try {
+    let filesNormalized = 0
+
+    // Recursively scan all directories in CPE
+    const scanDirectory = (dir: string): void => {
+      const items = readdirSync(dir)
+
+      items.forEach(item => {
+        const itemPath = path.join(dir, item)
+        const stat = statSync(itemPath)
+
+        if (stat.isDirectory()) {
+          // Recursively scan subdirectories
+          scanDirectory(itemPath)
+        } else if (stat.isFile() && !item.endsWith('.json') && item !== 'artifactVersion' && item !== 'originalArtifactVersion') {
+          // Found a file without .json extension
+          // Check if the .json version already exists
+          const jsonPath = `${itemPath}.json`
+
+          if (!existsSync(jsonPath)) {
+            try {
+              // Try to read and validate it's JSON content
+              const content = readFileSync(itemPath, 'utf8')
+              JSON.parse(content) // Validate it's valid JSON
+
+              // Copy the file with .json extension
+              cpSync(itemPath, jsonPath)
+              filesNormalized++
+              debug(`Normalized: ${itemPath} -> ${jsonPath}`)
+            } catch (err) {
+              // Not a JSON file or invalid JSON, skip it
+              debug(`Skipped non-JSON file: ${itemPath}`)
+            }
+          }
+        }
+      })
+    }
+
+    scanDirectory(cpeDir)
+
+    if (filesNormalized > 0) {
+      info(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`)
+    } else {
+      debug('No CPE files needed normalization')
+    }
+  } catch (error) {
+    info(`Warning: Failed to normalize CPE file extensions: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

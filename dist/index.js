@@ -16938,10 +16938,10 @@ function run() {
             (0, core_1.debug)(`Working directory: ${exports.internalActionVariables.workingDir}`);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
-            // Synthesize golang CPE metadata from pipeline environment if needed
-            // (writePipelineEnv creates files without .json extension, but sapDownloadArtifact expects .json)
-            (0, core_1.info)('Ensuring golang CPE metadata has correct file extensions');
-            synthesizeGolangCPEIfMissing(actionCfg.workingDir);
+            // Fix CPE file extensions: writePipelineEnv creates files without .json extension,
+            // but many Piper steps (sapDownloadArtifact, etc.) expect .json extension
+            (0, core_1.info)('Normalizing CPE file extensions');
+            normalizeCPEFileExtensions();
             (0, core_1.endGroup)();
             (0, core_1.startGroup)('version');
             (0, core_1.info)('Getting version');
@@ -17237,6 +17237,64 @@ function copyBackPipelineMetadata(workingDir) {
     }
     catch (error) {
         throw new Error(`Failed to copy pipeline metadata back: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Normalizes CPE file extensions by ensuring all JSON files have .json extension.
+ * writePipelineEnv creates files without .json extension, but many Piper steps
+ * (sapDownloadArtifact, etc.) expect .json extension.
+ * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
+ */
+function normalizeCPEFileExtensions() {
+    const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+    if (!(0, fs_1.existsSync)(cpeDir)) {
+        (0, core_1.debug)('CPE directory does not exist, skipping normalization');
+        return;
+    }
+    try {
+        let filesNormalized = 0;
+        // Recursively scan all directories in CPE
+        const scanDirectory = (dir) => {
+            const items = (0, fs_1.readdirSync)(dir);
+            items.forEach(item => {
+                const itemPath = path.join(dir, item);
+                const stat = (0, fs_1.statSync)(itemPath);
+                if (stat.isDirectory()) {
+                    // Recursively scan subdirectories
+                    scanDirectory(itemPath);
+                }
+                else if (stat.isFile() && !item.endsWith('.json') && item !== 'artifactVersion' && item !== 'originalArtifactVersion') {
+                    // Found a file without .json extension
+                    // Check if the .json version already exists
+                    const jsonPath = `${itemPath}.json`;
+                    if (!(0, fs_1.existsSync)(jsonPath)) {
+                        try {
+                            // Try to read and validate it's JSON content
+                            const content = (0, fs_1.readFileSync)(itemPath, 'utf8');
+                            JSON.parse(content); // Validate it's valid JSON
+                            // Copy the file with .json extension
+                            (0, fs_1.cpSync)(itemPath, jsonPath);
+                            filesNormalized++;
+                            (0, core_1.debug)(`Normalized: ${itemPath} -> ${jsonPath}`);
+                        }
+                        catch (err) {
+                            // Not a JSON file or invalid JSON, skip it
+                            (0, core_1.debug)(`Skipped non-JSON file: ${itemPath}`);
+                        }
+                    }
+                }
+            });
+        };
+        scanDirectory(cpeDir);
+        if (filesNormalized > 0) {
+            (0, core_1.info)(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`);
+        }
+        else {
+            (0, core_1.debug)('No CPE files needed normalization');
+        }
+    }
+    catch (error) {
+        (0, core_1.info)(`Warning: Failed to normalize CPE file extensions: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 function synthesizeGolangCPEIfMissing(workingDir) {
