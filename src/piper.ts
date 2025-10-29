@@ -77,11 +77,12 @@ export async function run (): Promise<void> {
         await createCheckIfStepActiveMaps(actionCfg)
       }
 
-      debugDirectoryStructure('Working directory structure', actionCfg.workingDir)
+      debugDirectoryStructure('Before copying .pipeline files', actionCfg.workingDir)
 
-      // Symlink no longer needed - all operations use correct absolute paths based on workingDir
-      // info('Creating symlink to .pipeline folder in working directory')
-      // symlinkPipelineFolder(actionCfg.workingDir)
+      info('Copying commonPipelineEnvironment from root to working directory')
+      copyPipelineEnvToWorkingDir(actionCfg.workingDir)
+
+      debugDirectoryStructure('After copying .pipeline files', actionCfg.workingDir)
 
       endGroup()
     }
@@ -103,6 +104,12 @@ export async function run (): Promise<void> {
       endGroup()
 
       debugDirectoryStructure('After executing step', actionCfg.workingDir)
+
+      // Copy CPE files back from working directory to root for exportPipelineEnv
+      if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '' && onGitHubEnterprise()) {
+        info('Copying commonPipelineEnvironment back from working directory to root')
+        copyPipelineEnvFromWorkingDir(actionCfg.workingDir)
+      }
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
@@ -284,54 +291,77 @@ function debugDirectoryStructure (label: string, workingDir: string): void {
  * Creates a symlink from working directory to root .pipeline folder.
  * This avoids file copying and keeps everything synchronized automatically.
  */
-function symlinkPipelineFolder (workingDir: string): void {
-  // Only symlink if working directory is different from current directory
+/**
+ * Copies commonPipelineEnvironment directory from root to working directory.
+ * This allows piper steps to access CPE data when executing with cwd set to working directory.
+ * Preserves existing config files in working directory.
+ */
+function copyPipelineEnvToWorkingDir (workingDir: string): void {
+  // Only copy if working directory is different from root
   if (workingDir === '.' || workingDir === '') {
-    debug('Working directory is root, no symlink needed')
+    debug('Working directory is root, no need to copy CPE files')
     return
   }
 
-  const sourcePipelineDir = path.join(process.cwd(), '.pipeline')
+  const sourceCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
   const targetPipelineDir = path.join(process.cwd(), workingDir, '.pipeline')
+  const targetCPEDir = path.join(targetPipelineDir, 'commonPipelineEnvironment')
 
-  // Check if source .pipeline folder exists
-  if (!existsSync(sourcePipelineDir)) {
-    debug('Source .pipeline folder does not exist, skipping symlink')
+  // Check if source CPE directory exists
+  if (!existsSync(sourceCPEDir)) {
+    debug('Source commonPipelineEnvironment does not exist, skipping copy')
     return
   }
 
-  info(`Creating symlink: ${targetPipelineDir} -> ${sourcePipelineDir}`)
+  info(`Copying commonPipelineEnvironment from root to ${workingDir}`)
 
   try {
-    // Ensure target parent directory exists
-    const targetParent = path.join(process.cwd(), workingDir)
-    if (!existsSync(targetParent)) {
-      mkdirSync(targetParent, { recursive: true })
+    // Ensure target .pipeline directory exists (but don't remove existing files!)
+    if (!existsSync(targetPipelineDir)) {
+      mkdirSync(targetPipelineDir, { recursive: true })
+      debug(`Created target .pipeline directory: ${targetPipelineDir}`)
     }
 
-    // Remove existing .pipeline if it exists (might be a directory or symlink)
-    if (existsSync(targetPipelineDir)) {
-      const stats = statSync(targetPipelineDir)
-      if (stats.isSymbolicLink() || stats.isDirectory()) {
-        debug(`Removing existing .pipeline at ${targetPipelineDir}`)
-        // Use rmSync with recursive for directories, unlinkSync for symlinks
-        if (stats.isDirectory() && !stats.isSymbolicLink()) {
-          // It's a real directory, need recursive removal
-          rmSync(targetPipelineDir, { recursive: true, force: true })
-        } else {
-          // It's a symlink, just unlink it
-          unlinkSync(targetPipelineDir)
-        }
-      }
+    // Copy commonPipelineEnvironment directory recursively
+    if (existsSync(targetCPEDir)) {
+      debug(`Target CPE directory already exists, removing: ${targetCPEDir}`)
+      rmSync(targetCPEDir, { recursive: true, force: true })
     }
 
-    // Create relative symlink (more portable than absolute)
-    const relativeSource = path.relative(path.dirname(targetPipelineDir), sourcePipelineDir)
-    symlinkSync(relativeSource, targetPipelineDir, 'dir')
-
-    info('Symlink created successfully')
+    cpSync(sourceCPEDir, targetCPEDir, { recursive: true })
+    info(`Copied ${sourceCPEDir} to ${targetCPEDir}`)
   } catch (error) {
-    throw new Error(`Failed to create symlink for .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
+    throw new Error(`Failed to copy commonPipelineEnvironment: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Copies commonPipelineEnvironment directory from working directory back to root.
+ * This ensures that updates made by piper steps in the working directory are available
+ * for exportPipelineEnv.
+ */
+function copyPipelineEnvFromWorkingDir (workingDir: string): void {
+  const sourceCPEDir = path.join(process.cwd(), workingDir, '.pipeline', 'commonPipelineEnvironment')
+  const targetCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+
+  // Check if source CPE directory exists
+  if (!existsSync(sourceCPEDir)) {
+    debug('Source commonPipelineEnvironment in working directory does not exist, skipping copy')
+    return
+  }
+
+  info(`Copying commonPipelineEnvironment from ${workingDir} back to root`)
+
+  try {
+    // Remove root CPE directory and replace with working directory version
+    if (existsSync(targetCPEDir)) {
+      rmSync(targetCPEDir, { recursive: true, force: true })
+    }
+
+    cpSync(sourceCPEDir, targetCPEDir, { recursive: true })
+    info(`Copied ${sourceCPEDir} to ${targetCPEDir}`)
+  } catch (error) {
+    throw new Error(`Failed to copy commonPipelineEnvironment from working directory: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -361,6 +391,7 @@ function ensureGolangCPEFromPipelineEnv (): void {
     info('Found golang metadata in pipeline environment, creating CPE files')
 
     // Calculate absolute path based on working directory
+    // We stay in root directory, but write files to working directory for symlink to work
     const workingDir = internalActionVariables.workingDir
     const baseDir = (workingDir === '.' || workingDir === '')
       ? process.cwd()
@@ -405,12 +436,8 @@ function ensureGolangCPEFromPipelineEnv (): void {
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
  */
 function normalizeCPEFileExtensions (): void {
-  // Calculate absolute path based on working directory
-  const workingDir = internalActionVariables.workingDir
-  const baseDir = (workingDir === '.' || workingDir === '')
-    ? process.cwd()
-    : path.join(process.cwd(), workingDir)
-  const cpeDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment')
+  // Use relative path - we've already changed to the correct directory
+  const cpeDir = path.join('.pipeline', 'commonPipelineEnvironment')
 
   if (!existsSync(cpeDir)) {
     debug(`CPE directory does not exist at ${cpeDir}, skipping normalization`)
