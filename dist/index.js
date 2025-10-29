@@ -16164,8 +16164,13 @@ function startContainer(actionCfg, ctxConfig) {
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
         const cwd = process.cwd();
+        // Calculate actual working directory for Docker container
+        const workingDir = actionCfg.workingDir !== '.' && actionCfg.workingDir !== ''
+            ? `${cwd}/${actionCfg.workingDir}`
+            : cwd;
         piper_1.internalActionVariables.dockerContainerID = containerID;
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
+        (0, core_1.debug)(`Docker working directory: ${workingDir}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
         if (dockerOptions !== undefined) {
@@ -16181,7 +16186,7 @@ function startContainer(actionCfg, ctxConfig) {
             '--user', '1000:1000',
             '--volume', `${cwd}:${cwd}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
-            '--workdir', cwd,
+            '--workdir', workingDir,
             ...dockerOptionsArray,
             '--name', containerID
         ];

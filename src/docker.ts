@@ -23,8 +23,13 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
   const piperPath = internalActionVariables.piperBinPath
   const containerID = uuidv4()
   const cwd = process.cwd()
+  // Calculate actual working directory for Docker container
+  const workingDir = actionCfg.workingDir !== '.' && actionCfg.workingDir !== ''
+    ? `${cwd}/${actionCfg.workingDir}`
+    : cwd
   internalActionVariables.dockerContainerID = containerID
   info(`Starting image ${dockerImage} as container ${containerID}`)
+  debug(`Docker working directory: ${workingDir}`)
 
   let dockerOptionsArray: string[] = []
   const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions
@@ -42,7 +47,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--user', '1000:1000',
     '--volume', `${cwd}:${cwd}`,
     '--volume', `${dirname(piperPath)}:/piper`,
-    '--workdir', cwd,
+    '--workdir', workingDir,
     ...dockerOptionsArray,
     '--name', containerID
   ]
