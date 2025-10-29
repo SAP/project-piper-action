@@ -43,6 +43,11 @@ export async function run (): Promise<void> {
     info('Loading pipeline environment')
     await loadPipelineEnv()
 
+    // writePipelineEnv doesn't always create directory structure for keys like "golang/artifactId"
+    // Manually ensure golang CPE files exist if golang metadata is in pipeline environment
+    info('Ensuring golang CPE files exist from pipeline environment')
+    ensureGolangCPEFromPipelineEnv()
+
     // Fix CPE file extensions: writePipelineEnv creates files without .json extension,
     // but many Piper steps (sapDownloadArtifact, etc.) expect .json extension
     info('Normalizing CPE file extensions')
@@ -328,6 +333,64 @@ function symlinkPipelineFolder (workingDir: string): void {
     info('Symlink created successfully')
   } catch (error) {
     throw new Error(`Failed to create symlink for .pipeline folder: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Ensures golang CPE files exist by reading from PIPER_ACTION_PIPELINE_ENV.
+ * writePipelineEnv doesn't always create directory structure for golang metadata.
+ */
+function ensureGolangCPEFromPipelineEnv (): void {
+  if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+    debug('No pipeline environment to extract golang metadata from')
+    return
+  }
+
+  try {
+    const pipelineEnv = JSON.parse(process.env.PIPER_ACTION_PIPELINE_ENV)
+
+    // Check if golang metadata exists in pipeline environment
+    const golangPackageName = pipelineEnv['golang/packageName']
+    const golangArtifactId = pipelineEnv['golang/artifactId']
+    const golangGoModulePath = pipelineEnv['golang/goModulePath']
+
+    if (!golangPackageName && !golangArtifactId && !golangGoModulePath) {
+      debug('No golang metadata found in pipeline environment')
+      return
+    }
+
+    info('Found golang metadata in pipeline environment, creating CPE files')
+
+    const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang')
+
+    // Create directory if it doesn't exist
+    if (!existsSync(golangCPEDir)) {
+      mkdirSync(golangCPEDir, { recursive: true })
+      debug(`Created golang CPE directory: ${golangCPEDir}`)
+    }
+
+    // Write files with .json extension
+    if (golangPackageName) {
+      const file = path.join(golangCPEDir, 'packageName.json')
+      writeFileSync(file, JSON.stringify(golangPackageName), 'utf8')
+      debug(`Created: ${file} = ${golangPackageName}`)
+    }
+
+    if (golangArtifactId) {
+      const file = path.join(golangCPEDir, 'artifactId.json')
+      writeFileSync(file, JSON.stringify(golangArtifactId), 'utf8')
+      debug(`Created: ${file} = ${golangArtifactId}`)
+    }
+
+    if (golangGoModulePath) {
+      const file = path.join(golangCPEDir, 'goModulePath.json')
+      writeFileSync(file, JSON.stringify(golangGoModulePath), 'utf8')
+      debug(`Created: ${file} = ${golangGoModulePath}`)
+    }
+
+    info('Golang CPE files created successfully from pipeline environment')
+  } catch (error) {
+    info(`Warning: Failed to create golang CPE from pipeline environment: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 

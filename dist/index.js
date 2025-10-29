@@ -16831,14 +16831,35 @@ const execute_1 = __nccwpck_require__(5938);
 function loadPipelineEnv() {
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+            (0, core_1.debug)('PIPER_ACTION_PIPELINE_ENV is undefined, skipping pipeline environment load');
             return;
         }
         (0, core_1.debug)('Loading pipeline environment...');
         const pipelineEnv = process.env.PIPER_ACTION_PIPELINE_ENV;
+        try {
+            const parsed = JSON.parse(pipelineEnv);
+            (0, core_1.debug)(`Pipeline environment contains ${Object.keys(parsed).length} keys`);
+            // Log golang-specific keys for debugging
+            const golangKeys = Object.keys(parsed).filter(k => k.startsWith('golang/'));
+            if (golangKeys.length > 0) {
+                (0, core_1.debug)(`Golang keys found: ${golangKeys.join(', ')}`);
+                golangKeys.forEach(key => {
+                    (0, core_1.debug)(`  ${key}: ${parsed[key]}`);
+                });
+            }
+            else {
+                (0, core_1.debug)('WARNING: No golang keys found in pipeline environment!');
+            }
+        }
+        catch (err) {
+            (0, core_1.debug)(`Failed to parse pipeline environment JSON: ${err}`);
+        }
         const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' };
+        (0, core_1.debug)('Executing writePipelineEnv...');
         yield (0, execute_1.executePiper)('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
             throw new Error(`Can't load pipeline environment: ${err}`);
         });
+        (0, core_1.debug)('writePipelineEnv completed successfully');
     });
 }
 exports.loadPipelineEnv = loadPipelineEnv;
@@ -16938,6 +16959,10 @@ function run() {
             (0, core_1.debug)(`Working directory: ${exports.internalActionVariables.workingDir}`);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
+            // writePipelineEnv doesn't always create directory structure for keys like "golang/artifactId"
+            // Manually ensure golang CPE files exist if golang metadata is in pipeline environment
+            (0, core_1.info)('Ensuring golang CPE files exist from pipeline environment');
+            ensureGolangCPEFromPipelineEnv();
             // Fix CPE file extensions: writePipelineEnv creates files without .json extension,
             // but many Piper steps (sapDownloadArtifact, etc.) expect .json extension
             (0, core_1.info)('Normalizing CPE file extensions');
@@ -17195,6 +17220,54 @@ function symlinkPipelineFolder(workingDir) {
     }
     catch (error) {
         throw new Error(`Failed to create symlink for .pipeline folder: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Ensures golang CPE files exist by reading from PIPER_ACTION_PIPELINE_ENV.
+ * writePipelineEnv doesn't always create directory structure for golang metadata.
+ */
+function ensureGolangCPEFromPipelineEnv() {
+    if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+        (0, core_1.debug)('No pipeline environment to extract golang metadata from');
+        return;
+    }
+    try {
+        const pipelineEnv = JSON.parse(process.env.PIPER_ACTION_PIPELINE_ENV);
+        // Check if golang metadata exists in pipeline environment
+        const golangPackageName = pipelineEnv['golang/packageName'];
+        const golangArtifactId = pipelineEnv['golang/artifactId'];
+        const golangGoModulePath = pipelineEnv['golang/goModulePath'];
+        if (!golangPackageName && !golangArtifactId && !golangGoModulePath) {
+            (0, core_1.debug)('No golang metadata found in pipeline environment');
+            return;
+        }
+        (0, core_1.info)('Found golang metadata in pipeline environment, creating CPE files');
+        const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang');
+        // Create directory if it doesn't exist
+        if (!(0, fs_1.existsSync)(golangCPEDir)) {
+            (0, fs_1.mkdirSync)(golangCPEDir, { recursive: true });
+            (0, core_1.debug)(`Created golang CPE directory: ${golangCPEDir}`);
+        }
+        // Write files with .json extension
+        if (golangPackageName) {
+            const file = path.join(golangCPEDir, 'packageName.json');
+            (0, fs_1.writeFileSync)(file, JSON.stringify(golangPackageName), 'utf8');
+            (0, core_1.debug)(`Created: ${file} = ${golangPackageName}`);
+        }
+        if (golangArtifactId) {
+            const file = path.join(golangCPEDir, 'artifactId.json');
+            (0, fs_1.writeFileSync)(file, JSON.stringify(golangArtifactId), 'utf8');
+            (0, core_1.debug)(`Created: ${file} = ${golangArtifactId}`);
+        }
+        if (golangGoModulePath) {
+            const file = path.join(golangCPEDir, 'goModulePath.json');
+            (0, fs_1.writeFileSync)(file, JSON.stringify(golangGoModulePath), 'utf8');
+            (0, core_1.debug)(`Created: ${file} = ${golangGoModulePath}`);
+        }
+        (0, core_1.info)('Golang CPE files created successfully from pipeline environment');
+    }
+    catch (error) {
+        (0, core_1.info)(`Warning: Failed to create golang CPE from pipeline environment: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 /**
