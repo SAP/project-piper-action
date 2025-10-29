@@ -1,8 +1,9 @@
 import { debug, setOutput } from '@actions/core'
 import { executePiper } from './execute'
+import { existsSync } from 'fs'
 
 export async function loadPipelineEnv (): Promise<void> {
-  if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+  if (existsSync('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
     debug('PIPER_ACTION_PIPELINE_ENV is undefined, skipping pipeline environment load')
     return
   }
@@ -27,7 +28,8 @@ export async function loadPipelineEnv (): Promise<void> {
     debug(`Failed to parse pipeline environment JSON: ${err}`)
   }
 
-  const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' }
+  // Don't specify cwd - let executePiper use the default workingDir from internalActionVariables
+  const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } }
 
   debug('Executing writePipelineEnv...')
   await executePiper('writePipelineEnv', undefined, undefined, execOptions).catch(err => {

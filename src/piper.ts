@@ -27,6 +27,7 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
+  // cd into workdir ..
   try {
     startGroup('Setup')
     info('Getting action configuration')
@@ -76,12 +77,11 @@ export async function run (): Promise<void> {
         await createCheckIfStepActiveMaps(actionCfg)
       }
 
-      debugDirectoryStructure('Before symlinking .pipeline folder', actionCfg.workingDir)
+      debugDirectoryStructure('Working directory structure', actionCfg.workingDir)
 
-      info('Creating symlink to .pipeline folder in working directory')
-      symlinkPipelineFolder(actionCfg.workingDir)
-
-      debugDirectoryStructure('After symlinking .pipeline folder', actionCfg.workingDir)
+      // Symlink no longer needed - all operations use correct absolute paths based on workingDir
+      // info('Creating symlink to .pipeline folder in working directory')
+      // symlinkPipelineFolder(actionCfg.workingDir)
 
       endGroup()
     }
@@ -102,7 +102,6 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
-      // No need to copy back - symlink keeps everything in sync!
       debugDirectoryStructure('After executing step', actionCfg.workingDir)
     }
 
@@ -361,7 +360,12 @@ function ensureGolangCPEFromPipelineEnv (): void {
 
     info('Found golang metadata in pipeline environment, creating CPE files')
 
-    const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang')
+    // Calculate absolute path based on working directory
+    const workingDir = internalActionVariables.workingDir
+    const baseDir = (workingDir === '.' || workingDir === '')
+      ? process.cwd()
+      : path.join(process.cwd(), workingDir)
+    const golangCPEDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment', 'golang')
 
     // Create directory if it doesn't exist
     if (!existsSync(golangCPEDir)) {
@@ -399,11 +403,13 @@ function ensureGolangCPEFromPipelineEnv (): void {
  * writePipelineEnv creates files without .json extension, but many Piper steps
  * (sapDownloadArtifact, etc.) expect .json extension.
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
- *
- * @param workingDir - Optional working directory to normalize (defaults to root)
  */
-function normalizeCPEFileExtensions (workingDir: string = '.'): void {
-  const baseDir = workingDir === '.' || workingDir === '' ? process.cwd() : path.join(process.cwd(), workingDir)
+function normalizeCPEFileExtensions (): void {
+  // Calculate absolute path based on working directory
+  const workingDir = internalActionVariables.workingDir
+  const baseDir = (workingDir === '.' || workingDir === '')
+    ? process.cwd()
+    : path.join(process.cwd(), workingDir)
   const cpeDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment')
 
   if (!existsSync(cpeDir)) {
@@ -452,8 +458,7 @@ function normalizeCPEFileExtensions (workingDir: string = '.'): void {
     scanDirectory(cpeDir)
 
     if (filesNormalized > 0) {
-      const location = workingDir === '.' || workingDir === '' ? 'root' : workingDir
-      info(`Normalized ${filesNormalized} CPE file(s) in ${location} by adding .json extension`)
+      info(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`)
     } else {
       debug('No CPE files needed normalization')
     }
@@ -461,4 +466,3 @@ function normalizeCPEFileExtensions (workingDir: string = '.'): void {
     info(`Warning: Failed to normalize CPE file extensions: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
-

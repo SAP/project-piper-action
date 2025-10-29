@@ -16828,9 +16828,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.exportPipelineEnv = exports.loadPipelineEnv = void 0;
 const core_1 = __nccwpck_require__(2186);
 const execute_1 = __nccwpck_require__(5938);
+const fs_1 = __nccwpck_require__(7147);
 function loadPipelineEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        if (process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+        if ((0, fs_1.existsSync)('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
             (0, core_1.debug)('PIPER_ACTION_PIPELINE_ENV is undefined, skipping pipeline environment load');
             return;
         }
@@ -16854,7 +16855,8 @@ function loadPipelineEnv() {
         catch (err) {
             (0, core_1.debug)(`Failed to parse pipeline environment JSON: ${err}`);
         }
-        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' };
+        // Don't specify cwd - let executePiper use the default workingDir from internalActionVariables
+        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } };
         (0, core_1.debug)('Executing writePipelineEnv...');
         yield (0, execute_1.executePiper)('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
             throw new Error(`Can't load pipeline environment: ${err}`);
@@ -16947,6 +16949,7 @@ exports.internalActionVariables = {
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        // cd into workdir ..
         try {
             (0, core_1.startGroup)('Setup');
             (0, core_1.info)('Getting action configuration');
@@ -16979,10 +16982,10 @@ function run() {
                 if (actionCfg.createCheckIfStepActiveMaps) {
                     yield (0, config_1.createCheckIfStepActiveMaps)(actionCfg);
                 }
-                debugDirectoryStructure('Before symlinking .pipeline folder', actionCfg.workingDir);
-                (0, core_1.info)('Creating symlink to .pipeline folder in working directory');
-                symlinkPipelineFolder(actionCfg.workingDir);
-                debugDirectoryStructure('After symlinking .pipeline folder', actionCfg.workingDir);
+                debugDirectoryStructure('Working directory structure', actionCfg.workingDir);
+                // Symlink no longer needed - all operations use correct absolute paths based on workingDir
+                // info('Creating symlink to .pipeline folder in working directory')
+                // symlinkPipelineFolder(actionCfg.workingDir)
                 (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
@@ -16998,7 +17001,6 @@ function run() {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
-                // No need to copy back - symlink keeps everything in sync!
                 debugDirectoryStructure('After executing step', actionCfg.workingDir);
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
@@ -17242,7 +17244,12 @@ function ensureGolangCPEFromPipelineEnv() {
             return;
         }
         (0, core_1.info)('Found golang metadata in pipeline environment, creating CPE files');
-        const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang');
+        // Calculate absolute path based on working directory
+        const workingDir = exports.internalActionVariables.workingDir;
+        const baseDir = (workingDir === '.' || workingDir === '')
+            ? process.cwd()
+            : path.join(process.cwd(), workingDir);
+        const golangCPEDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment', 'golang');
         // Create directory if it doesn't exist
         if (!(0, fs_1.existsSync)(golangCPEDir)) {
             (0, fs_1.mkdirSync)(golangCPEDir, { recursive: true });
@@ -17275,11 +17282,13 @@ function ensureGolangCPEFromPipelineEnv() {
  * writePipelineEnv creates files without .json extension, but many Piper steps
  * (sapDownloadArtifact, etc.) expect .json extension.
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
- *
- * @param workingDir - Optional working directory to normalize (defaults to root)
  */
-function normalizeCPEFileExtensions(workingDir = '.') {
-    const baseDir = workingDir === '.' || workingDir === '' ? process.cwd() : path.join(process.cwd(), workingDir);
+function normalizeCPEFileExtensions() {
+    // Calculate absolute path based on working directory
+    const workingDir = exports.internalActionVariables.workingDir;
+    const baseDir = (workingDir === '.' || workingDir === '')
+        ? process.cwd()
+        : path.join(process.cwd(), workingDir);
     const cpeDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment');
     if (!(0, fs_1.existsSync)(cpeDir)) {
         (0, core_1.debug)(`CPE directory does not exist at ${cpeDir}, skipping normalization`);
@@ -17321,8 +17330,7 @@ function normalizeCPEFileExtensions(workingDir = '.') {
         };
         scanDirectory(cpeDir);
         if (filesNormalized > 0) {
-            const location = workingDir === '.' || workingDir === '' ? 'root' : workingDir;
-            (0, core_1.info)(`Normalized ${filesNormalized} CPE file(s) in ${location} by adding .json extension`);
+            (0, core_1.info)(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`);
         }
         else {
             (0, core_1.debug)('No CPE files needed normalization');
