@@ -16530,17 +16530,21 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
     return __awaiter(this, void 0, void 0, function* () {
         if (process.env.GITHUB_JOB !== undefined)
             flags.push('--stageName', process.env.GITHUB_JOB);
-        // If working directory is a subdirectory, adjust paths to point to root .pipeline
         const workingDir = piper_1.internalActionVariables.workingDir;
-        if (workingDir !== '.' && workingDir !== '') {
+        const containerID = piper_1.internalActionVariables.dockerContainerID;
+        // Only adjust paths when running in Docker container with a subdirectory
+        const isInContainer = containerID !== '';
+        const isSubdirectory = workingDir !== '.' && workingDir !== '';
+        if (isInContainer && isSubdirectory) {
             // Set envRootPath to ../.pipeline so Piper writes CPE files to root .pipeline
+            // This only applies to commands running inside the Docker container
             flags.push('--envRootPath', '../.pipeline');
-            (0, core_1.debug)(`Set envRootPath to ../.pipeline for subdirectory execution`);
+            (0, core_1.debug)(`Set envRootPath to ../.pipeline for Docker container subdirectory execution`);
         }
         if (!ignoreDefaults && process.env.defaultsFlags !== undefined) {
             let defaultFlags = JSON.parse(process.env.defaultsFlags);
-            // Adjust .pipeline paths in default flags
-            if (workingDir !== '.' && workingDir !== '') {
+            // Adjust .pipeline paths in default flags when running in container subdirectory
+            if (isInContainer && isSubdirectory) {
                 defaultFlags = defaultFlags.map(flag => {
                     if (flag.startsWith('.pipeline/')) {
                         return '../' + flag;
@@ -16552,7 +16556,6 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
             flags = flags.concat(defaultFlags);
         }
         const piperPath = piper_1.internalActionVariables.piperBinPath;
-        const containerID = piper_1.internalActionVariables.dockerContainerID;
         // Default to Piper
         let binaryPath = piperPath;
         let args = [stepName, ...flags];
