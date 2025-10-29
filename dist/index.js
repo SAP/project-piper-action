@@ -17008,6 +17008,11 @@ function run() {
                 if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '' && (0, enterprise_1.onGitHubEnterprise)()) {
                     (0, core_1.info)('Copying commonPipelineEnvironment back from working directory to root');
                     copyPipelineEnvFromWorkingDir(actionCfg.workingDir);
+                    // For golang builds, extract metadata from stagedArtifactUrls if missing
+                    if (actionCfg.stepName === 'golangBuild') {
+                        (0, core_1.info)('Ensuring golang metadata files exist after golangBuild');
+                        ensureGolangMetadataFromCPE();
+                    }
                 }
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
@@ -17275,6 +17280,72 @@ function copyPipelineEnvFromWorkingDir(workingDir) {
     }
     catch (error) {
         throw new Error(`Failed to copy commonPipelineEnvironment from working directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Extracts golang metadata from stagedArtifactUrls in CPE and creates missing files.
+ * This is needed when golangBuild doesn't create artifactId/groupId files (e.g., when running from subdirectory).
+ */
+function ensureGolangMetadataFromCPE() {
+    const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+    if (!(0, fs_1.existsSync)(cpeDir)) {
+        (0, core_1.debug)('CPE directory does not exist, skipping golang metadata extraction');
+        return;
+    }
+    try {
+        // Read stagedArtifactUrls from custom/stagedArtifactUrls.json
+        const stagedArtifactUrlsPath = path.join(cpeDir, 'custom', 'stagedArtifactUrls.json');
+        if (!(0, fs_1.existsSync)(stagedArtifactUrlsPath)) {
+            (0, core_1.debug)('stagedArtifactUrls.json not found, skipping');
+            return;
+        }
+        const stagedArtifactUrls = JSON.parse((0, fs_1.readFileSync)(stagedArtifactUrlsPath, 'utf8'));
+        if (!Array.isArray(stagedArtifactUrls) || stagedArtifactUrls.length === 0) {
+            (0, core_1.debug)('No staged artifact URLs found');
+            return;
+        }
+        // Parse the first URL to extract groupId and artifactId
+        // URL format: {repo}/go/{groupId}/{artifactId}/{version}/{artifactId}
+        // Example: https://.../go/github.tools.sap/piper-test/fast-build-repo/1.0.0-.../fast-build-repo
+        const url = stagedArtifactUrls[0];
+        const match = url.match(/\/go\/([^/]+\/[^/]+)\/([^/]+)\//);
+        if (!match) {
+            (0, core_1.debug)(`Could not parse golang metadata from URL: ${url}`);
+            return;
+        }
+        const groupId = match[1]; // e.g., "github.tools.sap/piper-test"
+        const artifactId = match[2]; // e.g., "fast-build-repo"
+        (0, core_1.info)(`Extracted golang metadata: groupId=${groupId}, artifactId=${artifactId}`);
+        // Create top-level artifactId and groupId files for sapDownloadArtifact
+        const artifactIdPath = path.join(cpeDir, 'artifactId.json');
+        const groupIdPath = path.join(cpeDir, 'groupId.json');
+        if (!(0, fs_1.existsSync)(artifactIdPath)) {
+            (0, fs_1.writeFileSync)(artifactIdPath, JSON.stringify(artifactId), 'utf8');
+            (0, core_1.info)(`Created ${artifactIdPath}`);
+        }
+        if (!(0, fs_1.existsSync)(groupIdPath)) {
+            (0, fs_1.writeFileSync)(groupIdPath, JSON.stringify(groupId), 'utf8');
+            (0, core_1.info)(`Created ${groupIdPath}`);
+        }
+        // Also create golang-specific subdirectory files
+        const golangCPEDir = path.join(cpeDir, 'golang');
+        if (!(0, fs_1.existsSync)(golangCPEDir)) {
+            (0, fs_1.mkdirSync)(golangCPEDir, { recursive: true });
+        }
+        const golangArtifactIdPath = path.join(golangCPEDir, 'artifactId.json');
+        const golangPackageNamePath = path.join(golangCPEDir, 'packageName.json');
+        if (!(0, fs_1.existsSync)(golangArtifactIdPath)) {
+            (0, fs_1.writeFileSync)(golangArtifactIdPath, JSON.stringify(artifactId), 'utf8');
+            (0, core_1.info)(`Created ${golangArtifactIdPath}`);
+        }
+        if (!(0, fs_1.existsSync)(golangPackageNamePath)) {
+            (0, fs_1.writeFileSync)(golangPackageNamePath, JSON.stringify(artifactId), 'utf8');
+            (0, core_1.info)(`Created ${golangPackageNamePath}`);
+        }
+        (0, core_1.info)('Golang metadata files created successfully');
+    }
+    catch (error) {
+        (0, core_1.info)(`Warning: Failed to extract golang metadata from CPE: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 /**

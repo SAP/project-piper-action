@@ -109,6 +109,12 @@ export async function run (): Promise<void> {
       if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '' && onGitHubEnterprise()) {
         info('Copying commonPipelineEnvironment back from working directory to root')
         copyPipelineEnvFromWorkingDir(actionCfg.workingDir)
+
+        // For golang builds, extract metadata from stagedArtifactUrls if missing
+        if (actionCfg.stepName === 'golangBuild') {
+          info('Ensuring golang metadata files exist after golangBuild')
+          ensureGolangMetadataFromCPE()
+        }
       }
     }
 
@@ -392,6 +398,87 @@ function copyPipelineEnvFromWorkingDir (workingDir: string): void {
     info(`Copied ${sourceCPEDir} to ${targetCPEDir}`)
   } catch (error) {
     throw new Error(`Failed to copy commonPipelineEnvironment from working directory: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Extracts golang metadata from stagedArtifactUrls in CPE and creates missing files.
+ * This is needed when golangBuild doesn't create artifactId/groupId files (e.g., when running from subdirectory).
+ */
+function ensureGolangMetadataFromCPE (): void {
+  const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+
+  if (!existsSync(cpeDir)) {
+    debug('CPE directory does not exist, skipping golang metadata extraction')
+    return
+  }
+
+  try {
+    // Read stagedArtifactUrls from custom/stagedArtifactUrls.json
+    const stagedArtifactUrlsPath = path.join(cpeDir, 'custom', 'stagedArtifactUrls.json')
+    if (!existsSync(stagedArtifactUrlsPath)) {
+      debug('stagedArtifactUrls.json not found, skipping')
+      return
+    }
+
+    const stagedArtifactUrls = JSON.parse(readFileSync(stagedArtifactUrlsPath, 'utf8'))
+    if (!Array.isArray(stagedArtifactUrls) || stagedArtifactUrls.length === 0) {
+      debug('No staged artifact URLs found')
+      return
+    }
+
+    // Parse the first URL to extract groupId and artifactId
+    // URL format: {repo}/go/{groupId}/{artifactId}/{version}/{artifactId}
+    // Example: https://.../go/github.tools.sap/piper-test/fast-build-repo/1.0.0-.../fast-build-repo
+    const url = stagedArtifactUrls[0]
+    const match = url.match(/\/go\/([^/]+\/[^/]+)\/([^/]+)\//)
+
+    if (!match) {
+      debug(`Could not parse golang metadata from URL: ${url}`)
+      return
+    }
+
+    const groupId = match[1] // e.g., "github.tools.sap/piper-test"
+    const artifactId = match[2] // e.g., "fast-build-repo"
+
+    info(`Extracted golang metadata: groupId=${groupId}, artifactId=${artifactId}`)
+
+    // Create top-level artifactId and groupId files for sapDownloadArtifact
+    const artifactIdPath = path.join(cpeDir, 'artifactId.json')
+    const groupIdPath = path.join(cpeDir, 'groupId.json')
+
+    if (!existsSync(artifactIdPath)) {
+      writeFileSync(artifactIdPath, JSON.stringify(artifactId), 'utf8')
+      info(`Created ${artifactIdPath}`)
+    }
+
+    if (!existsSync(groupIdPath)) {
+      writeFileSync(groupIdPath, JSON.stringify(groupId), 'utf8')
+      info(`Created ${groupIdPath}`)
+    }
+
+    // Also create golang-specific subdirectory files
+    const golangCPEDir = path.join(cpeDir, 'golang')
+    if (!existsSync(golangCPEDir)) {
+      mkdirSync(golangCPEDir, { recursive: true })
+    }
+
+    const golangArtifactIdPath = path.join(golangCPEDir, 'artifactId.json')
+    const golangPackageNamePath = path.join(golangCPEDir, 'packageName.json')
+
+    if (!existsSync(golangArtifactIdPath)) {
+      writeFileSync(golangArtifactIdPath, JSON.stringify(artifactId), 'utf8')
+      info(`Created ${golangArtifactIdPath}`)
+    }
+
+    if (!existsSync(golangPackageNamePath)) {
+      writeFileSync(golangPackageNamePath, JSON.stringify(artifactId), 'utf8')
+      info(`Created ${golangPackageNamePath}`)
+    }
+
+    info('Golang metadata files created successfully')
+  } catch (error) {
+    info(`Warning: Failed to extract golang metadata from CPE: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
