@@ -42,6 +42,12 @@ export async function run (): Promise<void> {
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
+
+    // Synthesize golang CPE metadata from pipeline environment if needed
+    // (writePipelineEnv creates files without .json extension, but sapDownloadArtifact expects .json)
+    info('Ensuring golang CPE metadata has correct file extensions')
+    synthesizeGolangCPEIfMissing(actionCfg.workingDir)
+
     endGroup()
 
     startGroup('version')
@@ -377,43 +383,75 @@ function copyBackPipelineMetadata (workingDir: string): void {
 function synthesizeGolangCPEIfMissing (workingDir: string): void {
   const golangCPEDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment', 'golang')
 
-  // Check if golang CPE metadata already exists
-  if (existsSync(golangCPEDir)) {
-    debug('Golang CPE metadata already exists')
+  // Check if golang CPE metadata files exist with .json extension (required by sapDownloadArtifact)
+  const packageNameFile = path.join(golangCPEDir, 'packageName.json')
+  const goModulePathFile = path.join(golangCPEDir, 'goModulePath.json')
+  const artifactIdFile = path.join(golangCPEDir, 'artifactId.json')
+
+  if (existsSync(packageNameFile) && existsSync(goModulePathFile) && existsSync(artifactIdFile)) {
+    debug('Golang CPE metadata already exists with correct extensions')
     return
   }
 
-  info('Golang CPE metadata missing - synthesizing from go.mod')
+  info('Golang CPE metadata missing or incomplete - synthesizing')
 
   try {
-    // Read go.mod from working directory
-    const goModPath = path.join(process.cwd(), workingDir, 'go.mod')
-    if (!existsSync(goModPath)) {
-      debug(`go.mod not found at ${goModPath}`)
-      return
+    // First, try to read from pipeline environment JSON
+    let modulePath: string | undefined
+    let artifactId: string | undefined
+
+    if (process.env.PIPER_ACTION_PIPELINE_ENV !== undefined) {
+      try {
+        const pipelineEnv = JSON.parse(process.env.PIPER_ACTION_PIPELINE_ENV)
+        modulePath = pipelineEnv['golang/packageName'] ?? pipelineEnv['golang/goModulePath']
+        artifactId = pipelineEnv['golang/artifactId']
+        debug(`Found golang metadata in pipeline env: modulePath=${modulePath}, artifactId=${artifactId}`)
+      } catch (err) {
+        debug('Could not parse pipeline environment JSON')
+      }
     }
 
-    const goModContent = readFileSync(goModPath, 'utf8')
+    // If not in pipeline env, check if files exist without .json extension (created by writePipelineEnv)
+    if (modulePath === undefined || artifactId === undefined) {
+      const packageNameFileNoExt = path.join(golangCPEDir, 'packageName')
+      const artifactIdFileNoExt = path.join(golangCPEDir, 'artifactId')
 
-    // Extract module path from go.mod (first line: "module <path>")
-    const moduleMatch = goModContent.match(/^module\s+(.+)$/m)
-    if (!moduleMatch) {
-      debug('Could not extract module path from go.mod')
-      return
+      if (existsSync(packageNameFileNoExt) && existsSync(artifactIdFileNoExt)) {
+        modulePath = JSON.parse(readFileSync(packageNameFileNoExt, 'utf8'))
+        artifactId = JSON.parse(readFileSync(artifactIdFileNoExt, 'utf8'))
+        info('Found golang metadata in files without .json extension')
+      }
     }
 
-    const modulePath = moduleMatch[1].trim()
-    const artifactId = path.basename(modulePath)
+    // If still not found, try to read from go.mod
+    if (modulePath === undefined || artifactId === undefined) {
+      const goModPath = path.join(process.cwd(), workingDir, 'go.mod')
+      if (!existsSync(goModPath)) {
+        debug(`go.mod not found at ${goModPath}`)
+        return
+      }
 
-    info(`Detected Go module: ${modulePath}, artifact: ${artifactId}`)
+      const goModContent = readFileSync(goModPath, 'utf8')
+      const moduleMatch = goModContent.match(/^module\s+(.+)$/m)
+      if (!moduleMatch) {
+        debug('Could not extract module path from go.mod')
+        return
+      }
 
-    // Create golang CPE directory at root
-    mkdirSync(golangCPEDir, { recursive: true })
+      modulePath = moduleMatch[1].trim()
+      artifactId = path.basename(modulePath)
+      info(`Detected Go module from go.mod: ${modulePath}, artifact: ${artifactId}`)
+    }
 
-    // Write golang CPE files (required by sapDownloadArtifact)
-    writeFileSync(path.join(golangCPEDir, 'packageName.json'), JSON.stringify(modulePath), 'utf8')
-    writeFileSync(path.join(golangCPEDir, 'goModulePath.json'), JSON.stringify(modulePath), 'utf8')
-    writeFileSync(path.join(golangCPEDir, 'artifactId.json'), JSON.stringify(artifactId), 'utf8')
+    // Create golang CPE directory at root if it doesn't exist
+    if (!existsSync(golangCPEDir)) {
+      mkdirSync(golangCPEDir, { recursive: true })
+    }
+
+    // Write golang CPE files with .json extension (required by sapDownloadArtifact)
+    writeFileSync(packageNameFile, JSON.stringify(modulePath), 'utf8')
+    writeFileSync(goModulePathFile, JSON.stringify(modulePath), 'utf8')
+    writeFileSync(artifactIdFile, JSON.stringify(artifactId), 'utf8')
 
     info('Golang CPE metadata synthesized successfully')
   } catch (error) {
