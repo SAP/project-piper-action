@@ -14,7 +14,6 @@ export async function executePiper (
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = internalActionVariables.dockerContainerID
-  const workingDir = internalActionVariables.workingDir
 
   // Default to Piper
   let binaryPath = piperPath
@@ -23,25 +22,16 @@ export async function executePiper (
   if (containerID !== '') { // Running in a container
     debug(`containerID: ${containerID}, running in docker`)
     binaryPath = 'docker'
-
-    // Build the path inside the container
-    // The container mounts process.cwd() to itself, so we need to build the full path
-    const containerWorkDir = workingDir === '.'
-      ? process.cwd()
-      : path.join(process.cwd(), workingDir)
-
     args = [
       'exec',
-      '--workdir', containerWorkDir,
       containerID,
       `/piper/${path.basename(piperPath)}`,
       stepName,
       ...flags
     ]
-    debug(`Docker exec working directory: ${containerWorkDir}`)
   }
 
-  let options: ExecOptions = { ignoreReturnCode: true, cwd: workingDir }
+  let options: ExecOptions = { ignoreReturnCode: true }
   options = Object.assign({}, options, execOptions)
 
   return await getExecOutput(binaryPath, args, options)
