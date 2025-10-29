@@ -15,11 +15,20 @@ export async function executePiper (
   const isInContainer = containerID !== ''
   const isSubdirectory = workingDir !== '.' && workingDir !== ''
 
-  if (isInContainer && isSubdirectory) {
-    // Set envRootPath to ../.pipeline so Piper writes CPE files to root .pipeline
-    // This only applies to commands running inside the Docker container
+  // Commands that need envRootPath adjustment when in subdirectory:
+  // - Commands in Docker: all commands need it to write to root .pipeline
+  // - readPipelineEnv: needs to read from root .pipeline even when on host
+  // - writePipelineEnv: needs to write to root .pipeline even when on host
+  const needsEnvRootPath = isSubdirectory && (
+    isInContainer ||
+    stepName === 'readPipelineEnv' ||
+    stepName === 'writePipelineEnv'
+  )
+
+  if (needsEnvRootPath) {
+    // Set envRootPath to ../.pipeline so Piper writes/reads CPE files to/from root .pipeline
     flags.push('--envRootPath', '../.pipeline')
-    debug(`Set envRootPath to ../.pipeline for Docker container subdirectory execution`)
+    debug(`Set envRootPath to ../.pipeline for step ${stepName} (container: ${isInContainer}, subdirectory: ${isSubdirectory})`)
   }
 
   if (!ignoreDefaults && process.env.defaultsFlags !== undefined) {
