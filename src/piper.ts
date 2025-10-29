@@ -76,6 +76,12 @@ export async function run (): Promise<void> {
       info('Copying .pipeline folder to working directory')
       copyPipelineFolder(actionCfg.workingDir)
 
+      // Normalize CPE file extensions in the working directory too
+      if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '') {
+        info('Normalizing CPE file extensions in working directory')
+        normalizeCPEFileExtensions(actionCfg.workingDir)
+      }
+
       debugDirectoryStructure('After copying .pipeline folder', actionCfg.workingDir)
 
       endGroup()
@@ -385,12 +391,15 @@ function copyBackPipelineMetadata (workingDir: string): void {
  * writePipelineEnv creates files without .json extension, but many Piper steps
  * (sapDownloadArtifact, etc.) expect .json extension.
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
+ *
+ * @param workingDir - Optional working directory to normalize (defaults to root)
  */
-function normalizeCPEFileExtensions (): void {
-  const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment')
+function normalizeCPEFileExtensions (workingDir: string = '.'): void {
+  const baseDir = workingDir === '.' || workingDir === '' ? process.cwd() : path.join(process.cwd(), workingDir)
+  const cpeDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment')
 
   if (!existsSync(cpeDir)) {
-    debug('CPE directory does not exist, skipping normalization')
+    debug(`CPE directory does not exist at ${cpeDir}, skipping normalization`)
     return
   }
 
@@ -435,7 +444,8 @@ function normalizeCPEFileExtensions (): void {
     scanDirectory(cpeDir)
 
     if (filesNormalized > 0) {
-      info(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`)
+      const location = workingDir === '.' || workingDir === '' ? 'root' : workingDir
+      info(`Normalized ${filesNormalized} CPE file(s) in ${location} by adding .json extension`)
     } else {
       debug('No CPE files needed normalization')
     }

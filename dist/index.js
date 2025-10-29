@@ -16957,6 +16957,11 @@ function run() {
                 debugDirectoryStructure('Before copying .pipeline folder', actionCfg.workingDir);
                 (0, core_1.info)('Copying .pipeline folder to working directory');
                 copyPipelineFolder(actionCfg.workingDir);
+                // Normalize CPE file extensions in the working directory too
+                if (actionCfg.workingDir !== '.' && actionCfg.workingDir !== '') {
+                    (0, core_1.info)('Normalizing CPE file extensions in working directory');
+                    normalizeCPEFileExtensions(actionCfg.workingDir);
+                }
                 debugDirectoryStructure('After copying .pipeline folder', actionCfg.workingDir);
                 (0, core_1.endGroup)();
             }
@@ -17244,11 +17249,14 @@ function copyBackPipelineMetadata(workingDir) {
  * writePipelineEnv creates files without .json extension, but many Piper steps
  * (sapDownloadArtifact, etc.) expect .json extension.
  * This is a generic solution that works for all build tools (golang, maven, npm, python, etc.)
+ *
+ * @param workingDir - Optional working directory to normalize (defaults to root)
  */
-function normalizeCPEFileExtensions() {
-    const cpeDir = path.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+function normalizeCPEFileExtensions(workingDir = '.') {
+    const baseDir = workingDir === '.' || workingDir === '' ? process.cwd() : path.join(process.cwd(), workingDir);
+    const cpeDir = path.join(baseDir, '.pipeline', 'commonPipelineEnvironment');
     if (!(0, fs_1.existsSync)(cpeDir)) {
-        (0, core_1.debug)('CPE directory does not exist, skipping normalization');
+        (0, core_1.debug)(`CPE directory does not exist at ${cpeDir}, skipping normalization`);
         return;
     }
     try {
@@ -17287,7 +17295,8 @@ function normalizeCPEFileExtensions() {
         };
         scanDirectory(cpeDir);
         if (filesNormalized > 0) {
-            (0, core_1.info)(`Normalized ${filesNormalized} CPE file(s) by adding .json extension`);
+            const location = workingDir === '.' || workingDir === '' ? 'root' : workingDir;
+            (0, core_1.info)(`Normalized ${filesNormalized} CPE file(s) in ${location} by adding .json extension`);
         }
         else {
             (0, core_1.debug)('No CPE files needed normalization');
