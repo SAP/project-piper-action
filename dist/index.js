@@ -16835,7 +16835,7 @@ function loadPipelineEnv() {
         }
         (0, core_1.debug)('Loading pipeline environment...');
         const pipelineEnv = process.env.PIPER_ACTION_PIPELINE_ENV;
-        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv } };
+        const execOptions = { env: { PIPER_pipelineEnv: pipelineEnv }, cwd: '.' };
         yield (0, execute_1.executePiper)('writePipelineEnv', undefined, undefined, execOptions).catch(err => {
             throw new Error(`Can't load pipeline environment: ${err}`);
         });
