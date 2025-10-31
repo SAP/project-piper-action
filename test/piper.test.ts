@@ -9,6 +9,7 @@ import * as github from '../src/github'
 import * as download from '../src/download'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
+import * as utils from '../src/utils'
 import { GITHUB_COM_API_URL } from '../src/github'
 import { internalActionVariables } from '../src/piper'
 
@@ -38,7 +39,8 @@ describe('Piper', () => {
       'custom-defaults-paths': '',
       'custom-stage-conditions-path': '',
       'create-check-if-step-active-maps': '',
-      'export-pipeline-environment': ''
+      'export-pipeline-environment': '',
+      'working-dir': '.'
     }
 
     fs.chmodSync = jest.fn()
@@ -52,6 +54,11 @@ describe('Piper', () => {
     jest.spyOn(docker, 'cleanupContainers').mockImplementation()
     jest.spyOn(pipelineEnv, 'loadPipelineEnv').mockImplementation()
     jest.spyOn(pipelineEnv, 'exportPipelineEnv').mockImplementation()
+    jest.spyOn(utils, 'setupMonorepoSymlinks').mockImplementation()
+    jest.spyOn(utils, 'changeToWorkingDirectory').mockImplementation()
+    jest.spyOn(utils, 'ensurePipelineSymlinksAfterLoad').mockImplementation()
+    jest.spyOn(utils, 'restoreOriginalDirectory').mockImplementation()
+    jest.spyOn(utils, 'cleanupMonorepoSymlinks').mockImplementation()
     jest.spyOn(core, 'setFailed').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
@@ -62,7 +69,7 @@ describe('Piper', () => {
         }
       }
 
-      return val.trim()
+      return val !== undefined ? val.trim() : ''
     })
   })
 
