@@ -16981,6 +16981,10 @@ function run() {
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
+            // After loadPipelineEnv, the parent .pipeline directory may have been created by writePipelineEnv
+            // We need to ensure symlinks are set up now (they may not have been created earlier if parent didn't exist)
+            (0, core_1.info)('Ensuring .pipeline symlinks are set up after pipeline env load');
+            ensurePipelineSymlinksAfterLoad(actionCfg.workingDir);
             (0, core_1.endGroup)();
             (0, core_1.startGroup)('version');
             (0, core_1.info)('Getting version');
@@ -17281,6 +17285,60 @@ function createSelectivePipelineSymlinks(subdirPipelinePath, parentPipelinePath)
     }
     catch (error) {
         (0, core_1.debug)(`Could not read parent .pipeline directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+/**
+ * Ensures .pipeline symlinks are created after loadPipelineEnv() has run.
+ * This is necessary because loadPipelineEnv() may create the parent .pipeline directory
+ * via writePipelineEnv, but setupMonorepoSymlinks() only creates symlinks if the parent
+ * already exists. This function is called AFTER chdir to working directory.
+ *
+ * @param workingDir - The working directory from action configuration (e.g., 'backend')
+ */
+function ensurePipelineSymlinksAfterLoad(workingDir) {
+    const isSubdirectory = workingDir !== '.' && workingDir !== '';
+    if (!isSubdirectory) {
+        return;
+    }
+    // We've already changed to the working directory, so use originalCwd to get repo root
+    const repoRoot = exports.internalActionVariables.originalCwd;
+    if (!repoRoot) {
+        (0, core_1.debug)('Original working directory not set, cannot ensure pipeline symlinks');
+        return;
+    }
+    const subdirPath = path.join(repoRoot, workingDir);
+    const pipelineSymlinkPath = path.join(subdirPath, '.pipeline');
+    const parentPipelinePath = path.join(repoRoot, '.pipeline');
+    try {
+        // Check if parent .pipeline now exists (may have been created by writePipelineEnv)
+        if (!(0, fs_1.existsSync)(parentPipelinePath)) {
+            (0, core_1.debug)('Parent .pipeline still does not exist, no symlinks needed');
+            return;
+        }
+        // Check current state of subdirectory's .pipeline
+        if ((0, fs_1.existsSync)(pipelineSymlinkPath)) {
+            const stats = (0, fs_1.lstatSync)(pipelineSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                (0, core_1.debug)('.pipeline symlink already exists');
+                return;
+            }
+            else {
+                // Service-specific .pipeline directory exists
+                // Create selective symlinks for items that don't exist in subdirectory
+                (0, core_1.info)('Creating selective symlinks for .pipeline items from parent');
+                createSelectivePipelineSymlinks(pipelineSymlinkPath, parentPipelinePath);
+            }
+        }
+        else {
+            // No .pipeline in subdirectory, symlink the whole directory
+            (0, core_1.info)(`Creating .pipeline symlink: ${subdirPath}/.pipeline -> ../.pipeline`);
+            (0, fs_1.symlinkSync)(path.join('..', '.pipeline'), pipelineSymlinkPath, 'dir');
+            exports.internalActionVariables.pipelineSymlinkCreated = true;
+            (0, core_1.debug)('.pipeline symlink created successfully');
+        }
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to ensure .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 /**
