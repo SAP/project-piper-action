@@ -17219,7 +17219,7 @@ function setupMonorepoSymlinks(workingDir) {
                 (0, core_1.info)('.pipeline directory exists in subdirectory - creating selective symlinks for missing items');
                 // Selectively symlink items that don't exist in subdirectory
                 if ((0, fs_1.existsSync)(parentPipelinePath)) {
-                    createSelectivePipelineSymlinks(subdirPath, parentPipelinePath);
+                    createSelectivePipelineSymlinks(pipelineSymlinkPath, parentPipelinePath);
                 }
             }
         }

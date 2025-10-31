@@ -316,7 +316,7 @@ function setupMonorepoSymlinks (workingDir: string): void {
 
         // Selectively symlink items that don't exist in subdirectory
         if (existsSync(parentPipelinePath)) {
-          createSelectivePipelineSymlinks(subdirPath, parentPipelinePath)
+          createSelectivePipelineSymlinks(pipelineSymlinkPath, parentPipelinePath)
         }
       }
     } else if (!existsSync(parentPipelinePath)) {
