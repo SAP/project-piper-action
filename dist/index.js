@@ -17104,7 +17104,7 @@ function debugDirectoryStructure() {
  * Background: The openGit() function in piper only looks for .git in the current directory,
  * not in parent directories like standard git tools. This is a workaround until upstream fix.
  *
- * @param workingDir - The working directory from action configuration
+ * @param workingDir - The working directory from action configuration (e.g., 'backend')
  */
 function setupGitSymlink(workingDir) {
     // Only create symlink if running from a subdirectory
@@ -17114,9 +17114,16 @@ function setupGitSymlink(workingDir) {
         return;
     }
     try {
-        const gitSymlinkPath = path.join(process.cwd(), '.git');
-        const parentGitPath = path.join(process.cwd(), '..', '.git');
-        // Check if .git already exists in current directory
+        // Paths relative to the subdirectory where piper will run
+        const repoRoot = process.cwd();
+        const subdirPath = path.join(repoRoot, workingDir);
+        const gitSymlinkPath = path.join(subdirPath, '.git');
+        const parentGitPath = path.join(repoRoot, '.git');
+        (0, core_1.debug)(`Repository root: ${repoRoot}`);
+        (0, core_1.debug)(`Subdirectory path: ${subdirPath}`);
+        (0, core_1.debug)(`Git symlink target: ${gitSymlinkPath}`);
+        (0, core_1.debug)(`Parent git location: ${parentGitPath}`);
+        // Check if .git already exists in subdirectory
         if ((0, fs_1.existsSync)(gitSymlinkPath)) {
             const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
             if (stats.isSymbolicLink()) {
@@ -17131,12 +17138,14 @@ function setupGitSymlink(workingDir) {
         }
         // Check if parent .git exists
         if (!(0, fs_1.existsSync)(parentGitPath)) {
-            (0, core_1.warning)('Parent .git directory not found - git operations may fail');
+            (0, core_1.warning)(`Parent .git directory not found at ${parentGitPath} - git operations may fail`);
             return;
         }
         // Create symlink from subdirectory to parent .git
-        (0, core_1.info)(`Creating symlink: ${gitSymlinkPath} -> ${parentGitPath}`);
-        (0, fs_1.symlinkSync)(parentGitPath, gitSymlinkPath, 'dir');
+        // Use relative path for the target so it works inside Docker containers
+        const relativeGitPath = '..';
+        (0, core_1.info)(`Creating symlink: ${gitSymlinkPath} -> ../.git`);
+        (0, fs_1.symlinkSync)(path.join(relativeGitPath, '.git'), gitSymlinkPath, 'dir');
         exports.internalActionVariables.gitSymlinkCreated = true;
         (0, core_1.debug)('Git symlink created successfully');
     }
@@ -17154,7 +17163,10 @@ function cleanupGitSymlink() {
         return;
     }
     try {
-        const gitSymlinkPath = path.join(process.cwd(), '.git');
+        const workingDir = exports.internalActionVariables.workingDir;
+        const repoRoot = process.cwd();
+        const subdirPath = path.join(repoRoot, workingDir);
+        const gitSymlinkPath = path.join(subdirPath, '.git');
         if ((0, fs_1.existsSync)(gitSymlinkPath)) {
             const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
             if (stats.isSymbolicLink()) {
