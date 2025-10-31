@@ -404,7 +404,7 @@ function ensurePipelineSymlinksAfterLoad (workingDir: string): void {
 
   // We've already changed to the working directory, so use originalCwd to get repo root
   const repoRoot = internalActionVariables.originalCwd
-  if (!repoRoot) {
+  if (repoRoot.length === 0) {
     debug('Original working directory not set, cannot ensure pipeline symlinks')
     return
   }
@@ -425,7 +425,6 @@ function ensurePipelineSymlinksAfterLoad (workingDir: string): void {
       const stats = lstatSync(pipelineSymlinkPath)
       if (stats.isSymbolicLink()) {
         debug('.pipeline symlink already exists')
-        return
       } else {
         // Service-specific .pipeline directory exists
         // Create selective symlinks for items that don't exist in subdirectory
