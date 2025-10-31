@@ -300,7 +300,7 @@ function setupMonorepoSymlinks (workingDir: string): void {
     warning(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`)
   }
 
-  // Create .pipeline symlink
+  // Create .pipeline symlinks (selective merge approach)
   try {
     const pipelineSymlinkPath = path.join(subdirPath, '.pipeline')
     const parentPipelinePath = path.join(repoRoot, '.pipeline')
@@ -309,14 +309,20 @@ function setupMonorepoSymlinks (workingDir: string): void {
     if (existsSync(pipelineSymlinkPath)) {
       const stats = lstatSync(pipelineSymlinkPath)
       if (stats.isSymbolicLink()) {
-        debug('.pipeline symlink already exists')
+        info('.pipeline symlink already exists')
       } else {
-        debug('.pipeline directory already exists (not a symlink) - this is valid for service-specific config')
+        // Service-specific .pipeline directory exists
+        info('.pipeline directory exists in subdirectory - creating selective symlinks for missing items')
+
+        // Selectively symlink items that don't exist in subdirectory
+        if (existsSync(parentPipelinePath)) {
+          createSelectivePipelineSymlinks(subdirPath, parentPipelinePath)
+        }
       }
     } else if (!existsSync(parentPipelinePath)) {
-      debug(`Parent .pipeline directory not found at ${parentPipelinePath} - will be created later`)
+      info(`Parent .pipeline directory not found at ${parentPipelinePath} - will be created later`)
     } else {
-      // Create symlink using relative path for Docker compatibility
+      // No .pipeline in subdirectory, symlink the whole directory
       info(`Creating .pipeline symlink: ${subdirPath}/.pipeline -> ../.pipeline`)
       symlinkSync(path.join('..', '.pipeline'), pipelineSymlinkPath, 'dir')
       internalActionVariables.pipelineSymlinkCreated = true
@@ -324,6 +330,55 @@ function setupMonorepoSymlinks (workingDir: string): void {
     }
   } catch (error) {
     warning(`Failed to create .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
+/**
+ * Creates selective symlinks for .pipeline subdirectories and files that don't exist
+ * in the service's .pipeline directory but exist in the parent.
+ *
+ * This enables a "merge" behavior where service-specific files (like config.yml) are used,
+ * but shared files (like commonPipelineEnvironment) are symlinked from parent.
+ *
+ * @param subdirPipelinePath - Path to subdirectory's .pipeline (e.g., /repo/backend/.pipeline)
+ * @param parentPipelinePath - Path to parent's .pipeline (e.g., /repo/.pipeline)
+ */
+function createSelectivePipelineSymlinks (subdirPipelinePath: string, parentPipelinePath: string): void {
+  try {
+    const parentItems = readdirSync(parentPipelinePath)
+
+    for (const item of parentItems) {
+      // Skip certain items that should always be service-specific
+      if (item === 'config.yml' || item === 'defaults_temp') {
+        continue
+      }
+
+      const subdirItemPath = path.join(subdirPipelinePath, item)
+      const parentItemPath = path.join(parentPipelinePath, item)
+
+      // Only create symlink if item doesn't exist in subdirectory
+      if (!existsSync(subdirItemPath)) {
+        try {
+          const stats = statSync(parentItemPath)
+          const symlinkType = stats.isDirectory() ? 'dir' : 'file'
+
+          // Use relative path for Docker compatibility
+          const relativePath = path.join('..', '..', '.pipeline', item)
+
+          info(`Creating selective symlink: .pipeline/${item} -> ${relativePath}`)
+          symlinkSync(relativePath, subdirItemPath, symlinkType)
+
+          // Track that we created pipeline symlinks (for cleanup)
+          internalActionVariables.pipelineSymlinkCreated = true
+        } catch (err) {
+          debug(`Skipping symlink for ${item}: ${err instanceof Error ? err.message : String(err)}`)
+        }
+      } else {
+        debug(`.pipeline/${item} already exists in subdirectory, keeping local version`)
+      }
+    }
+  } catch (error) {
+    debug(`Could not read parent .pipeline directory: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -361,21 +416,43 @@ function cleanupMonorepoSymlinks (): void {
     }
   }
 
-  // Remove .pipeline symlink
+  // Remove .pipeline symlinks (both whole directory and selective symlinks)
   if (internalActionVariables.pipelineSymlinkCreated) {
     try {
       const pipelineSymlinkPath = path.join(subdirPath, '.pipeline')
+
       if (existsSync(pipelineSymlinkPath)) {
         const stats = lstatSync(pipelineSymlinkPath)
+
         if (stats.isSymbolicLink()) {
+          // Whole .pipeline directory was symlinked
           info(`Removing .pipeline symlink: ${pipelineSymlinkPath}`)
           unlinkSync(pipelineSymlinkPath)
           debug('.pipeline symlink removed successfully')
+        } else if (stats.isDirectory()) {
+          // Selective symlinks were created inside .pipeline directory
+          info('Removing selective .pipeline symlinks')
+          const items = readdirSync(pipelineSymlinkPath)
+
+          for (const item of items) {
+            try {
+              const itemPath = path.join(pipelineSymlinkPath, item)
+              const itemStats = lstatSync(itemPath)
+
+              if (itemStats.isSymbolicLink()) {
+                debug(`Removing symlink: .pipeline/${item}`)
+                unlinkSync(itemPath)
+              }
+            } catch (err) {
+              debug(`Could not remove .pipeline/${item}: ${err instanceof Error ? err.message : String(err)}`)
+            }
+          }
         }
       }
+
       internalActionVariables.pipelineSymlinkCreated = false
     } catch (error) {
-      warning(`Failed to remove .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`)
+      warning(`Failed to remove .pipeline symlinks: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 }
