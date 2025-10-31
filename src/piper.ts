@@ -1,6 +1,6 @@
-import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
+import { debug, setFailed, info, startGroup, endGroup, warning } from '@actions/core'
 import { buildPiperFromSource } from './github'
-import { chmodSync, existsSync, readdirSync, statSync, readFileSync } from 'fs'
+import { chmodSync, existsSync, readdirSync, statSync, symlinkSync, unlinkSync, lstatSync } from 'fs'
 import * as path from 'path'
 import { executePiper } from './execute'
 import {
@@ -23,7 +23,8 @@ export const internalActionVariables = {
   dockerContainerID: '',
   sidecarNetworkID: '',
   sidecarContainerID: '',
-  workingDir: '.'
+  workingDir: '.',
+  gitSymlinkCreated: false
 }
 
 export async function run (): Promise<void> {
@@ -39,6 +40,9 @@ export async function run (): Promise<void> {
     info('Setting working directory')
     internalActionVariables.workingDir = actionCfg.workingDir
     debug(`Working directory: ${actionCfg.workingDir}`)
+
+    info('Setting up git repository access for subdirectory')
+    setupGitSymlink(actionCfg.workingDir)
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
@@ -90,6 +94,7 @@ export async function run (): Promise<void> {
   } catch (error: unknown) {
     setFailed(error instanceof Error ? error.message : String(error))
   } finally {
+    cleanupGitSymlink()
     await cleanupContainers()
   }
 }
@@ -178,4 +183,85 @@ function debugDirectoryStructure (): void {
   }
 
   info('=== End Directory Structure ===\n')
+}
+
+/**
+ * Creates a symbolic link to the parent .git directory when running from a subdirectory.
+ * This enables piper steps (especially artifactPrepareVersion) to access the git repository.
+ *
+ * Background: The openGit() function in piper only looks for .git in the current directory,
+ * not in parent directories like standard git tools. This is a workaround until upstream fix.
+ *
+ * @param workingDir - The working directory from action configuration
+ */
+function setupGitSymlink (workingDir: string): void {
+  // Only create symlink if running from a subdirectory
+  const isSubdirectory = workingDir !== '.' && workingDir !== ''
+
+  if (!isSubdirectory) {
+    debug('Running from root directory, no git symlink needed')
+    return
+  }
+
+  try {
+    const gitSymlinkPath = path.join(process.cwd(), '.git')
+    const parentGitPath = path.join(process.cwd(), '..', '.git')
+
+    // Check if .git already exists in current directory
+    if (existsSync(gitSymlinkPath)) {
+      const stats = lstatSync(gitSymlinkPath)
+      if (stats.isSymbolicLink()) {
+        debug('.git symlink already exists in working directory')
+        return
+      } else {
+        // Real .git directory exists in subdirectory - this is valid, don't create symlink
+        debug('.git directory already exists in working directory (not a symlink)')
+        return
+      }
+    }
+
+    // Check if parent .git exists
+    if (!existsSync(parentGitPath)) {
+      warning('Parent .git directory not found - git operations may fail')
+      return
+    }
+
+    // Create symlink from subdirectory to parent .git
+    info(`Creating symlink: ${gitSymlinkPath} -> ${parentGitPath}`)
+    symlinkSync(parentGitPath, gitSymlinkPath, 'dir')
+    internalActionVariables.gitSymlinkCreated = true
+    debug('Git symlink created successfully')
+  } catch (error) {
+    warning(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`)
+    warning('Piper steps requiring git access (e.g., artifactPrepareVersion) may fail')
+  }
+}
+
+/**
+ * Removes the .git symlink created by setupGitSymlink().
+ * Called in the finally block to ensure cleanup even if the action fails.
+ */
+function cleanupGitSymlink (): void {
+  if (!internalActionVariables.gitSymlinkCreated) {
+    return
+  }
+
+  try {
+    const gitSymlinkPath = path.join(process.cwd(), '.git')
+
+    if (existsSync(gitSymlinkPath)) {
+      const stats = lstatSync(gitSymlinkPath)
+      if (stats.isSymbolicLink()) {
+        info(`Removing git symlink: ${gitSymlinkPath}`)
+        unlinkSync(gitSymlinkPath)
+        debug('Git symlink removed successfully')
+      } else {
+        debug('Skipping .git removal - not a symlink')
+      }
+    }
+
+    internalActionVariables.gitSymlinkCreated = false
+  } catch (error) {
+    warning(`Failed to remove .git symlink: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }

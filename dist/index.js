@@ -16535,11 +16535,17 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
         // Only adjust paths when running in Docker container with a subdirectory
         const isInContainer = containerID !== '';
         const isSubdirectory = workingDir !== '.' && workingDir !== '';
-        if (isInContainer && isSubdirectory) {
-            // Set envRootPath to ../.pipeline so Piper writes CPE files to root .pipeline
-            // This only applies to commands running inside the Docker container
+        // Commands that need envRootPath adjustment when in subdirectory:
+        // - Commands in Docker: all commands need it to write to root .pipeline
+        // - readPipelineEnv: needs to read from root .pipeline even when on host
+        // - writePipelineEnv: needs to write to root .pipeline even when on host
+        const needsEnvRootPath = isSubdirectory && (isInContainer ||
+            stepName === 'readPipelineEnv' ||
+            stepName === 'writePipelineEnv');
+        if (needsEnvRootPath) {
+            // Set envRootPath to ../.pipeline so Piper writes/reads CPE files to/from root .pipeline
             flags.push('--envRootPath', '../.pipeline');
-            (0, core_1.debug)(`Set envRootPath to ../.pipeline for Docker container subdirectory execution`);
+            (0, core_1.debug)(`Set envRootPath to ../.pipeline for step ${stepName} (container: ${isInContainer}, subdirectory: ${isSubdirectory})`);
         }
         if (!ignoreDefaults && process.env.defaultsFlags !== undefined) {
             let defaultFlags = JSON.parse(process.env.defaultsFlags);
@@ -16847,9 +16853,17 @@ exports.exportPipelineEnv = exports.loadPipelineEnv = void 0;
 const fs_1 = __nccwpck_require__(7147);
 const core_1 = __nccwpck_require__(2186);
 const execute_1 = __nccwpck_require__(5938);
+const piper_1 = __nccwpck_require__(309);
 function loadPipelineEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        if ((0, fs_1.existsSync)('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+        // When running from subdirectory, CPE is in root .pipeline, not subdirectory .pipeline
+        const workingDir = piper_1.internalActionVariables.workingDir;
+        const isSubdirectory = workingDir !== '.' && workingDir !== '';
+        const pipelineEnvPath = isSubdirectory
+            ? '../.pipeline/commonPipelineEnvironment'
+            : '.pipeline/commonPipelineEnvironment';
+        if ((0, fs_1.existsSync)(pipelineEnvPath) || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+            (0, core_1.debug)(`Pipeline environment check: path=${pipelineEnvPath}, exists=${(0, fs_1.existsSync)(pipelineEnvPath)}`);
             return;
         }
         (0, core_1.debug)('Loading pipeline environment...');
@@ -16941,7 +16955,8 @@ exports.internalActionVariables = {
     dockerContainerID: '',
     sidecarNetworkID: '',
     sidecarContainerID: '',
-    workingDir: '.'
+    workingDir: '.',
+    gitSymlinkCreated: false
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -16955,6 +16970,8 @@ function run() {
             (0, core_1.info)('Setting working directory');
             exports.internalActionVariables.workingDir = actionCfg.workingDir;
             (0, core_1.debug)(`Working directory: ${actionCfg.workingDir}`);
+            (0, core_1.info)('Setting up git repository access for subdirectory');
+            setupGitSymlink(actionCfg.workingDir);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -16992,6 +17009,7 @@ function run() {
             (0, core_1.setFailed)(error instanceof Error ? error.message : String(error));
         }
         finally {
+            cleanupGitSymlink();
             yield (0, docker_1.cleanupContainers)();
         }
     });
@@ -17078,6 +17096,81 @@ function debugDirectoryStructure() {
         (0, core_1.info)('  (does not exist)');
     }
     (0, core_1.info)('=== End Directory Structure ===\n');
+}
+/**
+ * Creates a symbolic link to the parent .git directory when running from a subdirectory.
+ * This enables piper steps (especially artifactPrepareVersion) to access the git repository.
+ *
+ * Background: The openGit() function in piper only looks for .git in the current directory,
+ * not in parent directories like standard git tools. This is a workaround until upstream fix.
+ *
+ * @param workingDir - The working directory from action configuration
+ */
+function setupGitSymlink(workingDir) {
+    // Only create symlink if running from a subdirectory
+    const isSubdirectory = workingDir !== '.' && workingDir !== '';
+    if (!isSubdirectory) {
+        (0, core_1.debug)('Running from root directory, no git symlink needed');
+        return;
+    }
+    try {
+        const gitSymlinkPath = path.join(process.cwd(), '.git');
+        const parentGitPath = path.join(process.cwd(), '..', '.git');
+        // Check if .git already exists in current directory
+        if ((0, fs_1.existsSync)(gitSymlinkPath)) {
+            const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                (0, core_1.debug)('.git symlink already exists in working directory');
+                return;
+            }
+            else {
+                // Real .git directory exists in subdirectory - this is valid, don't create symlink
+                (0, core_1.debug)('.git directory already exists in working directory (not a symlink)');
+                return;
+            }
+        }
+        // Check if parent .git exists
+        if (!(0, fs_1.existsSync)(parentGitPath)) {
+            (0, core_1.warning)('Parent .git directory not found - git operations may fail');
+            return;
+        }
+        // Create symlink from subdirectory to parent .git
+        (0, core_1.info)(`Creating symlink: ${gitSymlinkPath} -> ${parentGitPath}`);
+        (0, fs_1.symlinkSync)(parentGitPath, gitSymlinkPath, 'dir');
+        exports.internalActionVariables.gitSymlinkCreated = true;
+        (0, core_1.debug)('Git symlink created successfully');
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+        (0, core_1.warning)('Piper steps requiring git access (e.g., artifactPrepareVersion) may fail');
+    }
+}
+/**
+ * Removes the .git symlink created by setupGitSymlink().
+ * Called in the finally block to ensure cleanup even if the action fails.
+ */
+function cleanupGitSymlink() {
+    if (!exports.internalActionVariables.gitSymlinkCreated) {
+        return;
+    }
+    try {
+        const gitSymlinkPath = path.join(process.cwd(), '.git');
+        if ((0, fs_1.existsSync)(gitSymlinkPath)) {
+            const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                (0, core_1.info)(`Removing git symlink: ${gitSymlinkPath}`);
+                (0, fs_1.unlinkSync)(gitSymlinkPath);
+                (0, core_1.debug)('Git symlink removed successfully');
+            }
+            else {
+                (0, core_1.debug)('Skipping .git removal - not a symlink');
+            }
+        }
+        exports.internalActionVariables.gitSymlinkCreated = false;
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to remove .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 
 
