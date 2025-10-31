@@ -16960,6 +16960,7 @@ exports.internalActionVariables = {
     sidecarContainerID: '',
     workingDir: '.',
     gitSymlinkCreated: false,
+    pipelineSymlinkCreated: false,
     originalCwd: ''
 };
 function run() {
@@ -16969,14 +16970,15 @@ function run() {
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
-            // Change to working directory at the very beginning
+            // Set up symlinks BEFORE changing directory
             (0, core_1.info)('Setting working directory');
             exports.internalActionVariables.workingDir = actionCfg.workingDir;
+            (0, core_1.info)('Setting up symlinks for subdirectory (git and pipeline)');
+            setupMonorepoSymlinks(actionCfg.workingDir);
+            // Change to working directory after symlinks are created
             changeToWorkingDirectory(actionCfg.workingDir);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
-            (0, core_1.info)('Setting up git repository access for subdirectory');
-            setupGitSymlink(actionCfg.workingDir);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -17014,9 +17016,9 @@ function run() {
             (0, core_1.setFailed)(error instanceof Error ? error.message : String(error));
         }
         finally {
-            cleanupGitSymlink();
             yield (0, docker_1.cleanupContainers)();
             restoreOriginalDirectory();
+            cleanupMonorepoSymlinks();
         }
     });
 }
@@ -17155,90 +17157,130 @@ function restoreOriginalDirectory() {
     }
 }
 /**
- * Creates a symbolic link to the parent .git directory when running from a subdirectory.
- * This enables piper steps (especially artifactPrepareVersion) to access the git repository.
+ * Creates symbolic links for .git and .pipeline directories when running from a subdirectory.
+ * This enables piper steps to access the git repository and pipeline configuration.
  *
- * Background: The openGit() function in piper only looks for .git in the current directory,
- * not in parent directories like standard git tools. This is a workaround until upstream fix.
+ * IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
+ * from the repository root.
  *
  * @param workingDir - The working directory from action configuration (e.g., 'backend')
  */
-function setupGitSymlink(workingDir) {
-    // Only create symlink if running from a subdirectory
+function setupMonorepoSymlinks(workingDir) {
+    // Only create symlinks if running from a subdirectory
     const isSubdirectory = workingDir !== '.' && workingDir !== '';
     if (!isSubdirectory) {
-        (0, core_1.debug)('Running from root directory, no git symlink needed');
+        (0, core_1.debug)('Running from root directory, no symlinks needed');
         return;
     }
+    const repoRoot = process.cwd();
+    const subdirPath = path.join(repoRoot, workingDir);
+    (0, core_1.debug)(`Repository root: ${repoRoot}`);
+    (0, core_1.debug)(`Subdirectory path: ${subdirPath}`);
+    // Create .git symlink
     try {
-        // Paths relative to the subdirectory where piper will run
-        const repoRoot = process.cwd();
-        const subdirPath = path.join(repoRoot, workingDir);
         const gitSymlinkPath = path.join(subdirPath, '.git');
         const parentGitPath = path.join(repoRoot, '.git');
-        (0, core_1.debug)(`Repository root: ${repoRoot}`);
-        (0, core_1.debug)(`Subdirectory path: ${subdirPath}`);
-        (0, core_1.debug)(`Git symlink target: ${gitSymlinkPath}`);
-        (0, core_1.debug)(`Parent git location: ${parentGitPath}`);
         // Check if .git already exists in subdirectory
         if ((0, fs_1.existsSync)(gitSymlinkPath)) {
             const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
             if (stats.isSymbolicLink()) {
-                (0, core_1.debug)('.git symlink already exists in working directory');
-                return;
+                (0, core_1.debug)('.git symlink already exists');
             }
             else {
-                // Real .git directory exists in subdirectory - this is valid, don't create symlink
-                (0, core_1.debug)('.git directory already exists in working directory (not a symlink)');
-                return;
+                (0, core_1.debug)('.git directory already exists (not a symlink)');
             }
         }
-        // Check if parent .git exists
-        if (!(0, fs_1.existsSync)(parentGitPath)) {
-            (0, core_1.warning)(`Parent .git directory not found at ${parentGitPath} - git operations may fail`);
-            return;
+        else if (!(0, fs_1.existsSync)(parentGitPath)) {
+            (0, core_1.warning)(`Parent .git directory not found at ${parentGitPath}`);
         }
-        // Create symlink from subdirectory to parent .git
-        // Use relative path for the target so it works inside Docker containers
-        const relativeGitPath = '..';
-        (0, core_1.info)(`Creating symlink: ${gitSymlinkPath} -> ../.git`);
-        (0, fs_1.symlinkSync)(path.join(relativeGitPath, '.git'), gitSymlinkPath, 'dir');
-        exports.internalActionVariables.gitSymlinkCreated = true;
-        (0, core_1.debug)('Git symlink created successfully');
+        else {
+            // Create symlink using relative path for Docker compatibility
+            (0, core_1.info)(`Creating .git symlink: ${subdirPath}/.git -> ../.git`);
+            (0, fs_1.symlinkSync)(path.join('..', '.git'), gitSymlinkPath, 'dir');
+            exports.internalActionVariables.gitSymlinkCreated = true;
+            (0, core_1.debug)('.git symlink created successfully');
+        }
     }
     catch (error) {
         (0, core_1.warning)(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`);
-        (0, core_1.warning)('Piper steps requiring git access (e.g., artifactPrepareVersion) may fail');
+    }
+    // Create .pipeline symlink
+    try {
+        const pipelineSymlinkPath = path.join(subdirPath, '.pipeline');
+        const parentPipelinePath = path.join(repoRoot, '.pipeline');
+        // Check if .pipeline already exists in subdirectory
+        if ((0, fs_1.existsSync)(pipelineSymlinkPath)) {
+            const stats = (0, fs_1.lstatSync)(pipelineSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                (0, core_1.debug)('.pipeline symlink already exists');
+            }
+            else {
+                (0, core_1.debug)('.pipeline directory already exists (not a symlink) - this is valid for service-specific config');
+            }
+        }
+        else if (!(0, fs_1.existsSync)(parentPipelinePath)) {
+            (0, core_1.debug)(`Parent .pipeline directory not found at ${parentPipelinePath} - will be created later`);
+        }
+        else {
+            // Create symlink using relative path for Docker compatibility
+            (0, core_1.info)(`Creating .pipeline symlink: ${subdirPath}/.pipeline -> ../.pipeline`);
+            (0, fs_1.symlinkSync)(path.join('..', '.pipeline'), pipelineSymlinkPath, 'dir');
+            exports.internalActionVariables.pipelineSymlinkCreated = true;
+            (0, core_1.debug)('.pipeline symlink created successfully');
+        }
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to create .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 /**
- * Removes the .git symlink created by setupGitSymlink().
+ * Removes the symlinks created by setupMonorepoSymlinks().
  * Called in the finally block to ensure cleanup even if the action fails.
+ * Must be called AFTER restoreOriginalDirectory() to access the symlinks.
  */
-function cleanupGitSymlink() {
-    if (!exports.internalActionVariables.gitSymlinkCreated) {
+function cleanupMonorepoSymlinks() {
+    const workingDir = exports.internalActionVariables.workingDir;
+    const originalCwd = exports.internalActionVariables.originalCwd;
+    if (workingDir === '.' || workingDir === '') {
         return;
     }
-    try {
-        const workingDir = exports.internalActionVariables.workingDir;
-        const repoRoot = process.cwd();
-        const subdirPath = path.join(repoRoot, workingDir);
-        const gitSymlinkPath = path.join(subdirPath, '.git');
-        if ((0, fs_1.existsSync)(gitSymlinkPath)) {
-            const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
-            if (stats.isSymbolicLink()) {
-                (0, core_1.info)(`Removing git symlink: ${gitSymlinkPath}`);
-                (0, fs_1.unlinkSync)(gitSymlinkPath);
-                (0, core_1.debug)('Git symlink removed successfully');
+    const repoRoot = originalCwd !== '' ? originalCwd : process.cwd();
+    const subdirPath = path.join(repoRoot, workingDir);
+    // Remove .git symlink
+    if (exports.internalActionVariables.gitSymlinkCreated) {
+        try {
+            const gitSymlinkPath = path.join(subdirPath, '.git');
+            if ((0, fs_1.existsSync)(gitSymlinkPath)) {
+                const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
+                if (stats.isSymbolicLink()) {
+                    (0, core_1.info)(`Removing .git symlink: ${gitSymlinkPath}`);
+                    (0, fs_1.unlinkSync)(gitSymlinkPath);
+                    (0, core_1.debug)('.git symlink removed successfully');
+                }
             }
-            else {
-                (0, core_1.debug)('Skipping .git removal - not a symlink');
-            }
+            exports.internalActionVariables.gitSymlinkCreated = false;
         }
-        exports.internalActionVariables.gitSymlinkCreated = false;
+        catch (error) {
+            (0, core_1.warning)(`Failed to remove .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
-    catch (error) {
-        (0, core_1.warning)(`Failed to remove .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+    // Remove .pipeline symlink
+    if (exports.internalActionVariables.pipelineSymlinkCreated) {
+        try {
+            const pipelineSymlinkPath = path.join(subdirPath, '.pipeline');
+            if ((0, fs_1.existsSync)(pipelineSymlinkPath)) {
+                const stats = (0, fs_1.lstatSync)(pipelineSymlinkPath);
+                if (stats.isSymbolicLink()) {
+                    (0, core_1.info)(`Removing .pipeline symlink: ${pipelineSymlinkPath}`);
+                    (0, fs_1.unlinkSync)(pipelineSymlinkPath);
+                    (0, core_1.debug)('.pipeline symlink removed successfully');
+                }
+            }
+            exports.internalActionVariables.pipelineSymlinkCreated = false;
+        }
+        catch (error) {
+            (0, core_1.warning)(`Failed to remove .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
 }
 
