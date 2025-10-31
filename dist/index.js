@@ -16163,13 +16163,16 @@ function startContainer(actionCfg, ctxConfig) {
             return;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
-        const cwd = process.cwd();
-        // Calculate actual working directory for Docker container
-        const workingDir = actionCfg.workingDir !== '.' && actionCfg.workingDir !== ''
-            ? `${cwd}/${actionCfg.workingDir}`
-            : cwd;
+        // Since we already changed to the working directory with process.chdir(),
+        // process.cwd() now returns the correct directory (e.g., /repo/backend)
+        const workingDir = process.cwd();
+        // We need the repository root for volume mounting
+        const repoRoot = piper_1.internalActionVariables.originalCwd !== ''
+            ? piper_1.internalActionVariables.originalCwd
+            : workingDir;
         piper_1.internalActionVariables.dockerContainerID = containerID;
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
+        (0, core_1.debug)(`Repository root: ${repoRoot}`);
         (0, core_1.debug)(`Docker working directory: ${workingDir}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
@@ -16184,7 +16187,7 @@ function startContainer(actionCfg, ctxConfig) {
             '--detach',
             '--rm',
             '--user', '1000:1000',
-            '--volume', `${cwd}:${cwd}`,
+            '--volume', `${repoRoot}:${repoRoot}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
             '--workdir', workingDir,
             ...dockerOptionsArray,
@@ -16956,7 +16959,8 @@ exports.internalActionVariables = {
     sidecarNetworkID: '',
     sidecarContainerID: '',
     workingDir: '.',
-    gitSymlinkCreated: false
+    gitSymlinkCreated: false,
+    originalCwd: ''
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -16965,11 +16969,12 @@ function run() {
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
-            (0, core_1.info)('Preparing Piper binary');
-            yield preparePiperBinary(actionCfg);
+            // Change to working directory at the very beginning
             (0, core_1.info)('Setting working directory');
             exports.internalActionVariables.workingDir = actionCfg.workingDir;
-            (0, core_1.debug)(`Working directory: ${actionCfg.workingDir}`);
+            changeToWorkingDirectory(actionCfg.workingDir);
+            (0, core_1.info)('Preparing Piper binary');
+            yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Setting up git repository access for subdirectory');
             setupGitSymlink(actionCfg.workingDir);
             (0, core_1.info)('Loading pipeline environment');
@@ -17011,6 +17016,7 @@ function run() {
         finally {
             cleanupGitSymlink();
             yield (0, docker_1.cleanupContainers)();
+            restoreOriginalDirectory();
         }
     });
 }
@@ -17079,6 +17085,7 @@ function printDirectoryTree(dirPath, prefix = '', maxDepth = 2, currentDepth = 0
 function debugDirectoryStructure() {
     (0, core_1.info)('\n=== Directory Structure ===');
     (0, core_1.info)(`Current working directory: ${process.cwd()}`);
+    (0, core_1.info)(`Original working directory: ${exports.internalActionVariables.originalCwd}`);
     (0, core_1.info)('\n.pipeline directory:');
     const pipelineDir = path.join(process.cwd(), '.pipeline');
     if ((0, fs_1.existsSync)(pipelineDir)) {
@@ -17096,6 +17103,56 @@ function debugDirectoryStructure() {
         (0, core_1.info)('  (does not exist)');
     }
     (0, core_1.info)('=== End Directory Structure ===\n');
+}
+/**
+ * Changes the Node.js process working directory to the specified subdirectory.
+ * This makes all relative paths work naturally from the subdirectory.
+ *
+ * @param workingDir - The working directory from action configuration (e.g., 'backend')
+ */
+function changeToWorkingDirectory(workingDir) {
+    // Only change directory if running from a subdirectory
+    const isSubdirectory = workingDir !== '.' && workingDir !== '';
+    if (!isSubdirectory) {
+        (0, core_1.debug)('Running from root directory, no directory change needed');
+        exports.internalActionVariables.originalCwd = process.cwd();
+        return;
+    }
+    try {
+        const originalCwd = process.cwd();
+        const targetDir = path.join(originalCwd, workingDir);
+        exports.internalActionVariables.originalCwd = originalCwd;
+        (0, core_1.info)(`Changing directory from ${originalCwd} to ${targetDir}`);
+        // Verify target directory exists
+        if (!(0, fs_1.existsSync)(targetDir)) {
+            throw new Error(`Working directory does not exist: ${targetDir}`);
+        }
+        // Change Node.js working directory
+        process.chdir(targetDir);
+        (0, core_1.info)(`Successfully changed to working directory: ${process.cwd()}`);
+        (0, core_1.debug)(`Original directory stored: ${originalCwd}`);
+    }
+    catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to change to working directory '${workingDir}': ${errorMsg}`);
+    }
+}
+/**
+ * Restores the original working directory.
+ * Called in the finally block to ensure cleanup.
+ */
+function restoreOriginalDirectory() {
+    if (exports.internalActionVariables.originalCwd === '' || exports.internalActionVariables.originalCwd === process.cwd()) {
+        return;
+    }
+    try {
+        (0, core_1.info)(`Restoring original directory: ${exports.internalActionVariables.originalCwd}`);
+        process.chdir(exports.internalActionVariables.originalCwd);
+        (0, core_1.debug)('Directory restored successfully');
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to restore original directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
 }
 /**
  * Creates a symbolic link to the parent .git directory when running from a subdirectory.

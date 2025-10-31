@@ -22,13 +22,19 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 
   const piperPath = internalActionVariables.piperBinPath
   const containerID = uuidv4()
-  const cwd = process.cwd()
-  // Calculate actual working directory for Docker container
-  const workingDir = actionCfg.workingDir !== '.' && actionCfg.workingDir !== ''
-    ? `${cwd}/${actionCfg.workingDir}`
-    : cwd
+
+  // Since we already changed to the working directory with process.chdir(),
+  // process.cwd() now returns the correct directory (e.g., /repo/backend)
+  const workingDir = process.cwd()
+
+  // We need the repository root for volume mounting
+  const repoRoot = internalActionVariables.originalCwd !== ''
+    ? internalActionVariables.originalCwd
+    : workingDir
+
   internalActionVariables.dockerContainerID = containerID
   info(`Starting image ${dockerImage} as container ${containerID}`)
+  debug(`Repository root: ${repoRoot}`)
   debug(`Docker working directory: ${workingDir}`)
 
   let dockerOptionsArray: string[] = []
@@ -45,7 +51,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
     '--detach',
     '--rm',
     '--user', '1000:1000',
-    '--volume', `${cwd}:${cwd}`,
+    '--volume', `${repoRoot}:${repoRoot}`,
     '--volume', `${dirname(piperPath)}:/piper`,
     '--workdir', workingDir,
     ...dockerOptionsArray,

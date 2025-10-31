@@ -24,7 +24,8 @@ export const internalActionVariables = {
   sidecarNetworkID: '',
   sidecarContainerID: '',
   workingDir: '.',
-  gitSymlinkCreated: false
+  gitSymlinkCreated: false,
+  originalCwd: ''
 }
 
 export async function run (): Promise<void> {
@@ -34,12 +35,13 @@ export async function run (): Promise<void> {
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
 
-    info('Preparing Piper binary')
-    await preparePiperBinary(actionCfg)
-
+    // Change to working directory at the very beginning
     info('Setting working directory')
     internalActionVariables.workingDir = actionCfg.workingDir
-    debug(`Working directory: ${actionCfg.workingDir}`)
+    changeToWorkingDirectory(actionCfg.workingDir)
+
+    info('Preparing Piper binary')
+    await preparePiperBinary(actionCfg)
 
     info('Setting up git repository access for subdirectory')
     setupGitSymlink(actionCfg.workingDir)
@@ -96,6 +98,7 @@ export async function run (): Promise<void> {
   } finally {
     cleanupGitSymlink()
     await cleanupContainers()
+    restoreOriginalDirectory()
   }
 }
 
@@ -165,6 +168,7 @@ function printDirectoryTree (dirPath: string, prefix: string = '', maxDepth: num
 function debugDirectoryStructure (): void {
   info('\n=== Directory Structure ===')
   info(`Current working directory: ${process.cwd()}`)
+  info(`Original working directory: ${internalActionVariables.originalCwd}`)
 
   info('\n.pipeline directory:')
   const pipelineDir = path.join(process.cwd(), '.pipeline')
@@ -183,6 +187,64 @@ function debugDirectoryStructure (): void {
   }
 
   info('=== End Directory Structure ===\n')
+}
+
+/**
+ * Changes the Node.js process working directory to the specified subdirectory.
+ * This makes all relative paths work naturally from the subdirectory.
+ *
+ * @param workingDir - The working directory from action configuration (e.g., 'backend')
+ */
+function changeToWorkingDirectory (workingDir: string): void {
+  // Only change directory if running from a subdirectory
+  const isSubdirectory = workingDir !== '.' && workingDir !== ''
+
+  if (!isSubdirectory) {
+    debug('Running from root directory, no directory change needed')
+    internalActionVariables.originalCwd = process.cwd()
+    return
+  }
+
+  try {
+    const originalCwd = process.cwd()
+    const targetDir = path.join(originalCwd, workingDir)
+
+    internalActionVariables.originalCwd = originalCwd
+
+    info(`Changing directory from ${originalCwd} to ${targetDir}`)
+
+    // Verify target directory exists
+    if (!existsSync(targetDir)) {
+      throw new Error(`Working directory does not exist: ${targetDir}`)
+    }
+
+    // Change Node.js working directory
+    process.chdir(targetDir)
+
+    info(`Successfully changed to working directory: ${process.cwd()}`)
+    debug(`Original directory stored: ${originalCwd}`)
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    throw new Error(`Failed to change to working directory '${workingDir}': ${errorMsg}`)
+  }
+}
+
+/**
+ * Restores the original working directory.
+ * Called in the finally block to ensure cleanup.
+ */
+function restoreOriginalDirectory (): void {
+  if (internalActionVariables.originalCwd === '' || internalActionVariables.originalCwd === process.cwd()) {
+    return
+  }
+
+  try {
+    info(`Restoring original directory: ${internalActionVariables.originalCwd}`)
+    process.chdir(internalActionVariables.originalCwd)
+    debug('Directory restored successfully')
+  } catch (error) {
+    warning(`Failed to restore original directory: ${error instanceof Error ? error.message : String(error)}`)
+  }
 }
 
 /**
