@@ -49,7 +49,8 @@ describe('Docker', () => {
     customDefaultsPaths: '',
     customStageConditionsPath: '',
     createCheckIfStepActiveMaps: false,
-    exportPipelineEnvironment: false
+    exportPipelineEnvironment: false,
+    workingDir: '.'
   }
   const piperPath = './piper'
   const mockExecOptions = expect.objectContaining({ listeners: expect.anything() })

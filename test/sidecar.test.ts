@@ -35,7 +35,8 @@ describe('Sidecar', () => {
     customDefaultsPaths: '',
     customStageConditionsPath: '',
     createCheckIfStepActiveMaps: false,
-    exportPipelineEnvironment: false
+    exportPipelineEnvironment: false,
+    workingDir: '.'
   }
 
   const expectedNetworkId = 'testNetworkId12345'

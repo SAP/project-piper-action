@@ -1,9 +1,18 @@
 import { existsSync } from 'fs'
 import { debug, setOutput } from '@actions/core'
 import { executePiper } from './execute'
+import { internalActionVariables } from './piper'
 
 export async function loadPipelineEnv (): Promise<void> {
-  if (existsSync('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+  // When running from subdirectory, CPE is in root .pipeline, not subdirectory .pipeline
+  const workingDir = internalActionVariables.workingDir
+  const isSubdirectory = workingDir !== '.' && workingDir !== ''
+  const pipelineEnvPath = isSubdirectory
+    ? '../.pipeline/commonPipelineEnvironment'
+    : '.pipeline/commonPipelineEnvironment'
+
+  if (existsSync(pipelineEnvPath) || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+    debug(`Pipeline environment check: path=${pipelineEnvPath}, exists=${existsSync(pipelineEnvPath)}`)
     return
   }
 
