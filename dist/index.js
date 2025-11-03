@@ -39455,12 +39455,7 @@ function tokenize(input) {
     });
 }
 exports.tokenize = tokenize;
-/**
- * Changes the Node.js process working directory to the specified subdirectory.
- * This makes all relative paths work naturally from the subdirectory.
- *
- * @param workingDir - The working directory from action configuration (e.g., 'backend')
- */
+// workingDir - The working directory from action configuration (e.g., 'backend')
 function changeToWorkingDirectory(workingDir) {
     // Only change directory if running from a subdirectory
     const isSubdirectory = workingDir !== '.' && workingDir !== '';
@@ -39489,10 +39484,6 @@ function changeToWorkingDirectory(workingDir) {
     }
 }
 exports.changeToWorkingDirectory = changeToWorkingDirectory;
-/**
- * Restores the original working directory.
- * Called in the finally block to ensure cleanup.
- */
 function restoreOriginalDirectory() {
     if (piper_1.internalActionVariables.originalCwd === '' || piper_1.internalActionVariables.originalCwd === process.cwd()) {
         return;
@@ -39507,15 +39498,7 @@ function restoreOriginalDirectory() {
     }
 }
 exports.restoreOriginalDirectory = restoreOriginalDirectory;
-/**
- * Creates symbolic links for .git and .pipeline directories when running from a subdirectory.
- * This enables piper steps to access the git repository and pipeline configuration.
- *
- * IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
- * from the repository root.
- *
- * @param workingDir - The working directory from action configuration (e.g., 'backend')
- */
+// IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
 function setupMonorepoSymlinks(workingDir) {
     // Only create symlinks if running from a subdirectory
     const isSubdirectory = workingDir !== '.' && workingDir !== '';
@@ -39558,11 +39541,9 @@ function setupMonorepoSymlinks(workingDir) {
     }
 }
 exports.setupMonorepoSymlinks = setupMonorepoSymlinks;
-/**
- * Removes the symlinks created by setupMonorepoSymlinks().
- * Called in the finally block to ensure cleanup even if the action fails.
- * Must be called AFTER restoreOriginalDirectory() to access the symlinks.
- */
+// Removes the symlinks created by setupMonorepoSymlinks().
+// Called in the finally block to ensure cleanup even if the action fails.
+// Must be called AFTER restoreOriginalDirectory() to access the symlinks.
 function cleanupMonorepoSymlinks() {
     const workingDir = piper_1.internalActionVariables.workingDir;
     const originalCwd = piper_1.internalActionVariables.originalCwd;

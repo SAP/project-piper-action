@@ -2,7 +2,7 @@
 // and space separated string values
 import { debug, info, warning } from '@actions/core'
 import path from 'path'
-import { existsSync, lstatSync, readdirSync, symlinkSync, unlinkSync } from 'fs'
+import { existsSync, lstatSync, symlinkSync, unlinkSync } from 'fs'
 import { internalActionVariables } from './piper'
 
 function tokenize (input: string): string[] {
@@ -26,12 +26,7 @@ function tokenize (input: string): string[] {
   })
 }
 
-/**
- * Changes the Node.js process working directory to the specified subdirectory.
- * This makes all relative paths work naturally from the subdirectory.
- *
- * @param workingDir - The working directory from action configuration (e.g., 'backend')
- */
+// workingDir - The working directory from action configuration (e.g., 'backend')
 function changeToWorkingDirectory (workingDir: string): void {
   // Only change directory if running from a subdirectory
   const isSubdirectory = workingDir !== '.' && workingDir !== ''
@@ -45,11 +40,8 @@ function changeToWorkingDirectory (workingDir: string): void {
   try {
     const originalCwd = process.cwd()
     const targetDir = path.join(originalCwd, workingDir)
-
     internalActionVariables.originalCwd = originalCwd
-
     info(`Changing directory from ${originalCwd} to ${targetDir}`)
-
     // Verify target directory exists
     if (!existsSync(targetDir)) {
       throw new Error(`Working directory does not exist: ${targetDir}`)
@@ -66,10 +58,6 @@ function changeToWorkingDirectory (workingDir: string): void {
   }
 }
 
-/**
- * Restores the original working directory.
- * Called in the finally block to ensure cleanup.
- */
 function restoreOriginalDirectory (): void {
   if (internalActionVariables.originalCwd === '' || internalActionVariables.originalCwd === process.cwd()) {
     return
@@ -84,15 +72,7 @@ function restoreOriginalDirectory (): void {
   }
 }
 
-/**
- * Creates symbolic links for .git and .pipeline directories when running from a subdirectory.
- * This enables piper steps to access the git repository and pipeline configuration.
- *
- * IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
- * from the repository root.
- *
- * @param workingDir - The working directory from action configuration (e.g., 'backend')
- */
+// IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
 function setupMonorepoSymlinks (workingDir: string): void {
   // Only create symlinks if running from a subdirectory
   const isSubdirectory = workingDir !== '.' && workingDir !== ''
@@ -135,11 +115,9 @@ function setupMonorepoSymlinks (workingDir: string): void {
   }
 }
 
-/**
- * Removes the symlinks created by setupMonorepoSymlinks().
- * Called in the finally block to ensure cleanup even if the action fails.
- * Must be called AFTER restoreOriginalDirectory() to access the symlinks.
- */
+// Removes the symlinks created by setupMonorepoSymlinks().
+// Called in the finally block to ensure cleanup even if the action fails.
+// Must be called AFTER restoreOriginalDirectory() to access the symlinks.
 function cleanupMonorepoSymlinks (): void {
   const workingDir = internalActionVariables.workingDir
   const originalCwd = internalActionVariables.originalCwd
