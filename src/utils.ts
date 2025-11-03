@@ -108,12 +108,9 @@ function setupMonorepoSymlinks (workingDir: string): void {
   debug(`Repository root: ${repoRoot}`)
   debug(`Subdirectory path: ${subdirPath}`)
 
-  // Create .git symlink
+  const gitSymlinkPath = path.join(subdirPath, '.git')
+  const parentGitPath = path.join(repoRoot, '.git')
   try {
-    const gitSymlinkPath = path.join(subdirPath, '.git')
-    const parentGitPath = path.join(repoRoot, '.git')
-
-    // Check if .git already exists in subdirectory
     if (existsSync(gitSymlinkPath)) {
       const stats = lstatSync(gitSymlinkPath)
       if (stats.isSymbolicLink()) {
@@ -124,16 +121,18 @@ function setupMonorepoSymlinks (workingDir: string): void {
     } else if (!existsSync(parentGitPath)) {
       warning(`Parent .git directory not found at ${parentGitPath}`)
     } else {
-      // Create symlink using relative path for Docker compatibility
-      info(`Creating .git symlink: ${subdirPath}/.git -> ../.git`)
-      symlinkSync(path.join('..', '.git'), gitSymlinkPath, 'dir')
+      // Determine if parent .git is a file or directory
+      const symlinkType: 'dir' | 'file' = lstatSync(parentGitPath).isDirectory() ? 'dir' : 'file'
+      // Use relative path for symlink target
+      const relativeParentGitPath = path.relative(subdirPath, parentGitPath)
+      info(`Creating .git symlink: ${subdirPath}/.git -> ${relativeParentGitPath}`)
+      symlinkSync(relativeParentGitPath, gitSymlinkPath, symlinkType)
       internalActionVariables.gitSymlinkCreated = true
       debug('.git symlink created successfully')
     }
   } catch (error) {
     warning(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`)
   }
-
   // Create .pipeline symlinks (selective merge approach)
   // try {
   //   const pipelineSymlinkPath = path.join(subdirPath, '.pipeline')
