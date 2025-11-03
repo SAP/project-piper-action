@@ -56,7 +56,7 @@ describe('Piper', () => {
     jest.spyOn(pipelineEnv, 'exportPipelineEnv').mockImplementation()
     jest.spyOn(utils, 'setupMonorepoSymlinks').mockImplementation()
     jest.spyOn(utils, 'changeToWorkingDirectory').mockImplementation()
-    jest.spyOn(utils, 'ensurePipelineSymlinksAfterLoad').mockImplementation()
+    // jest.spyOn(utils, 'ensurePipelineSymlinksAfterLoad').mockImplementation()
     jest.spyOn(utils, 'restoreOriginalDirectory').mockImplementation()
     jest.spyOn(utils, 'cleanupMonorepoSymlinks').mockImplementation()
     jest.spyOn(core, 'setFailed').mockImplementation()

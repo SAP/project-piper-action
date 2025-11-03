@@ -2,7 +2,7 @@
 // and space separated string values
 import { debug, info, warning } from '@actions/core'
 import path from 'path'
-import { existsSync, lstatSync, readdirSync, symlinkSync, unlinkSync, statSync } from 'fs'
+import { existsSync, lstatSync, readdirSync, symlinkSync, unlinkSync } from 'fs'
 import { internalActionVariables } from './piper'
 
 function tokenize (input: string): string[] {
@@ -135,36 +135,36 @@ function setupMonorepoSymlinks (workingDir: string): void {
   }
 
   // Create .pipeline symlinks (selective merge approach)
-  try {
-    const pipelineSymlinkPath = path.join(subdirPath, '.pipeline')
-    const parentPipelinePath = path.join(repoRoot, '.pipeline')
-
-    // Check if .pipeline already exists in subdirectory
-    if (existsSync(pipelineSymlinkPath)) {
-      const stats = lstatSync(pipelineSymlinkPath)
-      if (stats.isSymbolicLink()) {
-        info('.pipeline symlink already exists')
-      } else {
-        // Service-specific .pipeline directory exists
-        info('.pipeline directory exists in subdirectory - creating selective symlinks for missing items')
-
-        // Selectively symlink items that don't exist in subdirectory
-        if (existsSync(parentPipelinePath)) {
-          createSelectivePipelineSymlinks(pipelineSymlinkPath, parentPipelinePath)
-        }
-      }
-    } else if (!existsSync(parentPipelinePath)) {
-      info(`Parent .pipeline directory not found at ${parentPipelinePath} - will be created later`)
-    } else {
-      // No .pipeline in subdirectory, symlink the whole directory
-      info(`Creating .pipeline symlink: ${subdirPath}/.pipeline -> ../.pipeline`)
-      symlinkSync(path.join('..', '.pipeline'), pipelineSymlinkPath, 'dir')
-      internalActionVariables.pipelineSymlinkCreated = true
-      debug('.pipeline symlink created successfully')
-    }
-  } catch (error) {
-    warning(`Failed to create .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`)
-  }
+  // try {
+  //   const pipelineSymlinkPath = path.join(subdirPath, '.pipeline')
+  //   const parentPipelinePath = path.join(repoRoot, '.pipeline')
+  //
+  //   // Check if .pipeline already exists in subdirectory
+  //   if (existsSync(pipelineSymlinkPath)) {
+  //     const stats = lstatSync(pipelineSymlinkPath)
+  //     if (stats.isSymbolicLink()) {
+  //       info('.pipeline symlink already exists')
+  //     } else {
+  //       // Service-specific .pipeline directory exists
+  //       info('.pipeline directory exists in subdirectory - creating selective symlinks for missing items')
+  //
+  //       // Selectively symlink items that don't exist in subdirectory
+  //       if (existsSync(parentPipelinePath)) {
+  //         createSelectivePipelineSymlinks(pipelineSymlinkPath, parentPipelinePath)
+  //       }
+  //     }
+  //   } else if (!existsSync(parentPipelinePath)) {
+  //     info(`Parent .pipeline directory not found at ${parentPipelinePath} - will be created later`)
+  //   } else {
+  //     // No .pipeline in subdirectory, symlink the whole directory
+  //     info(`Creating .pipeline symlink: ${subdirPath}/.pipeline -> ../.pipeline`)
+  //     symlinkSync(path.join('..', '.pipeline'), pipelineSymlinkPath, 'dir')
+  //     internalActionVariables.pipelineSymlinkCreated = true
+  //     debug('.pipeline symlink created successfully')
+  //   }
+  // } catch (error) {
+  //   warning(`Failed to create .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`)
+  // }
 }
 
 /**
@@ -177,44 +177,44 @@ function setupMonorepoSymlinks (workingDir: string): void {
  * @param subdirPipelinePath - Path to subdirectory's .pipeline (e.g., /repo/backend/.pipeline)
  * @param parentPipelinePath - Path to parent's .pipeline (e.g., /repo/.pipeline)
  */
-function createSelectivePipelineSymlinks (subdirPipelinePath: string, parentPipelinePath: string): void {
-  try {
-    const parentItems = readdirSync(parentPipelinePath)
-
-    for (const item of parentItems) {
-      // Skip certain items that should always be service-specific
-      if (item === 'config.yml' || item === 'defaults_temp') {
-        continue
-      }
-
-      const subdirItemPath = path.join(subdirPipelinePath, item)
-      const parentItemPath = path.join(parentPipelinePath, item)
-
-      // Only create symlink if item doesn't exist in subdirectory
-      if (!existsSync(subdirItemPath)) {
-        try {
-          const stats = statSync(parentItemPath)
-          const symlinkType = stats.isDirectory() ? 'dir' : 'file'
-
-          // Use relative path for Docker compatibility
-          const relativePath = path.join('..', '..', '.pipeline', item)
-
-          info(`Creating selective symlink: .pipeline/${item} -> ${relativePath}`)
-          symlinkSync(relativePath, subdirItemPath, symlinkType)
-
-          // Track that we created pipeline symlinks (for cleanup)
-          internalActionVariables.pipelineSymlinkCreated = true
-        } catch (err) {
-          debug(`Skipping symlink for ${item}: ${err instanceof Error ? err.message : String(err)}`)
-        }
-      } else {
-        debug(`.pipeline/${item} already exists in subdirectory, keeping local version`)
-      }
-    }
-  } catch (error) {
-    debug(`Could not read parent .pipeline directory: ${error instanceof Error ? error.message : String(error)}`)
-  }
-}
+// function createSelectivePipelineSymlinks (subdirPipelinePath: string, parentPipelinePath: string): void {
+//   try {
+//     const parentItems = readdirSync(parentPipelinePath)
+//
+//     for (const item of parentItems) {
+//       // Skip certain items that should always be service-specific
+//       if (item === 'config.yml' || item === 'defaults_temp') {
+//         continue
+//       }
+//
+//       const subdirItemPath = path.join(subdirPipelinePath, item)
+//       const parentItemPath = path.join(parentPipelinePath, item)
+//
+//       // Only create symlink if item doesn't exist in subdirectory
+//       if (!existsSync(subdirItemPath)) {
+//         try {
+//           const stats = statSync(parentItemPath)
+//           const symlinkType = stats.isDirectory() ? 'dir' : 'file'
+//
+//           // Use relative path for Docker compatibility
+//           const relativePath = path.join('..', '..', '.pipeline', item)
+//
+//           info(`Creating selective symlink: .pipeline/${item} -> ${relativePath}`)
+//           symlinkSync(relativePath, subdirItemPath, symlinkType)
+//
+//           // Track that we created pipeline symlinks (for cleanup)
+//           internalActionVariables.pipelineSymlinkCreated = true
+//         } catch (err) {
+//           debug(`Skipping symlink for ${item}: ${err instanceof Error ? err.message : String(err)}`)
+//         }
+//       } else {
+//         debug(`.pipeline/${item} already exists in subdirectory, keeping local version`)
+//       }
+//     }
+//   } catch (error) {
+//     debug(`Could not read parent .pipeline directory: ${error instanceof Error ? error.message : String(error)}`)
+//   }
+// }
 
 /**
  * Ensures .pipeline symlinks are created after loadPipelineEnv() has run.
@@ -224,6 +224,7 @@ function createSelectivePipelineSymlinks (subdirPipelinePath: string, parentPipe
  *
  * @param workingDir - The working directory from action configuration (e.g., 'backend')
  */
+/*
 function ensurePipelineSymlinksAfterLoad (workingDir: string): void {
   const isSubdirectory = workingDir !== '.' && workingDir !== ''
   if (!isSubdirectory) {
@@ -270,7 +271,7 @@ function ensurePipelineSymlinksAfterLoad (workingDir: string): void {
     warning(`Failed to ensure .pipeline symlink: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
-
+*/
 /**
  * Removes the symlinks created by setupMonorepoSymlinks().
  * Called in the finally block to ensure cleanup even if the action fails.
@@ -347,5 +348,5 @@ function cleanupMonorepoSymlinks (): void {
 }
 
 export {
-  tokenize, changeToWorkingDirectory, restoreOriginalDirectory, setupMonorepoSymlinks, ensurePipelineSymlinksAfterLoad, cleanupMonorepoSymlinks
+  tokenize, changeToWorkingDirectory, restoreOriginalDirectory, setupMonorepoSymlinks, cleanupMonorepoSymlinks
 }
