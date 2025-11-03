@@ -39234,10 +39234,6 @@ function run() {
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
-            // After loadPipelineEnv, the parent .pipeline directory may have been created by writePipelineEnv
-            // We need to ensure symlinks are set up now (they may not have been created earlier if parent didn't exist)
-            // info('Ensuring .pipeline symlinks are set up after pipeline env load')
-            // ensurePipelineSymlinksAfterLoad(actionCfg.workingDir)
             (0, core_1.endGroup)();
             (0, core_1.startGroup)('version');
             (0, core_1.info)('Getting version');

@@ -54,12 +54,6 @@ export async function run (): Promise<void> {
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
-
-    // After loadPipelineEnv, the parent .pipeline directory may have been created by writePipelineEnv
-    // We need to ensure symlinks are set up now (they may not have been created earlier if parent didn't exist)
-    // info('Ensuring .pipeline symlinks are set up after pipeline env load')
-    // ensurePipelineSymlinksAfterLoad(actionCfg.workingDir)
-
     endGroup()
 
     startGroup('version')
