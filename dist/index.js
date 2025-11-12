@@ -16211,7 +16211,7 @@ function stopContainer(containerID) {
             (0, core_1.debug)('no container to stop');
             return;
         }
-        yield dockerExecReadOutput(['stop', '--timeout=1', containerID]);
+        yield dockerExecReadOutput(['stop', '--time=1', containerID]);
     });
 }
 exports.stopContainer = stopContainer;

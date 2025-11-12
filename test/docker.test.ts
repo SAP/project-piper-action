@@ -244,7 +244,7 @@ describe('Docker', () => {
 
   test('Stop container', async () => {
     const expectedContainerId = 'test1'
-    const expectedDockerFlags = ['stop', '--timeout=1', expectedContainerId]
+    const expectedDockerFlags = ['stop', '--time=1', expectedContainerId]
     await stopContainer(expectedContainerId)
 
     expect(exec.exec).toHaveBeenCalledWith('docker', expectedDockerFlags, mockExecOptions)
@@ -277,8 +277,8 @@ describe('Docker', () => {
     internalActionVariables.sidecarNetworkID = expectedNetworkId
     await cleanupContainers()
 
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--timeout=1', expectedContainerId], expect.anything())
-    expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--timeout=1', expectedSidecarId], expect.anything())
+    expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedContainerId], expect.anything())
+    expect(exec.exec).toHaveBeenCalledWith('docker', ['stop', '--time=1', expectedSidecarId], expect.anything())
     expect(sidecar.removeNetwork).toHaveBeenCalledWith(expectedNetworkId)
   })
 
