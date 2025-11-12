@@ -84,7 +84,7 @@ export async function stopContainer (containerID: string): Promise<void> {
     return
   }
 
-  await dockerExecReadOutput(['stop', '--timeout=1', containerID])
+  await dockerExecReadOutput(['stop', '--time=1', containerID])
 }
 
 /** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
