@@ -16268,7 +16268,8 @@ function getSystemTrustEnvVars() {
 exports.getSystemTrustEnvVars = getSystemTrustEnvVars;
 function getTelemetryEnvVars() {
     return [
-        '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+        '--env', 'PIPER_PIPELINE_TEMPLATE_NAME',
+        '--env', 'PIPER_PIPELINE_STAGE_TEMPLATE_NAME'
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
