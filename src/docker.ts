@@ -140,7 +140,8 @@ export function getSystemTrustEnvVars (): string[] {
 
 export function getTelemetryEnvVars (): string[] {
   return [
-    '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+    '--env', 'PIPER_PIPELINE_TEMPLATE_NAME',
+    '--env', 'PIPER_PIPELINE_STAGE_TEMPLATE_NAME'
   ]
 }
 
