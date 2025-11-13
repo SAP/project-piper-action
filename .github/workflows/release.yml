@@ -68,6 +68,13 @@ jobs:
         run: >
           .github/scripts/update_dynamic_tags.sh "${{ steps.publish_release.outputs.tag_name }}"
 
+      - name: Report status to Uptime
+        # to avoid reporting when cancelled
+        if: success() || failure()
+        run: |
+          status="${{ job.status == 'success' && 'up' || 'down' }}"
+          curl -s "${{ secrets.UPTIME_PUSH_URL }}?status=$status&msg=${{ steps.publish_release.outputs.tag_name }}"
+
   trigger-mirror:
     name: Trigger tag mirroring
     needs: release
