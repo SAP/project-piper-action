@@ -87,7 +87,7 @@ export async function stopContainer (containerID: string): Promise<void> {
   await dockerExecReadOutput(['stop', '--time=1', containerID])
 }
 
-/** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
+/** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/github_actions.go) */
 export function getOrchestratorEnvVars (): string[] {
   return [
     // needed for Piper orchestrator detection
@@ -103,6 +103,8 @@ export function getOrchestratorEnvVars (): string[] {
     '--env', 'GITHUB_REPOSITORY',
     '--env', 'GITHUB_SHA',
     '--env', 'GITHUB_WORKFLOW_REF',
+    '--env', 'GITHUB_EVENT_NAME',
+    '--env', 'GITHUB_WORKSPACE',
     // Pull Request Info (needed for sonarExecuteScan)
     '--env', 'GITHUB_HEAD_REF',
     '--env', 'GITHUB_BASE_REF',
