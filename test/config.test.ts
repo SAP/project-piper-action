@@ -200,16 +200,36 @@ describe('Config', () => {
     piperExecResultMock = generatePiperGetDefaultsOutput([sapStageConfigUrl])
 
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const actionCfg = {
+    const cfg: config.ActionConfiguration = {
+      stepName: '',
+      flags: '',
+      piperVersion: '',
+      piperOwner: '',
+      piperRepo: '',
+      sapPiperVersion: 'v1.0.0',
+      sapPiperOwner: 'something',
+      sapPiperRepo: 'nothing',
+      gitHubToken: '',
+      gitHubApi: '',
+      gitHubServer: server, // added
       gitHubEnterpriseServer: server,
       gitHubEnterpriseApi: 'https://dummy-api.test/',
-      sapPiperVersion: 'v1.0.0',
       gitHubEnterpriseToken: 'blah-blah',
+      wdfGithubEnterpriseToken: '',
+      dockerImage: '',
+      dockerOptions: '',
+      dockerEnvVars: '',
+      sidecarImage: '',
+      sidecarOptions: '',
+      sidecarEnvVars: '',
+      retrieveDefaultConfig: false,
+      customDefaultsPaths: '',
       customStageConditionsPath: '',
-      sapPiperOwner: 'something',
-      sapPiperRepo: 'nothing'
-    } as config.ActionConfiguration
-    await config.downloadStageConfig(actionCfg)
+      createCheckIfStepActiveMaps: false,
+      exportPipelineEnvironment: false
+    }
+
+    await config.downloadStageConfig(cfg)
 
     expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     expect(fs.writeFileSync).toHaveBeenCalledWith(expectedWrittenFilepath, expect.anything())
@@ -234,15 +254,35 @@ describe('Config', () => {
     process.env.GITHUB_JOB = 'Init'
 
     // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-    const actionCfg = {
+    const other: config.ActionConfiguration = {
+      stepName: '',
+      flags: '',
+      piperVersion: '',
+      piperOwner: '',
+      piperRepo: '',
+      sapPiperVersion: 'version',
+      sapPiperOwner: 'something',
+      sapPiperRepo: 'nothing',
+      gitHubToken: '',
+      gitHubApi: '',
+      gitHubServer: 'server', // added
       gitHubEnterpriseServer: 'server',
       gitHubEnterpriseApi: 'apiURL',
-      sapPiperVersion: 'version',
       gitHubEnterpriseToken: 'testToken',
-      sapPiperOwner: 'something',
-      sapPiperRepo: 'nothing'
-    } as config.ActionConfiguration
-    await config.createCheckIfStepActiveMaps(actionCfg)
+      wdfGithubEnterpriseToken: '',
+      dockerImage: '',
+      dockerOptions: '',
+      dockerEnvVars: '',
+      sidecarImage: '',
+      sidecarOptions: '',
+      sidecarEnvVars: '',
+      retrieveDefaultConfig: false,
+      customDefaultsPaths: '',
+      customStageConditionsPath: '',
+      createCheckIfStepActiveMaps: false,
+      exportPipelineEnvironment: false
+    }
+    await config.createCheckIfStepActiveMaps(other)
 
     expect(config.downloadStageConfig).toHaveBeenCalled()
     expect(config.checkIfStepActive).toHaveBeenCalled()

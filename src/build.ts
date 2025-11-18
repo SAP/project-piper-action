@@ -58,7 +58,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
     setFailed(`Download failed: ${(e as Error).message}`)
   }
 
-  if (!zipFile || !fs.existsSync(zipFile)) {
+  if (zipFile === '' || !fs.existsSync(zipFile)) {
     // Download failed – create path and placeholder binary directly
     fs.mkdirSync(path, { recursive: true })
     if (!fs.existsSync(piperPath)) {

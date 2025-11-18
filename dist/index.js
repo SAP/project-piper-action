@@ -15708,7 +15708,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         catch (e) {
             (0, core_1.setFailed)(`Download failed: ${e.message}`);
         }
-        if (!zipFile || !fs_1.default.existsSync(zipFile)) {
+        if (zipFile === '' || !fs_1.default.existsSync(zipFile)) {
             // Download failed – create path and placeholder binary directly
             fs_1.default.mkdirSync(path, { recursive: true });
             if (!fs_1.default.existsSync(piperPath)) {
