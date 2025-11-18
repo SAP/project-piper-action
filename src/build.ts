@@ -7,68 +7,78 @@ import { exec } from '@actions/exec'
 import { extractZip } from '@actions/tool-cache'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
-  const { owner, repository, ref, isSHA } = parseInnerDevVersion(version)
+  // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
+  const { owner, repository, branch } = parseInnerDevBranchVersion(version)
+  if (!branch.trim()) {
+    throw new Error('branch component is empty in devel version')
+  }
   const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
   if (!innerServerUrl) {
-    error('PIPER_ENTERPRISE_SERVER_URL is not set')
+    error('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings')
   }
 
-  let commitForMetadata = ref
-  let branchName = ''
-  if (!isSHA) {
-    branchName = ref
-    commitForMetadata = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branchName, wdfGithubEnterpriseToken) || branchName
-    info(`Branch '${branchName}' resolved to '${commitForMetadata}'`)
-  }
+  const resolvedCommit = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken) || branch
+  info(`Branch '${branch}' HEAD -> '${resolvedCommit}'`)
 
-  const folderFragment = isSHA
-    ? commitForMetadata.slice(0, 7)
-    : sanitizeBranch(branchName)
-
+  const folderFragment = sanitizeBranch(branch)
   const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`
+  info(`path: ${path}`)
   const piperPath = `${path}/sap-piper`
+  info(`piperPath: ${piperPath}`)
   if (fs.existsSync(piperPath)) {
     info(`Using cached inner-source binary: ${piperPath}`)
     return piperPath
   }
 
-  info(`Building Inner Source Piper (${isSHA ? 'commit' : 'branch'}) from ${version}`)
-  const archiveRef = ref
-  const url = `${innerServerUrl}/${owner}/${repository}/archive/${archiveRef}.zip`
+  info(`Building Inner Source Piper (branch mode) from ${version}`)
+  const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
-  info(`Downloading Inner Source Piper from ${url} -> ${path}/source-code.zip`)
+  if (!wdfGithubEnterpriseToken) {
+    setFailed('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN')
+    throw new Error('missing WDF GitHub token')
+  }
+
+  info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
   const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
     .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`) })
 
-  info(`Extracting to ${path}`)
+  info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
   await extractZip(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`) })
   const wd = cwd()
 
-  const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
+  const repositoryPath = join(path, fs.readdirSync(path).find((n: string) => n.includes(repository)) ?? '')
+  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+    throw new Error('Extracted repository directory not found')
+  }
   info(`repositoryPath: ${repositoryPath}`)
   chdir(repositoryPath)
 
   const prevCGO = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
+  info(`Building Inner Source Piper from ${version}`)
   await exec('go build -o ../sap-piper')
     .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`) })
   process.env.CGO_ENABLED = prevCGO
 
+  info('Changing directory back to working directory: ' + wd)
   chdir(wd)
+  info('Removing repositoryPath: ' + repositoryPath)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
+  info(`Returning piperPath: ${piperPath}`)
   return piperPath
 }
 
-function parseInnerDevVersion (version: string): { owner: string, repository: string, ref: string, isSHA: boolean } {
+// Keep only branch parser
+function parseInnerDevBranchVersion (version: string): { owner: string, repository: string, branch: string } {
   const parts = version.split(':')
   if (parts.length !== 4) throw new Error('broken version: ' + version)
   if (parts[0] !== 'devel') throw new Error(`expected prefix 'devel', got '${parts[0]}'`)
-  const [, owner, repository, ref] = parts
-  const isSHA = /^[0-9a-fA-F]{7,40}$/.test(ref)
-  return { owner, repository, ref, isSHA }
+  const [, owner, repository, branch] = parts
+  return { owner, repository, branch }
 }
 
+// Branch sanitization
 function sanitizeBranch (branch: string): string {
   return branch
     .replace(/[^0-9A-Za-z._-]/g, '-')
@@ -76,6 +86,7 @@ function sanitizeBranch (branch: string): string {
     .slice(0, 40) || 'branch-build'
 }
 
+// Resolve branch head commit (optional metadata)
 async function resolveEnterpriseBranchHead (baseUrl: string, owner: string, repo: string, branch: string, token: string): Promise<string> {
   if (!token) return ''
   try {
@@ -93,95 +104,6 @@ async function resolveEnterpriseBranchHead (baseUrl: string, owner: string, repo
     return ''
   }
 }
-
-// Accept 'devel:OWNER:REPO:REF' where REF is commit SHA or branch name.
-// export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
-//   const { owner, repository, ref, isSHA } = parseInnerDevVersion(version)
-//   const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
-//   if (!innerServerUrl) {
-//     error('PIPER_ENTERPRISE_SERVER_URL is not set')
-//   }
-
-//   let commitForMetadata = ref
-//   let branchName = ''
-//   if (!isSHA) {
-//     branchName = ref
-//     commitForMetadata = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branchName, wdfGithubEnterpriseToken) || branchName
-//     info(`Branch '${branchName}' resolved to '${commitForMetadata}'`)
-//   }
-
-//   const folderFragment = isSHA
-//     ? commitForMetadata.slice(0, 7)
-//     : sanitizeBranch(branchName)
-
-//   const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`
-//   const piperPath = `${path}/sap-piper`
-//   if (fs.existsSync(piperPath)) {
-//     info(`Using cached inner-source binary: ${piperPath}`)
-//     return piperPath
-//   }
-
-//   info(`Building Inner Source Piper (${isSHA ? 'commit' : 'branch'}) from ${version}`)
-//   const archiveRef = ref
-//   const url = `${innerServerUrl}/${owner}/${repository}/archive/${archiveRef}.zip`
-//   info(`URL: ${url}`)
-
-//   info(`Downloading Inner Source Piper from ${url} -> ${path}/source-code.zip`)
-//   const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
-//     .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`) })
-
-//   info(`Extracting to ${path}`)
-//   await extractZip(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`) })
-//   const wd = cwd()
-
-//   const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
-//   info(`repositoryPath: ${repositoryPath}`)
-//   chdir(repositoryPath)
-
-//   const prevCGO = process.env.CGO_ENABLED
-//   process.env.CGO_ENABLED = '0'
-//   await exec('go build -o ../sap-piper')
-//     .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`) })
-//   process.env.CGO_ENABLED = prevCGO
-
-//   chdir(wd)
-//   fs.rmSync(repositoryPath, { recursive: true, force: true })
-//   return piperPath
-// }
-
-// function parseInnerDevVersion (version: string): { owner: string, repository: string, ref: string, isSHA: boolean } {
-//   const parts = version.split(':')
-//   if (parts.length !== 4) throw new Error('broken version: ' + version)
-//   if (parts[0] !== 'devel') throw new Error(`expected prefix 'devel', got '${parts[0]}'`)
-//   const [, owner, repository, ref] = parts
-//   const isSHA = /^[0-9a-fA-F]{7,40}$/.test(ref)
-//   return { owner, repository, ref, isSHA }
-// }
-
-// function sanitizeBranch (branch: string): string {
-//   return branch
-//     .replace(/[^0-9A-Za-z._-]/g, '-')
-//     .replace(/-+/g, '-')
-//     .slice(0, 40) || 'branch-build'
-// }
-
-// async function resolveEnterpriseBranchHead (baseUrl: string, owner: string, repo: string, branch: string, token: string): Promise<string> {
-//   if (!token) return ''
-//   try {
-//     const apiBase = `${baseUrl}/api/v3`
-//     const headers: Record<string, string> = {
-//       Accept: 'application/vnd.github.v3+json',
-//       Authorization: `Bearer ${token}`
-//     }
-//     const resp = await fetch(`${apiBase}/repos/${owner}/${repo}/branches/${branch}`, { headers })
-//     if (!resp.ok) return ''
-//     const data = await resp.json()
-//     return data?.commit?.sha || ''
-//   } catch (e: any) {
-//     info(`Branch head resolve failed: ${e?.message}`)
-//     return ''
-//   }
-// }
 
 async function downloadWithAuth (url: string, destination: string, wdfGithubToken: string): Promise<string> {
   if (wdfGithubToken.length !== 0) {
@@ -234,23 +156,4 @@ async function downloadZip (url: string, zipPath: string, token?: string): Promi
     setFailed(`❌ Download failed: ${error instanceof Error ? error.message : String(error)}`)
   }
   return zipPath
-}
-
-export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
-  const versionComponents = version.split(':')
-  if (versionComponents.length !== 4) {
-    throw new Error('broken version: ' + version)
-  }
-  if (versionComponents[0] !== 'devel') {
-    throw new Error('devel source version expected')
-  }
-  const [, owner, repository, commitISH] = versionComponents
-  return { owner, repository, commitISH }
-}
-
-function getVersionName (commitISH: string): string {
-  if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-    throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
-  }
-  return commitISH.slice(0, 7)
 }

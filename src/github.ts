@@ -56,24 +56,18 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   return response
 }
 
-// Format for development versions (all parts required): 'devel:OWNER:REPOSITORY:REF'
-// REF may be a commit SHA (7–40 hex) or a branch name.
-// If REF is not a SHA, treat it as branch: resolve HEAD commit (best‑effort) and download branch archive.
+// Development version format (branch only): devel:OWNER:REPOSITORY:BRANCH
+// Always treat REF as branch, resolve HEAD commit (best effort), download branch archive.
 export async function buildPiperFromSource (version: string): Promise<string> {
-  const { owner, repository, ref, isSHA } = parseDevVersion(version)
-
-  let commitForMetadata = ref
-  let branchName = ''
-  if (!isSHA) {
-    branchName = ref
-    commitForMetadata = await resolveBranchHead(owner, repository, branchName) || branchName
-    debug(`Branch '${branchName}' resolved to '${commitForMetadata}'`)
+  const { owner, repository, branch } = parseDevBranchVersion(version)
+  if (!branch.trim()) {
+    throw new Error('branch component is empty in devel version')
   }
 
-  const folderFragment = isSHA
-    ? commitForMetadata.slice(0, 7)
-    : sanitizeBranch(branchName)
+  const resolvedCommit = await resolveBranchHead(owner, repository, branch) || branch
+  debug(`Branch '${branch}' HEAD -> '${resolvedCommit}'`)
 
+  const folderFragment = sanitizeBranch(branch)
   const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`
   const piperPath = `${path}/piper`
   if (fs.existsSync(piperPath)) {
@@ -81,15 +75,22 @@ export async function buildPiperFromSource (version: string): Promise<string> {
     return piperPath
   }
 
-  info(`Building Piper from ${version} (${isSHA ? 'commit' : 'branch'})`)
-  const archiveRef = ref
-  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${archiveRef}.zip`
+  if (!fs.existsSync(path)) {
+    fs.mkdirSync(path, { recursive: true })
+    info(`Created build directory: ${path}`)
+  }
+
+  info(`Building Piper (branch mode) from ${version}`)
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
   info(`Download URL: ${url}`)
 
   await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
+  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+    throw new Error('Repository folder not found after extraction')
+  }
   chdir(repositoryPath)
 
   const prevCGO = process.env.CGO_ENABLED
@@ -98,7 +99,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
     'go build -o ../piper',
     [
       '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitForMetadata}
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${resolvedCommit}
        -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
        -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
     ]
@@ -106,19 +107,18 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   process.env.CGO_ENABLED = prevCGO
   chdir(wd)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
-
   return piperPath
 }
 
-function parseDevVersion (version: string): { owner: string, repository: string, ref: string, isSHA: boolean } {
+function parseDevBranchVersion (version: string): { owner: string, repository: string, branch: string } {
   const parts = version.split(':')
   if (parts.length !== 4) throw new Error(`broken version: ${version}`)
   if (parts[0] !== 'devel') throw new Error(`expected prefix 'devel', got '${parts[0]}'`)
-  const [, owner, repository, ref] = parts
-  const isSHA = /^[0-9a-fA-F]{7,40}$/.test(ref)
-  return { owner, repository, ref, isSHA }
+  const [, owner, repository, branch] = parts
+  return { owner, repository, branch }
 }
 
+// SHA validation removed; branch always sanitized.
 function sanitizeBranch (branch: string): string {
   return branch
     .replace(/[^0-9A-Za-z._-]/g, '-')
