@@ -8,7 +8,7 @@ jest.mock('@actions/tool-cache')
 jest.mock('@actions/exec')
 jest.mock('@octokit/core', () => ({
   Octokit: class {
-    async request() {
+    async request (): Promise<any> {
       // Simulate branch HEAD resolve returning SHA
       return { status: 200, data: { commit: { sha: 'abc1234def5678abc9012def3456abc7890def12' } } }
     }
@@ -25,8 +25,7 @@ describe('buildPiperFromSource branch mode', () => {
 
   beforeEach(() => {
     mockedDownloadTool.mockResolvedValue('archive.zip')
-    mockedExtractZip.mockImplementation((_zip: string, target: string) => {
-      // Simulate extraction creating a directory with repository name inside target
+    mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
       const repoDir = join(target, 'jenkins-library-main')
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(join(repoDir, 'go.mod'), 'module github.com/SAP/jenkins-library')

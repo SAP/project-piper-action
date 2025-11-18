@@ -8,9 +8,10 @@ import { buildPiperFromSource } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
 import { parseInnerDevBranchVersion } from '../src/build'
 
-// Re-import sanitize via indirect usage (or export it explicitly if Sonar marks as uncovered)
+// sanitizeBranch now exported; use dot notation directly.
 import * as buildModule from '../src/build'
 
+// Re-import sanitize via indirect usage (or export it explicitly if Sonar marks as uncovered)
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -162,17 +163,14 @@ describe('parseVersion', () => {
 
 describe('sanitizeBranch edge cases', () => {
   test('empty after sanitization -> branch-build fallback', () => {
-    // Export sanitizeBranch in build.ts if needed:
-    // export { sanitizeBranch } from './build'
-    // below uses bracket indexing for private access (acceptable for test coverage)
-    // @ts-ignore
-    const sanitizeBranch = buildModule['sanitizeBranch']
+    // @ts-expect-error intentional edge case if type narrows incorrectly
+    const sanitizeBranch = buildModule.sanitizeBranch
     expect(sanitizeBranch('@@@@')).toBe('branch-build')
   })
 
   test('long name truncated to 40 chars', () => {
-    // @ts-ignore
-    const sanitizeBranch = buildModule['sanitizeBranch']
+    // @ts-expect-error intentional edge case
+    const sanitizeBranch = buildModule.sanitizeBranch
     const long = 'feature/' + 'a'.repeat(100)
     expect(sanitizeBranch(long).length).toBe(40)
   })

@@ -39,10 +39,11 @@ describe('buildPiperInnerSource', () => {
         arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
       })
     })
-    mockedExtractZip.mockImplementation((_zip: string, target: string) => {
+    mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
       const repoDir = join(target, 'repo-main')
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(join(repoDir, 'go.mod'), 'module inner/repo')
+      return target
     })
   })
 
@@ -68,10 +69,11 @@ describe('buildPiperInnerSource', () => {
       ok: true,
       arrayBuffer: () => Promise.resolve(new ArrayBuffer(4))
     })
-    mockedExtractZip.mockImplementation((_zip: string, target: string) => {
+    mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
       const repoDir = join(target, 'repo-main')
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(join(repoDir, 'go.mod'), 'module inner/repo')
+      return target
     })
     const path = await buildPiperInnerSource('devel:Org:repo:main', 'token123')
     expect(fs.existsSync(path)).toBe(true)

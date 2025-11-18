@@ -47,7 +47,11 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
     .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`) })
 
   info(`Extracting Inner Source Piper from ${zipFile} to ${path}`)
-  await extractZip(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`) })
+  try {
+    await extractZip(zipFile, path)
+  } catch (e: any) {
+    throw new Error(`Can't extract Inner Source Piper: ${e?.message}`)
+  }
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find((n: string) => n.includes(repository)) ?? '')
@@ -80,9 +84,9 @@ export function parseInnerDevBranchVersion (version: string): { owner: string, r
   const [, owner, repository, branch] = parts
   return { owner, repository, branch }
 }
-
+ 
 // Branch sanitization
-function sanitizeBranch (branch: string): string {
+export function sanitizeBranch (branch: string): string {
   const sanitized = branch
     .replace(/[^0-9A-Za-z._-]/g, '-')
     .replace(/-+/g, '-')

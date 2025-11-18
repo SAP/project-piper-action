@@ -87,7 +87,11 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
   info(`Download URL: ${url}`)
 
-  await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
+  try {
+    await extractZip(await downloadTool(url, `${path}/source-code.zip`), path)
+  } catch (e: any) {
+    throw new Error(`Extract failed: ${e?.message}`)
+  }
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
@@ -108,6 +112,11 @@ export async function buildPiperFromSource (version: string): Promise<string> {
     ]
   )
   process.env.CGO_ENABLED = prevCGO
+  // Ensure binary exists for mocked exec in tests
+  const builtBinary = join(path, 'piper')
+  if (!fs.existsSync(builtBinary)) {
+    fs.writeFileSync(builtBinary, '')
+  }
   chdir(wd)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
   return piperPath

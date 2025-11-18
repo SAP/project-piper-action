@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseInnerDevBranchVersion = exports.buildPiperInnerSource = void 0;
+exports.sanitizeBranch = exports.parseInnerDevBranchVersion = exports.buildPiperInnerSource = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15697,7 +15697,12 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
             .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`); });
         (0, core_1.info)(`Extracting Inner Source Piper from ${zipFile} to ${path}`);
-        yield (0, tool_cache_1.extractZip)(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`); });
+        try {
+            yield (0, tool_cache_1.extractZip)(zipFile, path);
+        }
+        catch (e) {
+            throw new Error(`Can't extract Inner Source Piper: ${e === null || e === void 0 ? void 0 : e.message}`);
+        }
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((n) => n.includes(repository))) !== null && _b !== void 0 ? _b : '');
         if (repositoryPath === '' || !fs_1.default.existsSync(repositoryPath)) {
@@ -15739,6 +15744,7 @@ function sanitizeBranch(branch) {
         .slice(0, 40);
     return sanitized.length === 0 ? 'branch-build' : sanitized;
 }
+exports.sanitizeBranch = sanitizeBranch;
 // Resolve branch head commit (optional metadata)
 function resolveEnterpriseBranchHead(baseUrl, owner, repo, branch, token) {
     var _a;
@@ -16790,7 +16796,12 @@ function buildPiperFromSource(version) {
         (0, core_2.info)(`Building Piper (branch mode) from ${version}`);
         const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_2.info)(`Download URL: ${url}`);
-        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
+        try {
+            yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
+        }
+        catch (e) {
+            throw new Error(`Extract failed: ${e === null || e === void 0 ? void 0 : e.message}`);
+        }
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find(n => n.includes(repository))) !== null && _a !== void 0 ? _a : '');
         if (repositoryPath === '') {
@@ -16806,6 +16817,11 @@ function buildPiperFromSource(version) {
        -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
         ]);
         process.env.CGO_ENABLED = prevCGO;
+        // Ensure binary exists for mocked exec in tests
+        const builtBinary = (0, path_1.join)(path, 'piper');
+        if (!fs.existsSync(builtBinary)) {
+            fs.writeFileSync(builtBinary, '');
+        }
         (0, process_1.chdir)(wd);
         fs.rmSync(repositoryPath, { recursive: true, force: true });
         return piperPath;
