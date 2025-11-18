@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
+exports.buildPiperInnerSource = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15663,44 +15663,51 @@ const tool_cache_1 = __nccwpck_require__(7784);
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        const { owner, repository, commitISH } = parseDevVersion(version);
-        const versionName = getVersionName(commitISH);
-        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
+        const { owner, repository, branch } = parseInnerDevBranchVersion(version);
+        if (!branch.trim()) {
+            throw new Error('branch component is empty in devel version');
+        }
+        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        if (!innerServerUrl) {
+            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings');
+        }
+        const resolvedCommit = (yield resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken)) || branch;
+        (0, core_1.info)(`Branch '${branch}' HEAD -> '${resolvedCommit}'`);
+        const folderFragment = sanitizeBranch(branch);
+        const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`;
         (0, core_1.info)(`path: ${path}`);
         const piperPath = `${path}/sap-piper`;
         (0, core_1.info)(`piperPath: ${piperPath}`);
         if (fs_1.default.existsSync(piperPath)) {
-            (0, core_1.info)(`piperPath exists: ${piperPath}`);
+            (0, core_1.info)(`Using cached inner-source binary: ${piperPath}`);
             return piperPath;
         }
-        (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
-        if (innerServerUrl === '') {
-            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
-        }
-        const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`;
+        (0, core_1.info)(`Building Inner Source Piper (branch mode) from ${version}`);
+        const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_1.info)(`URL: ${url}`);
+        if (!wdfGithubEnterpriseToken) {
+            (0, core_1.setFailed)('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN');
+            throw new Error('missing WDF GitHub token');
+        }
         (0, core_1.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
         const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
-            .catch((err) => {
-            throw new Error(`Can't download Inner Source Piper: ${err}`);
-        });
+            .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`); });
         (0, core_1.info)(`Extracting Inner Source Piper from ${zipFile} to ${path}`);
-        yield (0, tool_cache_1.extractZip)(zipFile, `${path}`).catch((err) => {
-            throw new Error(`Can't extract Inner Source Piper: ${err}`);
-        });
+        yield (0, tool_cache_1.extractZip)(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`); });
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((name) => name.includes(repository))) !== null && _b !== void 0 ? _b : '');
+        const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((n) => n.includes(repository))) !== null && _b !== void 0 ? _b : '');
+        if (!repositoryPath || !fs_1.default.existsSync(repositoryPath)) {
+            throw new Error('Extracted repository directory not found');
+        }
         (0, core_1.info)(`repositoryPath: ${repositoryPath}`);
         (0, process_1.chdir)(repositoryPath);
-        const cgoEnabled = process.env.CGO_ENABLED;
+        const prevCGO = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
         yield (0, exec_1.exec)('go build -o ../sap-piper')
-            .catch((err) => {
-            throw new Error(`Can't build Inner Source Piper: ${err}`);
-        });
-        process.env.CGO_ENABLED = cgoEnabled;
+            .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`); });
+        process.env.CGO_ENABLED = prevCGO;
         (0, core_1.info)('Changing directory back to working directory: ' + wd);
         (0, process_1.chdir)(wd);
         (0, core_1.info)('Removing repositoryPath: ' + repositoryPath);
@@ -15710,6 +15717,47 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
+// Keep only branch parser
+function parseInnerDevBranchVersion(version) {
+    const parts = version.split(':');
+    if (parts.length !== 4)
+        throw new Error('broken version: ' + version);
+    if (parts[0] !== 'devel')
+        throw new Error(`expected prefix 'devel', got '${parts[0]}'`);
+    const [, owner, repository, branch] = parts;
+    return { owner, repository, branch };
+}
+// Branch sanitization
+function sanitizeBranch(branch) {
+    return branch
+        .replace(/[^0-9A-Za-z._-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'branch-build';
+}
+// Resolve branch head commit (optional metadata)
+function resolveEnterpriseBranchHead(baseUrl, owner, repo, branch, token) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!token)
+            return '';
+        try {
+            const apiBase = `${baseUrl}/api/v3`;
+            const headers = {
+                Accept: 'application/vnd.github.v3+json',
+                Authorization: `Bearer ${token}`
+            };
+            const resp = yield fetch(`${apiBase}/repos/${owner}/${repo}/branches/${branch}`, { headers });
+            if (!resp.ok)
+                return '';
+            const data = yield resp.json();
+            return ((_a = data === null || data === void 0 ? void 0 : data.commit) === null || _a === void 0 ? void 0 : _a.sha) || '';
+        }
+        catch (e) {
+            (0, core_1.info)(`Branch head resolve failed: ${e === null || e === void 0 ? void 0 : e.message}`);
+            return '';
+        }
+    });
+}
 function downloadWithAuth(url, destination, wdfGithubToken) {
     return __awaiter(this, void 0, void 0, function* () {
         if (wdfGithubToken.length !== 0) {
@@ -15759,24 +15807,6 @@ function downloadZip(url, zipPath, token) {
         }
         return zipPath;
     });
-}
-function parseDevVersion(version) {
-    const versionComponents = version.split(':');
-    if (versionComponents.length !== 4) {
-        throw new Error('broken version: ' + version);
-    }
-    if (versionComponents[0] !== 'devel') {
-        throw new Error('devel source version expected');
-    }
-    const [, owner, repository, commitISH] = versionComponents;
-    return { owner, repository, commitISH };
-}
-exports.parseDevVersion = parseDevVersion;
-function getVersionName(commitISH) {
-    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-        throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
-    }
-    return commitISH.slice(0, 7);
 }
 
 
@@ -16726,56 +16756,85 @@ function getPiperReleases(version, api, token, owner, repository) {
         return response;
     });
 }
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// Development version format (branch only): devel:OWNER:REPOSITORY:BRANCH
+// Always treat REF as branch, resolve HEAD commit (best effort), download branch archive.
 function buildPiperFromSource(version) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        const versionComponents = version.split(':');
-        if (versionComponents.length !== 4) {
-            throw new Error('broken version');
+        const { owner, repository, branch } = parseDevBranchVersion(version);
+        if (!branch.trim()) {
+            throw new Error('branch component is empty in devel version');
         }
-        const owner = versionComponents[1];
-        const repository = versionComponents[2];
-        const commitISH = versionComponents[3];
-        const versionName = (() => {
-            if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-                throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
-            }
-            return commitISH.slice(0, 7);
-        })();
-        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        const resolvedCommit = (yield resolveBranchHead(owner, repository, branch)) || branch;
+        (0, core_2.debug)(`Branch '${branch}' HEAD -> '${resolvedCommit}'`);
+        const folderFragment = sanitizeBranch(branch);
+        const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`;
         const piperPath = `${path}/piper`;
         if (fs.existsSync(piperPath)) {
+            (0, core_2.info)(`Using cached Piper binary: ${piperPath}`);
             return piperPath;
         }
-        // TODO
-        // check if cache is available
-        (0, core_2.info)(`Building Piper from ${version}`);
-        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
-        (0, core_2.info)(`URL: ${url}`);
-        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
+        if (!fs.existsSync(path)) {
+            fs.mkdirSync(path, { recursive: true });
+            (0, core_2.info)(`Created build directory: ${path}`);
+        }
+        (0, core_2.info)(`Building Piper (branch mode) from ${version}`);
+        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`;
+        (0, core_2.info)(`Download URL: ${url}`);
+        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
-            return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
+        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find(n => n.includes(repository))) !== null && _a !== void 0 ? _a : '');
+        if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+            throw new Error('Repository folder not found after extraction');
+        }
         (0, process_1.chdir)(repositoryPath);
-        const cgoEnabled = process.env.CGO_ENABLED;
+        const prevCGO = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
         yield (0, exec_1.exec)('go build -o ../piper', [
             '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${resolvedCommit}
+       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
+       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
         ]);
-        process.env.CGO_ENABLED = cgoEnabled;
+        process.env.CGO_ENABLED = prevCGO;
         (0, process_1.chdir)(wd);
         fs.rmSync(repositoryPath, { recursive: true, force: true });
-        // TODO
-        // await download cache
         return piperPath;
     });
 }
 exports.buildPiperFromSource = buildPiperFromSource;
+function parseDevBranchVersion(version) {
+    const parts = version.split(':');
+    if (parts.length !== 4)
+        throw new Error(`broken version: ${version}`);
+    if (parts[0] !== 'devel')
+        throw new Error(`expected prefix 'devel', got '${parts[0]}'`);
+    const [, owner, repository, branch] = parts;
+    return { owner, repository, branch };
+}
+// SHA validation removed; branch always sanitized.
+function sanitizeBranch(branch) {
+    return branch
+        .replace(/[^0-9A-Za-z._-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40) || 'branch-build';
+}
+function resolveBranchHead(owner, repo, branch) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const octokit = new core_1.Octokit({});
+            const resp = yield octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
+                owner, repo, branch
+            });
+            return resp.status === 200 ? (((_a = resp.data.commit) === null || _a === void 0 ? void 0 : _a.sha) || '') : '';
+        }
+        catch (e) {
+            (0, core_2.debug)(`resolveBranchHead failed: ${e === null || e === void 0 ? void 0 : e.message}`);
+            return '';
+        }
+    });
+}
 function getTag(version, forAPICall) {
     version = version.toLowerCase();
     if (version === '' || version === 'master' || version === 'latest') {
