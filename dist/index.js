@@ -16785,7 +16785,7 @@ function buildPiperFromSource(version) {
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find(n => n.includes(repository))) !== null && _a !== void 0 ? _a : '');
-        if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+        if (!repositoryPath) {
             throw new Error('Repository folder not found after extraction');
         }
         (0, process_1.chdir)(repositoryPath);
