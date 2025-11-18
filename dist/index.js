@@ -15776,7 +15776,8 @@ function getVersionName(branch) {
     const trimmed = branch.trim();
     // Replace path separators and whitespace with '-'
     const sanitized = trimmed
-        .replace(/[\/\\]/g, '-')
+        // ESLint: no-useless-escape -> simplify character class to forward or back slash
+        .replace(/[\\/]/g, '-')
         .replace(/\s+/g, '-')
         .slice(0, 40);
     return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized;
@@ -17343,8 +17344,7 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const piper_1 = __nccwpck_require__(309);
-// eslint-disable-next-line @typescript-eslint/no-floating-promises
-(0, piper_1.run)();
+void (0, piper_1.run)();
 
 })();
 

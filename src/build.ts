@@ -132,7 +132,8 @@ export function getVersionName (branch: string): string {
   const trimmed = branch.trim()
   // Replace path separators and whitespace with '-'
   const sanitized = trimmed
-    .replace(/[\/\\]/g, '-')
+    // ESLint: no-useless-escape -> simplify character class to forward or back slash
+    .replace(/[\\/]/g, '-')
     .replace(/\s+/g, '-')
     .slice(0, 40)
   return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized
