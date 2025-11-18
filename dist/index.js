@@ -15665,14 +15665,17 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     return __awaiter(this, void 0, void 0, function* () {
         // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
         const { owner, repository, branch } = parseInnerDevBranchVersion(version);
-        if (!branch.trim()) {
+        if (branch.trim() === '') {
             throw new Error('branch component is empty in devel version');
         }
         const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
-        if (!innerServerUrl) {
+        if (innerServerUrl === '') {
             (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings');
         }
-        const resolvedCommit = (yield resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken)) || branch;
+        let resolvedCommit = yield resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken);
+        if (resolvedCommit.length === 0) {
+            resolvedCommit = branch;
+        }
         (0, core_1.info)(`Branch '${branch}' HEAD -> '${resolvedCommit}'`);
         const folderFragment = sanitizeBranch(branch);
         const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`;
@@ -15686,7 +15689,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         (0, core_1.info)(`Building Inner Source Piper (branch mode) from ${version}`);
         const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_1.info)(`URL: ${url}`);
-        if (!wdfGithubEnterpriseToken) {
+        if (wdfGithubEnterpriseToken === '') {
             (0, core_1.setFailed)('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN');
             throw new Error('missing WDF GitHub token');
         }
@@ -15697,7 +15700,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         yield (0, tool_cache_1.extractZip)(zipFile, path).catch(err => { throw new Error(`Can't extract Inner Source Piper: ${err}`); });
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((n) => n.includes(repository))) !== null && _b !== void 0 ? _b : '');
-        if (!repositoryPath || !fs_1.default.existsSync(repositoryPath)) {
+        if (repositoryPath === '' || !fs_1.default.existsSync(repositoryPath)) {
             throw new Error('Extracted repository directory not found');
         }
         (0, core_1.info)(`repositoryPath: ${repositoryPath}`);
@@ -15730,16 +15733,17 @@ function parseInnerDevBranchVersion(version) {
 exports.parseInnerDevBranchVersion = parseInnerDevBranchVersion;
 // Branch sanitization
 function sanitizeBranch(branch) {
-    return branch
+    const sanitized = branch
         .replace(/[^0-9A-Za-z._-]/g, '-')
         .replace(/-+/g, '-')
-        .slice(0, 40) || 'branch-build';
+        .slice(0, 40);
+    return sanitized.length === 0 ? 'branch-build' : sanitized;
 }
 // Resolve branch head commit (optional metadata)
 function resolveEnterpriseBranchHead(baseUrl, owner, repo, branch, token) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        if (!token)
+        if (token === '')
             return '';
         try {
             const apiBase = `${baseUrl}/api/v3`;
@@ -15751,7 +15755,8 @@ function resolveEnterpriseBranchHead(baseUrl, owner, repo, branch, token) {
             if (!resp.ok)
                 return '';
             const data = yield resp.json();
-            return ((_a = data === null || data === void 0 ? void 0 : data.commit) === null || _a === void 0 ? void 0 : _a.sha) || '';
+            const sha = typeof ((_a = data === null || data === void 0 ? void 0 : data.commit) === null || _a === void 0 ? void 0 : _a.sha) === 'string' ? data.commit.sha : '';
+            return sha;
         }
         catch (e) {
             (0, core_1.info)(`Branch head resolve failed: ${e === null || e === void 0 ? void 0 : e.message}`);
@@ -16763,10 +16768,13 @@ function buildPiperFromSource(version) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, branch } = parseDevBranchVersion(version);
-        if (!branch.trim()) {
+        if (branch.trim() === '') {
             throw new Error('branch component is empty in devel version');
         }
-        const resolvedCommit = (yield resolveBranchHead(owner, repository, branch)) || branch;
+        let resolvedCommit = yield resolveBranchHead(owner, repository, branch);
+        if (resolvedCommit.length === 0) {
+            resolvedCommit = branch;
+        }
         (0, core_2.debug)(`Branch '${branch}' HEAD -> '${resolvedCommit}'`);
         const folderFragment = sanitizeBranch(branch);
         const path = `${process.cwd()}/${owner}-${repository}-${folderFragment}`;
@@ -16785,7 +16793,7 @@ function buildPiperFromSource(version) {
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), path);
         const wd = (0, process_1.cwd)();
         const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find(n => n.includes(repository))) !== null && _a !== void 0 ? _a : '');
-        if (!repositoryPath) {
+        if (repositoryPath === '') {
             throw new Error('Repository folder not found after extraction');
         }
         (0, process_1.chdir)(repositoryPath);
@@ -16815,10 +16823,11 @@ function parseDevBranchVersion(version) {
 }
 // SHA validation removed; branch always sanitized.
 function sanitizeBranch(branch) {
-    return branch
+    const sanitized = branch
         .replace(/[^0-9A-Za-z._-]/g, '-')
         .replace(/-+/g, '-')
-        .slice(0, 40) || 'branch-build';
+        .slice(0, 40);
+    return sanitized.length === 0 ? 'branch-build' : sanitized;
 }
 function resolveBranchHead(owner, repo, branch) {
     var _a;
@@ -16828,7 +16837,10 @@ function resolveBranchHead(owner, repo, branch) {
             const resp = yield octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
                 owner, repo, branch
             });
-            return resp.status === 200 ? (((_a = resp.data.commit) === null || _a === void 0 ? void 0 : _a.sha) || '') : '';
+            if (resp.status !== 200)
+                return '';
+            const sha = typeof ((_a = resp.data.commit) === null || _a === void 0 ? void 0 : _a.sha) === 'string' ? resp.data.commit.sha : '';
+            return sha;
         }
         catch (e) {
             (0, core_2.debug)(`resolveBranchHead failed: ${e === null || e === void 0 ? void 0 : e.message}`);

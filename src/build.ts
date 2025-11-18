@@ -9,15 +9,18 @@ import { extractZip } from '@actions/tool-cache'
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
   const { owner, repository, branch } = parseInnerDevBranchVersion(version)
-  if (!branch.trim()) {
+  if (branch.trim() === '') {
     throw new Error('branch component is empty in devel version')
   }
   const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
-  if (!innerServerUrl) {
+  if (innerServerUrl === '') {
     error('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings')
   }
 
-  const resolvedCommit = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken) || branch
+  let resolvedCommit = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken)
+  if (resolvedCommit.length === 0) {
+    resolvedCommit = branch
+  }
   info(`Branch '${branch}' HEAD -> '${resolvedCommit}'`)
 
   const folderFragment = sanitizeBranch(branch)
@@ -34,7 +37,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
-  if (!wdfGithubEnterpriseToken) {
+  if (wdfGithubEnterpriseToken === '') {
     setFailed('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN')
     throw new Error('missing WDF GitHub token')
   }
@@ -48,7 +51,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find((n: string) => n.includes(repository)) ?? '')
-  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+  if (repositoryPath === '' || !fs.existsSync(repositoryPath)) {
     throw new Error('Extracted repository directory not found')
   }
   info(`repositoryPath: ${repositoryPath}`)
@@ -80,15 +83,16 @@ export function parseInnerDevBranchVersion (version: string): { owner: string, r
 
 // Branch sanitization
 function sanitizeBranch (branch: string): string {
-  return branch
+  const sanitized = branch
     .replace(/[^0-9A-Za-z._-]/g, '-')
     .replace(/-+/g, '-')
-    .slice(0, 40) || 'branch-build'
+    .slice(0, 40)
+  return sanitized.length === 0 ? 'branch-build' : sanitized
 }
 
 // Resolve branch head commit (optional metadata)
 async function resolveEnterpriseBranchHead (baseUrl: string, owner: string, repo: string, branch: string, token: string): Promise<string> {
-  if (!token) return ''
+  if (token === '') return ''
   try {
     const apiBase = `${baseUrl}/api/v3`
     const headers: Record<string, string> = {
@@ -98,7 +102,8 @@ async function resolveEnterpriseBranchHead (baseUrl: string, owner: string, repo
     const resp = await fetch(`${apiBase}/repos/${owner}/${repo}/branches/${branch}`, { headers })
     if (!resp.ok) return ''
     const data = await resp.json()
-    return data?.commit?.sha || ''
+    const sha = typeof data?.commit?.sha === 'string' ? data.commit.sha : ''
+    return sha
   } catch (e: any) {
     info(`Branch head resolve failed: ${e?.message}`)
     return ''

@@ -60,11 +60,14 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 // Always treat REF as branch, resolve HEAD commit (best effort), download branch archive.
 export async function buildPiperFromSource (version: string): Promise<string> {
   const { owner, repository, branch } = parseDevBranchVersion(version)
-  if (!branch.trim()) {
+  if (branch.trim() === '') {
     throw new Error('branch component is empty in devel version')
   }
 
-  const resolvedCommit = await resolveBranchHead(owner, repository, branch) || branch
+  let resolvedCommit = await resolveBranchHead(owner, repository, branch)
+  if (resolvedCommit.length === 0) {
+    resolvedCommit = branch
+  }
   debug(`Branch '${branch}' HEAD -> '${resolvedCommit}'`)
 
   const folderFragment = sanitizeBranch(branch)
@@ -88,7 +91,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
-  if (!repositoryPath) {
+  if (repositoryPath === '') {
     throw new Error('Repository folder not found after extraction')
   }
   chdir(repositoryPath)
@@ -120,10 +123,11 @@ function parseDevBranchVersion (version: string): { owner: string, repository: s
 
 // SHA validation removed; branch always sanitized.
 function sanitizeBranch (branch: string): string {
-  return branch
+  const sanitized = branch
     .replace(/[^0-9A-Za-z._-]/g, '-')
     .replace(/-+/g, '-')
-    .slice(0, 40) || 'branch-build'
+    .slice(0, 40)
+  return sanitized.length === 0 ? 'branch-build' : sanitized
 }
 
 async function resolveBranchHead (owner: string, repo: string, branch: string): Promise<string> {
@@ -132,7 +136,9 @@ async function resolveBranchHead (owner: string, repo: string, branch: string): 
     const resp = await octokit.request('GET /repos/{owner}/{repo}/branches/{branch}', {
       owner, repo, branch
     })
-    return resp.status === 200 ? (resp.data.commit?.sha || '') : ''
+    if (resp.status !== 200) return ''
+    const sha = typeof resp.data.commit?.sha === 'string' ? resp.data.commit.sha : ''
+    return sha
   } catch (e: any) {
     debug(`resolveBranchHead failed: ${e?.message}`)
     return ''
