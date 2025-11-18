@@ -6,7 +6,7 @@ import * as core from '@actions/core'
 
 import { buildPiperFromSource } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
-import { parseDevVersion } from '../src/build'
+import { parseInnerDevBranchVersion } from '../src/build'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
