@@ -16826,7 +16826,12 @@ function buildPiperFromBranch(version) {
             fs.writeFileSync(piperPath, '');
             (0, core_2.info)(`Created placeholder piper binary at ${piperPath}`);
         }
-        fs.rmSync(repositoryPath, { recursive: true, force: true });
+        try {
+            fs.rmSync(repositoryPath, { recursive: true, force: true });
+        }
+        catch (e) {
+            (0, core_2.debug)(`Failed to remove repositoryPath ${repositoryPath}: ${e.message}`);
+        }
         // TODO
         // await download cache
         return piperPath;

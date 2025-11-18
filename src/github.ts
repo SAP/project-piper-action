@@ -111,7 +111,11 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
     fs.writeFileSync(piperPath, '')
     info(`Created placeholder piper binary at ${piperPath}`)
   }
-  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  try {
+    fs.rmSync(repositoryPath, { recursive: true, force: true })
+  } catch (e: any) {
+    debug(`Failed to remove repositoryPath ${repositoryPath}: ${e.message}`)
+  }
   // TODO
   // await download cache
   return piperPath
