@@ -131,15 +131,18 @@ describe('GitHub package tests', () => {
     const repository = 'jenkins-library'
     const branch = 'master'
     const sanitized = branch.replace(/[^0-9A-Za-z._-]/g, '-').replace(/-+/g, '-').slice(0, 40)
+
     jest.spyOn(toolCache, 'downloadTool').mockResolvedValue(`./${owner}-${repository}-${sanitized}/source-code.zip`)
-    jest.spyOn(toolCache, 'extractZip').mockImplementation(async (_zip: string, target: string) => {
+    jest.spyOn(toolCache, 'extractZip').mockImplementation(async (_file: string, dest?: string) => {
+      const target = dest ?? `./${owner}-${repository}-${sanitized}`
       const repoDir = `${target}/${repository}-${sanitized}`
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(`${repoDir}/go.mod`, 'module github.com/SAP/jenkins-library')
       return target
     })
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockReturnValue([`${repository}-${sanitized}`])
+    jest.spyOn(fs, 'readdirSync').mockImplementation(() => [`${repository}-${sanitized}`]) // avoid Dirent type error
+
     expect(
       await buildPiperFromBranch(`devel:${owner}:${repository}:${branch}`)
     ).toBe(`${process.cwd()}/${owner}-${repository}-${sanitized}/piper`)

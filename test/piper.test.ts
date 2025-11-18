@@ -42,8 +42,8 @@ describe('Piper', () => {
     }
 
     fs.chmodSync = jest.fn()
-    jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
-    jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
+    jest.spyOn(download, 'downloadPiperBinary').mockResolvedValue('./piper')
+    jest.spyOn(github, 'buildPiperFromBranch').mockResolvedValue('./piper')
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -55,14 +55,10 @@ describe('Piper', () => {
     jest.spyOn(core, 'setFailed').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
-      if (options !== undefined) {
-        // if (options.required && val == undefined) {
-        if ((options.required ?? false) && val === undefined) {
-          throw new Error(`Input required and not supplied: ${name}`)
-        }
+      if ((options?.required ?? false) && val === undefined) {
+        throw new Error(`Input required and not supplied: ${name}`)
       }
-
-      return val.trim()
+      return typeof val === 'string' ? val.trim() : val
     })
   })
 
@@ -105,11 +101,11 @@ describe('Piper', () => {
 
   test('development version build from source', async () => {
     inputs['step-name'] = 'getConfig'
-    inputs['piper-version'] = 'devel:testOwner:testRepo:1.1.1'
+    inputs['piper-version'] = 'devel:testOwner:testRepo:feature/x'
 
     await piper.run()
 
-    expect(github.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
+    expect(github.buildPiperFromBranch).toHaveBeenCalledWith(inputs['piper-version'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
