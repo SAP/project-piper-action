@@ -129,17 +129,16 @@ describe('GitHub package tests', () => {
   test('Get dev Piper', async () => {
     const owner = 'SAP'
     const repository = 'jenkins-library'
-    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
-    const shortCommitSHA = commitISH.slice(0, 7)
-    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
-    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
+    const branch = 'master'
+    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${branch}/source-code.zip`))
+    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${branch}`))
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
     jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
     jest.spyOn(fs, 'readdirSync').mockReturnValue([])
     jest.spyOn([], 'find').mockImplementation(jest.fn())
     expect(
-      await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+      await buildPiperFromSource(`devel:${owner}:${repository}:${branch}`)
+    ).toBe(`${process.cwd()}/${owner}-${repository}-${branch}/piper`)
   })
 })
 

@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.buildPiperInnerSource = void 0;
+exports.parseInnerDevBranchVersion = exports.buildPiperInnerSource = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15727,6 +15727,7 @@ function parseInnerDevBranchVersion(version) {
     const [, owner, repository, branch] = parts;
     return { owner, repository, branch };
 }
+exports.parseInnerDevBranchVersion = parseInnerDevBranchVersion;
 // Branch sanitization
 function sanitizeBranch(branch) {
     return branch
