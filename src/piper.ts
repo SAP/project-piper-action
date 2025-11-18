@@ -1,5 +1,5 @@
 import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
-import { buildPiperFromSource } from './github'
+import { buildPiperFromBranch } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -112,7 +112,7 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
   if (actionCfg.piperVersion.startsWith('devel:')) {
     info('Building OS Piper from source')
-    return await buildPiperFromSource(actionCfg.piperVersion)
+    return await buildPiperFromBranch(actionCfg.piperVersion)
   }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)

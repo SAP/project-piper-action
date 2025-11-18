@@ -15653,7 +15653,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
-// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
 const fs_1 = __importDefault(__nccwpck_require__(7147));
@@ -15663,8 +15663,11 @@ const tool_cache_1 = __nccwpck_require__(7784);
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        const { owner, repository, commitISH } = parseDevVersion(version);
-        const versionName = getVersionName(commitISH);
+        const { owner, repository, branch } = parseDevVersion(version);
+        if (branch.trim() === '') {
+            throw new Error('branch is empty');
+        }
+        const versionName = getVersionName(branch);
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         (0, core_1.info)(`path: ${path}`);
         const piperPath = `${path}/sap-piper`;
@@ -15678,7 +15681,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         if (innerServerUrl === '') {
             (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
         }
-        const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`;
+        const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_1.info)(`URL: ${url}`);
         (0, core_1.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
         const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
@@ -15768,15 +15771,17 @@ function parseDevVersion(version) {
     if (versionComponents[0] !== 'devel') {
         throw new Error('devel source version expected');
     }
-    const [, owner, repository, commitISH] = versionComponents;
-    return { owner, repository, commitISH };
+    const [, owner, repository, branch] = versionComponents;
+    return { owner, repository, branch };
 }
 exports.parseDevVersion = parseDevVersion;
-function getVersionName(commitISH) {
-    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-        throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
-    }
-    return commitISH.slice(0, 7);
+function getVersionName(branch) {
+    // Sanitize branch (folder-friendly)
+    const sanitized = branch
+        .replace(/[^0-9A-Za-z._-]/g, '-')
+        .replace(/-+/g, '-')
+        .slice(0, 40);
+    return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized;
 }
 
 
@@ -16674,7 +16679,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromBranch = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -16726,8 +16731,8 @@ function getPiperReleases(version, api, token, owner, repository) {
         return response;
     });
 }
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-function buildPiperFromSource(version) {
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
+function buildPiperFromBranch(version) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
@@ -16736,13 +16741,15 @@ function buildPiperFromSource(version) {
         }
         const owner = versionComponents[1];
         const repository = versionComponents[2];
-        const commitISH = versionComponents[3];
-        const versionName = (() => {
-            if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-                throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
-            }
-            return commitISH.slice(0, 7);
-        })();
+        const branch = versionComponents[3];
+        if (branch.trim() === '') {
+            throw new Error('branch is empty');
+        }
+        // Use sanitized branch fragment for folder naming
+        const versionName = branch
+            .replace(/[^0-9A-Za-z._-]/g, '-')
+            .replace(/-+/g, '-')
+            .slice(0, 40);
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         const piperPath = `${path}/piper`;
         if (fs.existsSync(piperPath)) {
@@ -16751,7 +16758,7 @@ function buildPiperFromSource(version) {
         // TODO
         // check if cache is available
         (0, core_2.info)(`Building Piper from ${version}`);
-        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
+        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
@@ -16763,7 +16770,7 @@ function buildPiperFromSource(version) {
         process.env.CGO_ENABLED = '0';
         yield (0, exec_1.exec)('go build -o ../piper', [
             '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${branch}
       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
         ]);
@@ -16775,7 +16782,7 @@ function buildPiperFromSource(version) {
         return piperPath;
     });
 }
-exports.buildPiperFromSource = buildPiperFromSource;
+exports.buildPiperFromBranch = buildPiperFromBranch;
 function getTag(version, forAPICall) {
     version = version.toLowerCase();
     if (version === '' || version === 'master' || version === 'latest') {
@@ -16968,7 +16975,7 @@ function preparePiperPath(actionCfg) {
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
         if (actionCfg.piperVersion.startsWith('devel:')) {
             (0, core_1.info)('Building OS Piper from source');
-            return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);

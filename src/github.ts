@@ -56,21 +56,23 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   return response
 }
 
-// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-export async function buildPiperFromSource (version: string): Promise<string> {
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
+export async function buildPiperFromBranch (version: string): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
   }
   const owner = versionComponents[1]
   const repository = versionComponents[2]
-  const commitISH = versionComponents[3]
-  const versionName = (() => {
-    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-      throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
-    }
-    return commitISH.slice(0, 7)
-  })()
+  const branch = versionComponents[3]
+  if (branch.trim() === '') {
+    throw new Error('branch is empty')
+  }
+  // Use sanitized branch fragment for folder naming
+  const versionName = branch
+    .replace(/[^0-9A-Za-z._-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 40)
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   const piperPath = `${path}/piper`
   if (fs.existsSync(piperPath)) {
@@ -79,7 +81,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   // TODO
   // check if cache is available
   info(`Building Piper from ${version}`)
-  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
   await extractZip(
@@ -97,7 +99,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
     'go build -o ../piper',
     [
       '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${branch}
       -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
       -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
     ]

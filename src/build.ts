@@ -1,4 +1,4 @@
-// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 import { error, info, setFailed } from '@actions/core'
 import { dirname, join } from 'path'
 import fs from 'fs'
@@ -7,8 +7,11 @@ import { exec } from '@actions/exec'
 import { extractZip } from '@actions/tool-cache'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
-  const { owner, repository, commitISH } = parseDevVersion(version)
-  const versionName = getVersionName(commitISH)
+  const { owner, repository, branch } = parseDevVersion(version)
+  if (branch.trim() === '') {
+    throw new Error('branch is empty')
+  }
+  const versionName = getVersionName(branch)
 
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   info(`path: ${path}`)
@@ -25,7 +28,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   if (innerServerUrl === '') {
     error('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository')
   }
-  const url = `${innerServerUrl}/${owner}/${repository}/archive/${commitISH}.zip`
+  const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
@@ -116,7 +119,7 @@ async function downloadZip (url: string, zipPath: string, token?: string): Promi
   return zipPath
 }
 
-export function parseDevVersion (version: string): { owner: string, repository: string, commitISH: string } {
+export function parseDevVersion (version: string): { owner: string, repository: string, branch: string } {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version: ' + version)
@@ -124,13 +127,15 @@ export function parseDevVersion (version: string): { owner: string, repository: 
   if (versionComponents[0] !== 'devel') {
     throw new Error('devel source version expected')
   }
-  const [, owner, repository, commitISH] = versionComponents
-  return { owner, repository, commitISH }
+  const [, owner, repository, branch] = versionComponents
+  return { owner, repository, branch }
 }
 
-function getVersionName (commitISH: string): string {
-  if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
-    throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
-  }
-  return commitISH.slice(0, 7)
+function getVersionName (branch: string): string {
+  // Sanitize branch (folder-friendly)
+  const sanitized = branch
+    .replace(/[^0-9A-Za-z._-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 40)
+  return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized
 }

@@ -4,7 +4,7 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { buildPiperFromSource } from '../src/github'
+import { buildPiperFromBranch } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
 import { parseDevVersion } from '../src/build'
 
@@ -126,32 +126,34 @@ describe('GitHub package tests', () => {
     expect(core.info).toHaveBeenCalledTimes(1)
   })
 
-  test('Get dev Piper', async () => {
+  test('Get dev Piper (branch mode)', async () => {
     const owner = 'SAP'
     const repository = 'jenkins-library'
-    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
-    const shortCommitSHA = commitISH.slice(0, 7)
-    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
-    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
+    const branch = 'master'
+    const sanitized = branch.replace(/[^0-9A-Za-z._-]/g, '-').replace(/-+/g, '-').slice(0, 40)
+    jest.spyOn(toolCache, 'downloadTool').mockResolvedValue(`./${owner}-${repository}-${sanitized}/source-code.zip`)
+    jest.spyOn(toolCache, 'extractZip').mockImplementation(async (_zip: string, target: string) => {
+      const repoDir = `${target}/${repository}-${sanitized}`
+      fs.mkdirSync(repoDir, { recursive: true })
+      fs.writeFileSync(`${repoDir}/go.mod`, 'module github.com/SAP/jenkins-library')
+      return target
+    })
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockReturnValue([])
-    jest.spyOn([], 'find').mockImplementation(jest.fn())
+    jest.spyOn(fs, 'readdirSync').mockReturnValue([`${repository}-${sanitized}`])
     expect(
-      await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+      await buildPiperFromBranch(`devel:${owner}:${repository}:${branch}`)
+    ).toBe(`${process.cwd()}/${owner}-${repository}-${sanitized}/piper`)
   })
 })
 
 describe('parseVersion', () => {
   it('should parse a valid version string', () => {
-    const version = 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-    const { owner, repository, commitISH } = parseDevVersion(version)
+    const version = 'devel:GH_OWNER:REPOSITORY:feature/awesome'
+    const { owner, repository, branch } = parseDevVersion(version)
     expect(owner).toBe('GH_OWNER')
     expect(repository).toBe('REPOSITORY')
-    expect(commitISH).toBe('COMMITISH')
+    expect(branch).toBe('feature/awesome')
   })
-
   it('should throw an error for an invalid version string', () => {
     const version = 'invalid:version:string'
     expect(() => parseDevVersion(version)).toThrow('broken version')
