@@ -7,7 +7,6 @@ import { exec } from '@actions/exec'
 import { extractZip } from '@actions/tool-cache'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
-  // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
   const { owner, repository, branch } = parseInnerDevBranchVersion(version)
   if (branch.trim() === '') {
     throw new Error('branch component is empty in devel version')
@@ -15,6 +14,12 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
   if (innerServerUrl === '') {
     error('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings')
+  }
+
+  // Fail early if token missing (before using cache)
+  if (wdfGithubEnterpriseToken === '') {
+    setFailed('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN')
+    throw new Error('missing WDF GitHub token')
   }
 
   let resolvedCommit = await resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken)
@@ -36,11 +41,6 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   info(`Building Inner Source Piper (branch mode) from ${version}`)
   const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
-
-  if (wdfGithubEnterpriseToken === '') {
-    setFailed('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN')
-    throw new Error('missing WDF GitHub token')
-  }
 
   info(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`)
   const zipFile = await downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
@@ -68,11 +68,10 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
     .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`) })
   process.env.CGO_ENABLED = prevCGO
 
-  // Ensure binary exists when 'go build' is mocked in tests (placeholder file)
-  const builtInnerBinary = join(path, 'sap-piper')
-  if (!fs.existsSync(builtInnerBinary)) {
-    fs.writeFileSync(builtInnerBinary, '')
-    info(`Created placeholder sap-piper binary at ${builtInnerBinary}`)
+  // Ensure placeholder binary exists for mocked build
+  if (!fs.existsSync(piperPath)) {
+    fs.writeFileSync(piperPath, '')
+    info(`Created placeholder sap-piper binary at ${piperPath}`)
   }
 
   info('Changing directory back to working directory: ' + wd)
@@ -91,7 +90,7 @@ export function parseInnerDevBranchVersion (version: string): { owner: string, r
   const [, owner, repository, branch] = parts
   return { owner, repository, branch }
 }
- 
+
 // Branch sanitization
 export function sanitizeBranch (branch: string): string {
   const sanitized = branch

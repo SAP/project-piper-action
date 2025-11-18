@@ -25,17 +25,17 @@ describe('buildPiperInnerSource', () => {
   beforeEach(() => {
     process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.example.corp'
     mockedExec.mockResolvedValue(0)
-    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+    ;(global.fetch as jest.Mock).mockImplementation(async (url: string) => {
       if (url.includes('/branches/')) {
-        return Promise.resolve({
+        return {
           ok: true,
-          json: () => Promise.resolve({ commit: { sha: 'abcdef1234567890abcdef1234567890abcdef12' } })
-        })
+          json: async () => ({ commit: { sha: 'abcdef1234567890abcdef1234567890abcdef12' } })
+        }
       }
-      return Promise.resolve({
+      return {
         ok: true,
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(8))
-      })
+        arrayBuffer: async () => new ArrayBuffer(8)
+      }
     })
     mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
       const repoDir = join(target, 'repo-main')
@@ -62,10 +62,10 @@ describe('buildPiperInnerSource', () => {
   })
 
   test('fallback to branch name when head resolve fails', async () => {
-    ;(global.fetch as jest.Mock).mockImplementationOnce(() => Promise.resolve({ ok: false }))
-    ;(global.fetch as jest.Mock).mockImplementationOnce(() => Promise.resolve({
+    ;(global.fetch as jest.Mock).mockImplementationOnce(async () => ({ ok: false }))
+    ;(global.fetch as jest.Mock).mockImplementationOnce(async () => ({
       ok: true,
-      arrayBuffer: () => Promise.resolve(new ArrayBuffer(4))
+      arrayBuffer: async () => new ArrayBuffer(4)
     }))
     mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
       const repoDir = join(target, 'repo-main')
@@ -76,4 +76,5 @@ describe('buildPiperInnerSource', () => {
     const path = await buildPiperInnerSource('devel:Org:repo:main', 'token123')
     expect(fs.existsSync(path)).toBe(true)
   })
-})
+}
+)

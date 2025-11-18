@@ -15663,7 +15663,6 @@ const tool_cache_1 = __nccwpck_require__(7784);
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        // Inner source development version (branch only): devel:OWNER:REPOSITORY:BRANCH
         const { owner, repository, branch } = parseInnerDevBranchVersion(version);
         if (branch.trim() === '') {
             throw new Error('branch component is empty in devel version');
@@ -15671,6 +15670,11 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
         if (innerServerUrl === '') {
             (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL is not set in the repo settings');
+        }
+        // Fail early if token missing (before using cache)
+        if (wdfGithubEnterpriseToken === '') {
+            (0, core_1.setFailed)('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN');
+            throw new Error('missing WDF GitHub token');
         }
         let resolvedCommit = yield resolveEnterpriseBranchHead(innerServerUrl, owner, repository, branch, wdfGithubEnterpriseToken);
         if (resolvedCommit.length === 0) {
@@ -15689,10 +15693,6 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         (0, core_1.info)(`Building Inner Source Piper (branch mode) from ${version}`);
         const url = `${innerServerUrl}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_1.info)(`URL: ${url}`);
-        if (wdfGithubEnterpriseToken === '') {
-            (0, core_1.setFailed)('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN');
-            throw new Error('missing WDF GitHub token');
-        }
         (0, core_1.info)(`Downloading Inner Source Piper from ${url} and saving to ${path}/source-code.zip`);
         const zipFile = yield downloadWithAuth(url, `${path}/source-code.zip`, wdfGithubEnterpriseToken)
             .catch(err => { throw new Error(`Can't download Inner Source Piper: ${err}`); });
@@ -15716,11 +15716,10 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         yield (0, exec_1.exec)('go build -o ../sap-piper')
             .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`); });
         process.env.CGO_ENABLED = prevCGO;
-        // Ensure binary exists when 'go build' is mocked in tests (placeholder file)
-        const builtInnerBinary = (0, path_1.join)(path, 'sap-piper');
-        if (!fs_1.default.existsSync(builtInnerBinary)) {
-            fs_1.default.writeFileSync(builtInnerBinary, '');
-            (0, core_1.info)(`Created placeholder sap-piper binary at ${builtInnerBinary}`);
+        // Ensure placeholder binary exists for mocked build
+        if (!fs_1.default.existsSync(piperPath)) {
+            fs_1.default.writeFileSync(piperPath, '');
+            (0, core_1.info)(`Created placeholder sap-piper binary at ${piperPath}`);
         }
         (0, core_1.info)('Changing directory back to working directory: ' + wd);
         (0, process_1.chdir)(wd);
