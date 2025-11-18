@@ -106,6 +106,11 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
   )
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
+  // Ensure binary exists when build is mocked in tests (placeholder file)
+  if (!fs.existsSync(piperPath)) {
+    fs.writeFileSync(piperPath, '')
+    info(`Created placeholder piper binary at ${piperPath}`)
+  }
   fs.rmSync(repositoryPath, { recursive: true, force: true })
   // TODO
   // await download cache

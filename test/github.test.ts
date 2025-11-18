@@ -141,7 +141,8 @@ describe('GitHub package tests', () => {
       return target
     })
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockImplementation(() => [`${repository}-${sanitized}`]) // avoid Dirent type error
+    // Mock readdirSync using the single-arg overload that returns string[]
+    jest.spyOn(fs, 'readdirSync').mockReturnValue([`${repository}-${sanitized}`] as any)
 
     expect(
       await buildPiperFromBranch(`devel:${owner}:${repository}:${branch}`)
