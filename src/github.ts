@@ -88,7 +88,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   const wd = cwd()
 
   const repositoryPath = join(path, fs.readdirSync(path).find(n => n.includes(repository)) ?? '')
-  if (!repositoryPath || !fs.existsSync(repositoryPath)) {
+  if (!repositoryPath) {
     throw new Error('Repository folder not found after extraction')
   }
   chdir(repositoryPath)
