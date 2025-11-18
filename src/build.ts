@@ -70,7 +70,7 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
 }
 
 // Keep only branch parser
-function parseInnerDevBranchVersion (version: string): { owner: string, repository: string, branch: string } {
+export function parseInnerDevBranchVersion (version: string): { owner: string, repository: string, branch: string } {
   const parts = version.split(':')
   if (parts.length !== 4) throw new Error('broken version: ' + version)
   if (parts[0] !== 'devel') throw new Error(`expected prefix 'devel', got '${parts[0]}'`)

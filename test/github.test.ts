@@ -145,15 +145,15 @@ describe('GitHub package tests', () => {
 
 describe('parseVersion', () => {
   it('should parse a valid version string', () => {
-    const version = 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-    const { owner, repository, commitISH } = parseDevVersion(version)
+    const version = 'devel:GH_OWNER:REPOSITORY:BRANCH'
+    const { owner, repository, branch } = parseInnerDevBranchVersion(version)
     expect(owner).toBe('GH_OWNER')
     expect(repository).toBe('REPOSITORY')
-    expect(commitISH).toBe('COMMITISH')
+    expect(branch).toBe('BRANCH')
   })
 
   it('should throw an error for an invalid version string', () => {
     const version = 'invalid:version:string'
-    expect(() => parseDevVersion(version)).toThrow('broken version')
+    expect(() => parseInnerDevBranchVersion(version)).toThrow('broken version')
   })
 })
