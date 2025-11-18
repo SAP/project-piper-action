@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
+exports.getVersionName = exports.parseDevVersion = exports.buildPiperInnerSource = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15664,9 +15664,6 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, branch } = parseDevVersion(version);
-        if (branch.trim() === '') {
-            throw new Error('branch is empty');
-        }
         const versionName = getVersionName(branch);
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         (0, core_1.info)(`path: ${path}`);
@@ -15776,13 +15773,15 @@ function parseDevVersion(version) {
 }
 exports.parseDevVersion = parseDevVersion;
 function getVersionName(branch) {
-    // Sanitize branch (folder-friendly)
-    const sanitized = branch
-        .replace(/[^0-9A-Za-z._-]/g, '-')
-        .replace(/-+/g, '-')
+    const trimmed = branch.trim();
+    // Replace path separators and whitespace with '-'
+    const sanitized = trimmed
+        .replace(/[\/\\]/g, '-')
+        .replace(/\s+/g, '-')
         .slice(0, 40);
     return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized;
 }
+exports.getVersionName = getVersionName;
 
 
 /***/ }),

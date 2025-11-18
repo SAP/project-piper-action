@@ -8,9 +8,6 @@ import { extractZip } from '@actions/tool-cache'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   const { owner, repository, branch } = parseDevVersion(version)
-  if (branch.trim() === '') {
-    throw new Error('branch is empty')
-  }
   const versionName = getVersionName(branch)
 
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
@@ -131,11 +128,12 @@ export function parseDevVersion (version: string): { owner: string, repository: 
   return { owner, repository, branch }
 }
 
-function getVersionName (branch: string): string {
-  // Sanitize branch (folder-friendly)
-  const sanitized = branch
-    .replace(/[^0-9A-Za-z._-]/g, '-')
-    .replace(/-+/g, '-')
+export function getVersionName (branch: string): string {
+  const trimmed = branch.trim()
+  // Replace path separators and whitespace with '-'
+  const sanitized = trimmed
+    .replace(/[\/\\]/g, '-')
+    .replace(/\s+/g, '-')
     .slice(0, 40)
   return sanitized.length === 0 || /^-+$/.test(sanitized) ? 'branch-build' : sanitized
 }

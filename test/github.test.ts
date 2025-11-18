@@ -7,6 +7,7 @@ import * as core from '@actions/core'
 import { buildPiperFromBranch } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
 import { parseDevVersion } from '../src/build'
+import { getVersionName } from '../src/build'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -157,5 +158,48 @@ describe('parseVersion', () => {
   it('should throw an error for an invalid version string', () => {
     const version = 'invalid:version:string'
     expect(() => parseDevVersion(version)).toThrow('broken version')
+  })
+})
+
+describe('getVersionName branch normalization', () => {
+  test('simple branch stays same (<=40 chars)', () => {
+    expect(getVersionName('main')).toBe('main')
+  })
+
+  test('trims surrounding whitespace', () => {
+    expect(getVersionName('  feature-x  ')).toBe('feature-x')
+  })
+
+  test('replaces path separators "/" and "\\" with "-"', () => {
+    expect(getVersionName('feat/JIRA\\123/sub')).toBe('feat-JIRA-123-sub')
+  })
+
+  test('replaces internal whitespace blocks with single "-"', () => {
+    expect(getVersionName('feat multiple   spaces here')).toBe('feat-multiple-spaces-here')
+  })
+
+  test('fallback to branch-build when sanitized empty', () => {
+    expect(getVersionName('   ')).toBe('branch-build')
+  })
+
+  test('fallback when result only hyphens', () => {
+    expect(getVersionName('//// \\\\ ///')).toBe('branch-build')
+  })
+
+  test('truncates to 40 characters', () => {
+    const long = 'feature/' + 'a'.repeat(100)
+    const result = getVersionName(long)
+    expect(result.length).toBe(40)
+    // Starts with 'feature-' because of first replacement
+    expect(result.startsWith('feature-')).toBe(true)
+  })
+
+  test('mixed separators and spaces produce collapsed dashes', () => {
+    expect(getVersionName('a/b c\\d e/f')).toBe('a-b-c-d-e-f')
+  })
+
+  test('does not alter allowed characters other than trimming', () => {
+    const branch = 'release-1.2.3_beta'
+    expect(getVersionName(branch)).toBe(branch)
   })
 })
