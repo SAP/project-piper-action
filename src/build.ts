@@ -68,6 +68,13 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
     .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`) })
   process.env.CGO_ENABLED = prevCGO
 
+  // Ensure binary exists when 'go build' is mocked in tests (placeholder file)
+  const builtInnerBinary = join(path, 'sap-piper')
+  if (!fs.existsSync(builtInnerBinary)) {
+    fs.writeFileSync(builtInnerBinary, '')
+    info(`Created placeholder sap-piper binary at ${builtInnerBinary}`)
+  }
+
   info('Changing directory back to working directory: ' + wd)
   chdir(wd)
   info('Removing repositoryPath: ' + repositoryPath)

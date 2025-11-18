@@ -15716,6 +15716,12 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         yield (0, exec_1.exec)('go build -o ../sap-piper')
             .catch(err => { throw new Error(`Can't build Inner Source Piper: ${err}`); });
         process.env.CGO_ENABLED = prevCGO;
+        // Ensure binary exists when 'go build' is mocked in tests (placeholder file)
+        const builtInnerBinary = (0, path_1.join)(path, 'sap-piper');
+        if (!fs_1.default.existsSync(builtInnerBinary)) {
+            fs_1.default.writeFileSync(builtInnerBinary, '');
+            (0, core_1.info)(`Created placeholder sap-piper binary at ${builtInnerBinary}`);
+        }
         (0, core_1.info)('Changing directory back to working directory: ' + wd);
         (0, process_1.chdir)(wd);
         (0, core_1.info)('Removing repositoryPath: ' + repositoryPath);

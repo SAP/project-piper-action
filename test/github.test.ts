@@ -163,13 +163,11 @@ describe('parseVersion', () => {
 
 describe('sanitizeBranch edge cases', () => {
   test('empty after sanitization -> branch-build fallback', () => {
-    // @ts-expect-error intentional edge case if type narrows incorrectly
     const sanitizeBranch = buildModule.sanitizeBranch
     expect(sanitizeBranch('@@@@')).toBe('branch-build')
   })
 
   test('long name truncated to 40 chars', () => {
-    // @ts-expect-error intentional edge case
     const sanitizeBranch = buildModule.sanitizeBranch
     const long = 'feature/' + 'a'.repeat(100)
     expect(sanitizeBranch(long).length).toBe(40)
