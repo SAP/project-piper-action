@@ -65,6 +65,10 @@ inputs:
   create-check-if-step-active-maps:
     description: 'Creates maps with active stages and steps using checkIfStepActive and outputs them at `.pipeline/stage_out.json` and `.pipeline/step_out.json`'
     required: false
+  working-dir:
+    description: 'Working directory to execute the Piper step in'
+    required: false
+    default: '.'
 runs:
   using: 'node20'
   main: 'dist/index.js'

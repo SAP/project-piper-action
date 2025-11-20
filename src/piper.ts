@@ -1,5 +1,5 @@
-import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
-import { buildPiperFromBranch } from './github'
+import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
+import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -12,16 +12,24 @@ import {
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
-import { tokenize } from './utils'
+import {
+  changeToWorkingDirectory, cleanupMonorepoSymlinks,
+  restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
+} from './utils'
 import { buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
+import { debugDirectoryStructure } from './debug'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
   piperBinPath: '',
   dockerContainerID: '',
   sidecarNetworkID: '',
-  sidecarContainerID: ''
+  sidecarContainerID: '',
+  workingDir: '.',
+  gitSymlinkCreated: false,
+  pipelineSymlinkCreated: false,
+  originalCwd: ''
 }
 
 export async function run (): Promise<void> {
@@ -30,6 +38,16 @@ export async function run (): Promise<void> {
     info('Getting action configuration')
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
+
+    // Set up symlinks BEFORE changing directory
+    info('Setting working directory')
+    internalActionVariables.workingDir = actionCfg.workingDir
+
+    info('Setting up symlinks for subdirectory (git and pipeline)')
+    setupMonorepoSymlinks(actionCfg.workingDir)
+
+    // Change to working directory after symlinks are created
+    changeToWorkingDirectory(actionCfg.workingDir)
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
@@ -68,12 +86,16 @@ export async function run (): Promise<void> {
 
       await runContainers(actionCfg, contextConfig)
 
+      if (isDebug()) debugDirectoryStructure()
+
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      if (isDebug()) debugDirectoryStructure()
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
@@ -81,6 +103,8 @@ export async function run (): Promise<void> {
     setFailed(error instanceof Error ? error.message : String(error))
   } finally {
     await cleanupContainers()
+    restoreOriginalDirectory()
+    cleanupMonorepoSymlinks()
   }
 }
 
