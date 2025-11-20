@@ -226,7 +226,8 @@ describe('Config', () => {
       customDefaultsPaths: '',
       customStageConditionsPath: '',
       createCheckIfStepActiveMaps: false,
-      exportPipelineEnvironment: false
+      exportPipelineEnvironment: false,
+      workingDir: '.'
     }
 
     await config.downloadStageConfig(cfg)
@@ -280,7 +281,8 @@ describe('Config', () => {
       customDefaultsPaths: '',
       customStageConditionsPath: '',
       createCheckIfStepActiveMaps: false,
-      exportPipelineEnvironment: false
+      exportPipelineEnvironment: false,
+      workingDir: '.'
     }
     await config.createCheckIfStepActiveMaps(other)
 

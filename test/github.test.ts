@@ -8,6 +8,9 @@ import { buildPiperFromBranch } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
 import { parseDevVersion, getVersionName } from '../src/build'
 
+// Store original fs functions for cleanup
+const { existsSync, rmSync } = fs
+
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -23,6 +26,11 @@ describe('GitHub package tests', () => {
   const owner = 'someOwner'
   const repo = 'SomeRepo'
   afterEach(() => {
+    // Clean up test directories created by branch builds using original fs functions
+    const testDir = `${process.cwd()}/SAP-jenkins-library-master`
+    if (existsSync(testDir)) {
+      rmSync(testDir, { recursive: true, force: true })
+    }
     jest.resetAllMocks()
     jest.clearAllMocks()
   })
