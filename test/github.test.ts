@@ -8,9 +8,6 @@ import { buildPiperFromBranch } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
 import { parseDevVersion, getVersionName } from '../src/build'
 
-// Store original fs functions for cleanup
-const { existsSync, rmSync } = fs
-
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
 jest.mock('@actions/tool-cache')
@@ -26,11 +23,6 @@ describe('GitHub package tests', () => {
   const owner = 'someOwner'
   const repo = 'SomeRepo'
   afterEach(() => {
-    // Clean up test directories created by branch builds using original fs functions
-    const testDir = `${process.cwd()}/SAP-jenkins-library-master`
-    if (existsSync(testDir)) {
-      rmSync(testDir, { recursive: true, force: true })
-    }
     jest.resetAllMocks()
     jest.clearAllMocks()
   })
@@ -140,16 +132,14 @@ describe('GitHub package tests', () => {
     const branch = 'master'
     const sanitized = branch.replace(/[^0-9A-Za-z._-]/g, '-').replace(/-+/g, '-').slice(0, 40)
 
+    // Mock all fs operations to avoid creating real directories
+    jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined)
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined)
+    jest.spyOn(fs, 'rmSync').mockImplementation(() => undefined)
+
     jest.spyOn(toolCache, 'downloadTool').mockResolvedValue(`./${owner}-${repository}-${sanitized}/source-code.zip`)
-    jest.spyOn(toolCache, 'extractZip').mockImplementation(async (_file: string, dest?: string) => {
-      const target = dest ?? `./${owner}-${repository}-${sanitized}`
-      const repoDir = `${target}/${repository}-${sanitized}`
-      fs.mkdirSync(repoDir, { recursive: true })
-      fs.writeFileSync(`${repoDir}/go.mod`, 'module github.com/SAP/jenkins-library')
-      return target
-    })
+    jest.spyOn(toolCache, 'extractZip').mockResolvedValue(`./${owner}-${repository}-${sanitized}`)
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    // Mock readdirSync using the single-arg overload that returns string[]
     jest.spyOn(fs, 'readdirSync').mockReturnValue([`${repository}-${sanitized}`] as any)
 
     expect(
