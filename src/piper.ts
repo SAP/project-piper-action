@@ -1,5 +1,5 @@
 import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
-import { buildPiperFromSource } from './github'
+import { buildPiperFromBranch } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
