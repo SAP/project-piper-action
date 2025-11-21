@@ -16908,7 +16908,7 @@ function buildPiperFromSource(version) {
 }
 exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-function buildPiperFromBranch(version) {
+function buildPiperFromBranch(version, token = '') {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
@@ -16928,7 +16928,11 @@ function buildPiperFromBranch(version) {
             throw new Error('GITHUB_API_URL environment variable is not set');
         }
         const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
-        const branchResponse = yield fetch(branchUrl);
+        const headers = {};
+        if (token !== '') {
+            headers.Authorization = `token ${token}`;
+        }
+        const branchResponse = yield fetch(branchUrl, { headers });
         if (!branchResponse.ok) {
             throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`);
         }
@@ -17208,7 +17212,7 @@ function preparePiperPath(actionCfg) {
         // Check unsafe variant first (new way - uses branch names)
         if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
             (0, core_1.info)('Building OS Piper from branch (unsafe-piper-version)');
-            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion);
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion, actionCfg.gitHubToken);
         }
         // Fall back to deprecated variant (uses commit SHAs)
         if (actionCfg.piperVersion.startsWith('devel:')) {
