@@ -161,8 +161,12 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
 
   // Use commit SHA for cache path to ensure each commit gets its own binary
   const shortSha = commitSha.slice(0, 7)
-  const path = `${process.cwd()}/${owner}-${repository}-${shortSha}`
+
+  // Support custom cache directory for cross-job caching (GitHub Actions cache)
+  const cacheBaseDir = process.env.PIPER_CACHE_DIR ?? process.cwd()
+  const path = `${cacheBaseDir}/${owner}-${repository}-${shortSha}`
   const piperPath = `${path}/piper`
+
   if (fs.existsSync(piperPath)) {
     info(`Using cached piper binary for commit ${shortSha}`)
     return piperPath

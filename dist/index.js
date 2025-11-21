@@ -16909,7 +16909,7 @@ function buildPiperFromSource(version) {
 exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 function buildPiperFromBranch(version) {
-    var _a;
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
         if (versionComponents.length !== 4) {
@@ -16952,7 +16952,9 @@ function buildPiperFromBranch(version) {
         (0, core_2.info)(`Branch ${branch} is at commit ${commitSha}`);
         // Use commit SHA for cache path to ensure each commit gets its own binary
         const shortSha = commitSha.slice(0, 7);
-        const path = `${process.cwd()}/${owner}-${repository}-${shortSha}`;
+        // Support custom cache directory for cross-job caching (GitHub Actions cache)
+        const cacheBaseDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : process.cwd();
+        const path = `${cacheBaseDir}/${owner}-${repository}-${shortSha}`;
         const piperPath = `${path}/piper`;
         if (fs.existsSync(piperPath)) {
             (0, core_2.info)(`Using cached piper binary for commit ${shortSha}`);
@@ -16965,9 +16967,9 @@ function buildPiperFromBranch(version) {
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
+        const repositoryPath = (0, path_1.join)(path, (_b = fs.readdirSync(path).find((name) => {
             return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
+        })) !== null && _b !== void 0 ? _b : '');
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
