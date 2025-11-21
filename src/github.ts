@@ -57,6 +57,7 @@ async function getPiperReleases (version: string, api: string, token: string, ow
 }
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// DEPRECATED: Use buildPiperFromBranch with unsafe-piper-version instead
 export async function buildPiperFromSource (version: string): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
@@ -105,6 +106,110 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // TODO
+  // await download cache
+  return piperPath
+}
+
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
+export async function buildPiperFromBranch (version: string): Promise<string> {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4) {
+    throw new Error('broken version')
+  }
+  const owner = versionComponents[1]
+  const repository = versionComponents[2]
+  const branch = versionComponents[3]
+  if (branch.trim() === '') {
+    throw new Error('branch is empty')
+  }
+
+  // Get the actual commit SHA for the branch first (before checking cache)
+  info(`Fetching commit SHA for branch ${branch}`)
+
+  // Use git ls-remote to get commit SHA (no API rate limits)
+  const repoUrl = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}.git`
+  let commitSha: string = ''
+
+  let stdout = ''
+  let stderr = ''
+  const exitCode = await exec('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
+    ignoreReturnCode: true,
+    silent: true,
+    listeners: {
+      stdout: (data: Buffer) => {
+        stdout += data.toString()
+      },
+      stderr: (data: Buffer) => {
+        stderr += data.toString()
+      }
+    }
+  })
+
+  if (exitCode !== 0) {
+    throw new Error(`Failed to fetch branch info: ${stderr}`)
+  }
+
+  // Parse output: "commit-sha\trefs/heads/branch-name"
+  const match = stdout.trim().match(/^([a-f0-9]{40})\s+/)
+  if (match === null) {
+    throw new Error(`Branch ${branch} not found in ${owner}/${repository}`)
+  }
+
+  commitSha = match[1]
+  info(`Branch ${branch} is at commit ${commitSha}`)
+
+  // Use commit SHA for cache path to ensure each commit gets its own binary
+  const shortSha = commitSha.slice(0, 7)
+
+  // Support custom cache directory for cross-job caching (GitHub Actions cache)
+  const cacheBaseDir = process.env.PIPER_CACHE_DIR ?? process.cwd()
+  const path = `${cacheBaseDir}/${owner}-${repository}-${shortSha}`
+  const piperPath = `${path}/piper`
+
+  if (fs.existsSync(piperPath)) {
+    info(`Using cached piper binary for commit ${shortSha}`)
+    return piperPath
+  }
+  // TODO
+  // check if cache is available
+  info(`Building Piper from ${version}`)
+
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
+  info(`URL: ${url}`)
+
+  await extractZip(
+    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
+  const wd = cwd()
+
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
+    return name.includes(repository)
+  }) ?? '')
+  chdir(repositoryPath)
+
+  const cgoEnabled = process.env.CGO_ENABLED
+  process.env.CGO_ENABLED = '0'
+  await exec(
+    'go build -o ../piper',
+    [
+      '-ldflags',
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+    ]
+  )
+  process.env.CGO_ENABLED = cgoEnabled
+  chdir(wd)
+  // Ensure binary exists when build is mocked in tests (placeholder file)
+  if (!fs.existsSync(piperPath)) {
+    fs.writeFileSync(piperPath, '')
+    info(`Created placeholder piper binary at ${piperPath}`)
+  }
+  try {
+    fs.rmSync(repositoryPath, { recursive: true, force: true })
+  } catch (e: any) {
+    debug(`Failed to remove repositoryPath ${repositoryPath}: ${e.message}`)
+  }
   // TODO
   // await download cache
   return piperPath

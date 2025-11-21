@@ -29,6 +29,12 @@ inputs:
   sap-piper-repository:
     description: 'Repository from where to load the SAP-internal Piper binary'
     required: false
+  unsafe-piper-version:
+    description: 'Development version in format: devel:OWNER:REPO:BRANCH (e.g., devel:SAP:jenkins-library:main). Overrides piper-version when set.'
+    required: false
+  unsafe-sap-piper-version:
+    description: 'SAP internal development version in format: devel:OWNER:REPO:BRANCH. Overrides sap-piper-version when set.'
+    required: false
   github-token:
     description: 'Token to access GitHub API'
     required: false

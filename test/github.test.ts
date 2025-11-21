@@ -4,9 +4,9 @@ import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { buildPiperFromSource } from '../src/github'
+import { buildPiperFromBranch } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
-import { parseDevVersion } from '../src/build'
+import { parseDevVersion, getVersionName } from '../src/build'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -126,34 +126,81 @@ describe('GitHub package tests', () => {
     expect(core.info).toHaveBeenCalledTimes(1)
   })
 
-  test('Get dev Piper', async () => {
+  test('Get dev Piper (branch mode)', async () => {
     const owner = 'SAP'
     const repository = 'jenkins-library'
-    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
-    const shortCommitSHA = commitISH.slice(0, 7)
-    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
-    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
+    const branch = 'master'
+    const sanitized = branch.replace(/[^0-9A-Za-z._-]/g, '-').replace(/-+/g, '-').slice(0, 40)
+
+    // Mock all fs operations to avoid creating real directories
+    jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined)
+    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined)
+    jest.spyOn(fs, 'rmSync').mockImplementation(() => undefined)
+
+    jest.spyOn(toolCache, 'downloadTool').mockResolvedValue(`./${owner}-${repository}-${sanitized}/source-code.zip`)
+    jest.spyOn(toolCache, 'extractZip').mockResolvedValue(`./${owner}-${repository}-${sanitized}`)
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockReturnValue([])
-    jest.spyOn([], 'find').mockImplementation(jest.fn())
+    jest.spyOn(fs, 'readdirSync').mockReturnValue([`${repository}-${sanitized}`] as any)
+
     expect(
-      await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+      await buildPiperFromBranch(`devel:${owner}:${repository}:${branch}`)
+    ).toBe(`${process.cwd()}/${owner}-${repository}-${sanitized}/piper`)
   })
 })
 
 describe('parseVersion', () => {
   it('should parse a valid version string', () => {
-    const version = 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-    const { owner, repository, commitISH } = parseDevVersion(version)
+    const version = 'devel:GH_OWNER:REPOSITORY:feature/awesome'
+    const { owner, repository, branch } = parseDevVersion(version)
     expect(owner).toBe('GH_OWNER')
     expect(repository).toBe('REPOSITORY')
-    expect(commitISH).toBe('COMMITISH')
+    expect(branch).toBe('feature/awesome')
   })
-
   it('should throw an error for an invalid version string', () => {
     const version = 'invalid:version:string'
     expect(() => parseDevVersion(version)).toThrow('broken version')
+  })
+})
+
+describe('getVersionName branch normalization', () => {
+  test('simple branch stays same (<=40 chars)', () => {
+    expect(getVersionName('main')).toBe('main')
+  })
+
+  test('trims surrounding whitespace', () => {
+    expect(getVersionName('  feature-x  ')).toBe('feature-x')
+  })
+
+  test('replaces path separators "/" and "\\" with "-"', () => {
+    expect(getVersionName('feat/JIRA\\123/sub')).toBe('feat-JIRA-123-sub')
+  })
+
+  test('replaces internal whitespace blocks with single "-"', () => {
+    expect(getVersionName('feat multiple   spaces here')).toBe('feat-multiple-spaces-here')
+  })
+
+  test('fallback to branch-build when sanitized empty', () => {
+    expect(getVersionName('   ')).toBe('branch-build')
+  })
+
+  test('fallback when result only hyphens', () => {
+    expect(getVersionName('//// \\\\ ///')).toBe('branch-build')
+  })
+
+  test('truncates to 40 characters', () => {
+    const long = 'feature/' + 'a'.repeat(100)
+    const result = getVersionName(long)
+    expect(result.length).toBe(40)
+    // Starts with 'feature-' because of first replacement
+    expect(result.startsWith('feature-')).toBe(true)
+  })
+
+  test('mixed separators and spaces produce collapsed dashes', () => {
+    expect(getVersionName('a/b c\\d e/f')).toBe('a-b-c-d-e-f')
+  })
+
+  test('does not alter allowed characters other than trimming', () => {
+    const branch = 'release-1.2.3_beta'
+    expect(getVersionName(branch)).toBe(branch)
   })
 })
