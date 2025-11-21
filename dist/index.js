@@ -16908,8 +16908,8 @@ function buildPiperFromSource(version) {
 }
 exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-function buildPiperFromBranch(version) {
-    var _a;
+function buildPiperFromBranch(version, token = '') {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
         if (versionComponents.length !== 4) {
@@ -16924,9 +16924,13 @@ function buildPiperFromBranch(version) {
         // Get the actual commit SHA for the branch first (before checking cache)
         (0, core_2.info)(`Fetching commit SHA for branch ${branch}`);
         // Use provided token, or fall back to GITHUB_TOKEN from environment
+        const authToken = (_a = (token !== '' ? token : process.env.GITHUB_TOKEN)) !== null && _a !== void 0 ? _a : '';
         const branchUrl = `${exports.GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
         (0, core_2.info)(`Fetching branch info from: ${branchUrl}`);
         const headers = {};
+        if (authToken !== '') {
+            headers.Authorization = `token ${authToken}`;
+        }
         const branchResponse = yield fetch(branchUrl, { headers });
         if (!branchResponse.ok) {
             throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`);
@@ -16949,9 +16953,9 @@ function buildPiperFromBranch(version) {
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
+        const repositoryPath = (0, path_1.join)(path, (_b = fs.readdirSync(path).find((name) => {
             return name.includes(repository);
-        })) !== null && _a !== void 0 ? _a : '');
+        })) !== null && _b !== void 0 ? _b : '');
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
@@ -17203,7 +17207,7 @@ function preparePiperPath(actionCfg) {
         // Check unsafe variant first (new way - uses branch names)
         if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
             (0, core_1.info)('Building OS Piper from branch (unsafe-piper-version)');
-            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion);
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion, actionCfg.gitHubToken);
         }
         // Fall back to deprecated variant (uses commit SHAs)
         if (actionCfg.piperVersion.startsWith('devel:')) {

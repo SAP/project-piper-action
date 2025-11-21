@@ -112,7 +112,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-export async function buildPiperFromBranch (version: string): Promise<string> {
+export async function buildPiperFromBranch (version: string, token: string = ''): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
@@ -127,9 +127,13 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
   // Get the actual commit SHA for the branch first (before checking cache)
   info(`Fetching commit SHA for branch ${branch}`)
   // Use provided token, or fall back to GITHUB_TOKEN from environment
+  const authToken = (token !== '' ? token : process.env.GITHUB_TOKEN) ?? ''
   const branchUrl = `${GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
   info(`Fetching branch info from: ${branchUrl}`)
   const headers: Record<string, string> = {}
+  if (authToken !== '') {
+    headers.Authorization = `token ${authToken}`
+  }
   const branchResponse = await fetch(branchUrl, { headers })
   if (!branchResponse.ok) {
     throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`)
