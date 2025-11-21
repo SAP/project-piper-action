@@ -112,7 +112,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-export async function buildPiperFromBranch (version: string, token: string = ''): Promise<string> {
+export async function buildPiperFromBranch (version: string): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
@@ -126,19 +126,10 @@ export async function buildPiperFromBranch (version: string, token: string = '')
 
   // Get the actual commit SHA for the branch first (before checking cache)
   info(`Fetching commit SHA for branch ${branch}`)
-  const apiUrl = process.env.GITHUB_API_URL
-  if (!apiUrl) {
-    throw new Error('GITHUB_API_URL environment variable is not set')
-  }
   // Use provided token, or fall back to GITHUB_TOKEN from environment
-  const authToken = token || process.env.GITHUB_TOKEN || ''
-  debug(`Token length: ${authToken.length}`)
-  const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
+  const branchUrl = `${GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
   info(`Fetching branch info from: ${branchUrl}`)
   const headers: Record<string, string> = {}
-  if (authToken !== '') {
-    headers.Authorization = `token ${authToken}`
-  }
   const branchResponse = await fetch(branchUrl, { headers })
   if (!branchResponse.ok) {
     throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`)
@@ -159,11 +150,7 @@ export async function buildPiperFromBranch (version: string, token: string = '')
   // check if cache is available
   info(`Building Piper from ${version}`)
 
-  const serverUrl = process.env.GITHUB_SERVER_URL
-  if (!serverUrl) {
-    throw new Error('GITHUB_SERVER_URL environment variable is not set')
-  }
-  const url = `${serverUrl}/${owner}/${repository}/archive/${branch}.zip`
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
   await extractZip(
@@ -182,8 +169,8 @@ export async function buildPiperFromBranch (version: string, token: string = '')
     [
       '-ldflags',
       `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${serverUrl}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${serverUrl}/${owner}/${repository}`
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
     ]
   )
   process.env.CGO_ENABLED = cgoEnabled

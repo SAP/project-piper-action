@@ -16908,7 +16908,7 @@ function buildPiperFromSource(version) {
 }
 exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-function buildPiperFromBranch(version, token = '') {
+function buildPiperFromBranch(version) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
@@ -16923,19 +16923,10 @@ function buildPiperFromBranch(version, token = '') {
         }
         // Get the actual commit SHA for the branch first (before checking cache)
         (0, core_2.info)(`Fetching commit SHA for branch ${branch}`);
-        const apiUrl = process.env.GITHUB_API_URL;
-        if (!apiUrl) {
-            throw new Error('GITHUB_API_URL environment variable is not set');
-        }
         // Use provided token, or fall back to GITHUB_TOKEN from environment
-        const authToken = token || process.env.GITHUB_TOKEN || '';
-        (0, core_2.debug)(`Token length: ${authToken.length}`);
-        const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
+        const branchUrl = `${exports.GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
         (0, core_2.info)(`Fetching branch info from: ${branchUrl}`);
         const headers = {};
-        if (authToken !== '') {
-            headers.Authorization = `token ${authToken}`;
-        }
         const branchResponse = yield fetch(branchUrl, { headers });
         if (!branchResponse.ok) {
             throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`);
@@ -16954,11 +16945,7 @@ function buildPiperFromBranch(version, token = '') {
         // TODO
         // check if cache is available
         (0, core_2.info)(`Building Piper from ${version}`);
-        const serverUrl = process.env.GITHUB_SERVER_URL;
-        if (!serverUrl) {
-            throw new Error('GITHUB_SERVER_URL environment variable is not set');
-        }
-        const url = `${serverUrl}/${owner}/${repository}/archive/${branch}.zip`;
+        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
@@ -16971,8 +16958,8 @@ function buildPiperFromBranch(version, token = '') {
         yield (0, exec_1.exec)('go build -o ../piper', [
             '-ldflags',
             `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${serverUrl}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${serverUrl}/${owner}/${repository}`
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
         ]);
         process.env.CGO_ENABLED = cgoEnabled;
         (0, process_1.chdir)(wd);
@@ -17216,7 +17203,7 @@ function preparePiperPath(actionCfg) {
         // Check unsafe variant first (new way - uses branch names)
         if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
             (0, core_1.info)('Building OS Piper from branch (unsafe-piper-version)');
-            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion, actionCfg.gitHubToken);
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion);
         }
         // Fall back to deprecated variant (uses commit SHAs)
         if (actionCfg.piperVersion.startsWith('devel:')) {
