@@ -16921,20 +16921,36 @@ function buildPiperFromBranch(version) {
         if (branch.trim() === '') {
             throw new Error('branch is empty');
         }
-        // Use sanitized branch fragment for folder naming
-        const versionName = branch
-            .replace(/[^0-9A-Za-z._-]/g, '-')
-            .replace(/-+/g, '-')
-            .slice(0, 40);
-        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        // Get the actual commit SHA for the branch first (before checking cache)
+        (0, core_2.info)(`Fetching commit SHA for branch ${branch}`);
+        const apiUrl = process.env.GITHUB_API_URL;
+        if (!apiUrl) {
+            throw new Error('GITHUB_API_URL environment variable is not set');
+        }
+        const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
+        const branchResponse = yield fetch(branchUrl);
+        if (!branchResponse.ok) {
+            throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`);
+        }
+        const branchData = yield branchResponse.json();
+        const commitSha = branchData.commit.sha;
+        (0, core_2.info)(`Branch ${branch} is at commit ${commitSha}`);
+        // Use commit SHA for cache path to ensure each commit gets its own binary
+        const shortSha = commitSha.slice(0, 7);
+        const path = `${process.cwd()}/${owner}-${repository}-${shortSha}`;
         const piperPath = `${path}/piper`;
         if (fs.existsSync(piperPath)) {
+            (0, core_2.info)(`Using cached piper binary for commit ${shortSha}`);
             return piperPath;
         }
         // TODO
         // check if cache is available
         (0, core_2.info)(`Building Piper from ${version}`);
-        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`;
+        const serverUrl = process.env.GITHUB_SERVER_URL;
+        if (!serverUrl) {
+            throw new Error('GITHUB_SERVER_URL environment variable is not set');
+        }
+        const url = `${serverUrl}/${owner}/${repository}/archive/${branch}.zip`;
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
@@ -16946,9 +16962,9 @@ function buildPiperFromBranch(version) {
         process.env.CGO_ENABLED = '0';
         yield (0, exec_1.exec)('go build -o ../piper', [
             '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${branch}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${serverUrl}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${serverUrl}/${owner}/${repository}`
         ]);
         process.env.CGO_ENABLED = cgoEnabled;
         (0, process_1.chdir)(wd);
