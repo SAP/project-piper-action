@@ -56,6 +56,61 @@ async function getPiperReleases (version: string, api: string, token: string, ow
   return response
 }
 
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// DEPRECATED: Use buildPiperFromBranch with unsafe-piper-version instead
+export async function buildPiperFromSource (version: string): Promise<string> {
+  const versionComponents = version.split(':')
+  if (versionComponents.length !== 4) {
+    throw new Error('broken version')
+  }
+  const owner = versionComponents[1]
+  const repository = versionComponents[2]
+  const commitISH = versionComponents[3]
+  const versionName = (() => {
+    if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+      throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA')
+    }
+    return commitISH.slice(0, 7)
+  })()
+  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+  const piperPath = `${path}/piper`
+  if (fs.existsSync(piperPath)) {
+    return piperPath
+  }
+  // TODO
+  // check if cache is available
+  info(`Building Piper from ${version}`)
+  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
+  info(`URL: ${url}`)
+
+  await extractZip(
+    await downloadTool(url, `${path}/source-code.zip`), `${path}`)
+  const wd = cwd()
+
+  const repositoryPath = join(path, fs.readdirSync(path).find((name: string) => {
+    return name.includes(repository)
+  }) ?? '')
+  chdir(repositoryPath)
+
+  const cgoEnabled = process.env.CGO_ENABLED
+  process.env.CGO_ENABLED = '0'
+  await exec(
+    'go build -o ../piper',
+    [
+      '-ldflags',
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+    ]
+  )
+  process.env.CGO_ENABLED = cgoEnabled
+  chdir(wd)
+  fs.rmSync(repositoryPath, { recursive: true, force: true })
+  // TODO
+  // await download cache
+  return piperPath
+}
+
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 export async function buildPiperFromBranch (version: string): Promise<string> {
   const versionComponents = version.split(':')

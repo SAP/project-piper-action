@@ -15920,6 +15920,8 @@ function getActionConfig(options) {
             sapPiperVersion: getValue('sap-piper-version'),
             sapPiperOwner: getValue('sap-piper-owner'),
             sapPiperRepo: getValue('sap-piper-repository'),
+            unsafePiperVersion: getValue('unsafe-piper-version'),
+            unsafeSapPiperVersion: getValue('unsafe-sap-piper-version'),
             gitHubToken: getValue('github-token'),
             gitHubServer: github_1.GITHUB_COM_SERVER_URL,
             gitHubApi: github_1.GITHUB_COM_API_URL,
@@ -16802,7 +16804,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromBranch = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
+exports.getDownloadUrlByTag = exports.getTag = exports.buildPiperFromBranch = exports.buildPiperFromSource = exports.getReleaseAssetUrl = exports.getHost = exports.PIPER_REPOSITORY = exports.PIPER_OWNER = exports.GITHUB_COM_API_URL = exports.GITHUB_COM_SERVER_URL = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const path_1 = __nccwpck_require__(1017);
 const process_1 = __nccwpck_require__(7282);
@@ -16854,6 +16856,57 @@ function getPiperReleases(version, api, token, owner, repository) {
         return response;
     });
 }
+// Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:COMMITISH'
+// DEPRECATED: Use buildPiperFromBranch with unsafe-piper-version instead
+function buildPiperFromSource(version) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        const versionComponents = version.split(':');
+        if (versionComponents.length !== 4) {
+            throw new Error('broken version');
+        }
+        const owner = versionComponents[1];
+        const repository = versionComponents[2];
+        const commitISH = versionComponents[3];
+        const versionName = (() => {
+            if (!/^[0-9a-f]{7,40}$/.test(commitISH)) {
+                throw new Error('Can\'t resolve COMMITISH, use SHA or short SHA');
+            }
+            return commitISH.slice(0, 7);
+        })();
+        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        const piperPath = `${path}/piper`;
+        if (fs.existsSync(piperPath)) {
+            return piperPath;
+        }
+        // TODO
+        // check if cache is available
+        (0, core_2.info)(`Building Piper from ${version}`);
+        const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
+        (0, core_2.info)(`URL: ${url}`);
+        yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
+        const wd = (0, process_1.cwd)();
+        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
+            return name.includes(repository);
+        })) !== null && _a !== void 0 ? _a : '');
+        (0, process_1.chdir)(repositoryPath);
+        const cgoEnabled = process.env.CGO_ENABLED;
+        process.env.CGO_ENABLED = '0';
+        yield (0, exec_1.exec)('go build -o ../piper', [
+            '-ldflags',
+            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+        ]);
+        process.env.CGO_ENABLED = cgoEnabled;
+        (0, process_1.chdir)(wd);
+        fs.rmSync(repositoryPath, { recursive: true, force: true });
+        // TODO
+        // await download cache
+        return piperPath;
+    });
+}
+exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 function buildPiperFromBranch(version) {
     var _a;
@@ -17123,18 +17176,28 @@ function preparePiperPath(actionCfg) {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
-            // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+            // Check unsafe variant first (new way)
+            if (actionCfg.unsafeSapPiperVersion !== '' && actionCfg.unsafeSapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
+                (0, core_1.info)('Building Piper from inner source (unsafe-sap-piper-version)');
+                return yield (0, build_1.buildPiperInnerSource)(actionCfg.unsafeSapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
+            }
+            // Fall back to deprecated variant
             if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
-                (0, core_1.info)('Building Piper from inner source');
+                (0, core_1.info)('Building Piper from inner source (deprecated sap-piper-version)');
                 return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
             (0, core_1.info)('Downloading Piper Inner source binary');
             return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
         }
-        // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+        // Check unsafe variant first (new way - uses branch names)
+        if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
+            (0, core_1.info)('Building OS Piper from branch (unsafe-piper-version)');
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion);
+        }
+        // Fall back to deprecated variant (uses commit SHAs)
         if (actionCfg.piperVersion.startsWith('devel:')) {
-            (0, core_1.info)('Building OS Piper from source');
-            return yield (0, github_1.buildPiperFromBranch)(actionCfg.piperVersion);
+            (0, core_1.info)('Building OS Piper from source (deprecated piper-version)');
+            return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
