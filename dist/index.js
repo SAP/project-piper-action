@@ -16908,8 +16908,8 @@ function buildPiperFromSource(version) {
 }
 exports.buildPiperFromSource = buildPiperFromSource;
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-function buildPiperFromBranch(version, token = '') {
-    var _a, _b;
+function buildPiperFromBranch(version) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const versionComponents = version.split(':');
         if (versionComponents.length !== 4) {
@@ -16923,20 +16923,32 @@ function buildPiperFromBranch(version, token = '') {
         }
         // Get the actual commit SHA for the branch first (before checking cache)
         (0, core_2.info)(`Fetching commit SHA for branch ${branch}`);
-        // Use provided token, or fall back to GITHUB_TOKEN from environment
-        const authToken = (_a = (token !== '' ? token : process.env.GITHUB_TOKEN)) !== null && _a !== void 0 ? _a : '';
-        const branchUrl = `${exports.GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
-        (0, core_2.info)(`Fetching branch info from: ${branchUrl}`);
-        const headers = {};
-        if (authToken !== '') {
-            headers.Authorization = `token ${authToken}`;
+        // Use git ls-remote to get commit SHA (no API rate limits)
+        const repoUrl = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}.git`;
+        let commitSha = '';
+        let stdout = '';
+        let stderr = '';
+        const exitCode = yield (0, exec_1.exec)('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
+            ignoreReturnCode: true,
+            silent: true,
+            listeners: {
+                stdout: (data) => {
+                    stdout += data.toString();
+                },
+                stderr: (data) => {
+                    stderr += data.toString();
+                }
+            }
+        });
+        if (exitCode !== 0) {
+            throw new Error(`Failed to fetch branch info: ${stderr}`);
         }
-        const branchResponse = yield fetch(branchUrl, { headers });
-        if (!branchResponse.ok) {
-            throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`);
+        // Parse output: "commit-sha\trefs/heads/branch-name"
+        const match = stdout.trim().match(/^([a-f0-9]{40})\s+/);
+        if (match === null) {
+            throw new Error(`Branch ${branch} not found in ${owner}/${repository}`);
         }
-        const branchData = yield branchResponse.json();
-        const commitSha = branchData.commit.sha;
+        commitSha = match[1];
         (0, core_2.info)(`Branch ${branch} is at commit ${commitSha}`);
         // Use commit SHA for cache path to ensure each commit gets its own binary
         const shortSha = commitSha.slice(0, 7);
@@ -16953,9 +16965,9 @@ function buildPiperFromBranch(version, token = '') {
         (0, core_2.info)(`URL: ${url}`);
         yield (0, tool_cache_1.extractZip)(yield (0, tool_cache_1.downloadTool)(url, `${path}/source-code.zip`), `${path}`);
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_b = fs.readdirSync(path).find((name) => {
+        const repositoryPath = (0, path_1.join)(path, (_a = fs.readdirSync(path).find((name) => {
             return name.includes(repository);
-        })) !== null && _b !== void 0 ? _b : '');
+        })) !== null && _a !== void 0 ? _a : '');
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
@@ -17207,7 +17219,7 @@ function preparePiperPath(actionCfg) {
         // Check unsafe variant first (new way - uses branch names)
         if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
             (0, core_1.info)('Building OS Piper from branch (unsafe-piper-version)');
-            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion, actionCfg.gitHubToken);
+            return yield (0, github_1.buildPiperFromBranch)(actionCfg.unsafePiperVersion);
         }
         // Fall back to deprecated variant (uses commit SHAs)
         if (actionCfg.piperVersion.startsWith('devel:')) {

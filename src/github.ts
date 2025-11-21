@@ -112,7 +112,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-export async function buildPiperFromBranch (version: string, token: string = ''): Promise<string> {
+export async function buildPiperFromBranch (version: string): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
@@ -126,20 +126,37 @@ export async function buildPiperFromBranch (version: string, token: string = '')
 
   // Get the actual commit SHA for the branch first (before checking cache)
   info(`Fetching commit SHA for branch ${branch}`)
-  // Use provided token, or fall back to GITHUB_TOKEN from environment
-  const authToken = (token !== '' ? token : process.env.GITHUB_TOKEN) ?? ''
-  const branchUrl = `${GITHUB_COM_API_URL}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
-  info(`Fetching branch info from: ${branchUrl}`)
-  const headers: Record<string, string> = {}
-  if (authToken !== '') {
-    headers.Authorization = `token ${authToken}`
+
+  // Use git ls-remote to get commit SHA (no API rate limits)
+  const repoUrl = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}.git`
+  let commitSha: string = ''
+
+  let stdout = ''
+  let stderr = ''
+  const exitCode = await exec('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
+    ignoreReturnCode: true,
+    silent: true,
+    listeners: {
+      stdout: (data: Buffer) => {
+        stdout += data.toString()
+      },
+      stderr: (data: Buffer) => {
+        stderr += data.toString()
+      }
+    }
+  })
+
+  if (exitCode !== 0) {
+    throw new Error(`Failed to fetch branch info: ${stderr}`)
   }
-  const branchResponse = await fetch(branchUrl, { headers })
-  if (!branchResponse.ok) {
-    throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`)
+
+  // Parse output: "commit-sha\trefs/heads/branch-name"
+  const match = stdout.trim().match(/^([a-f0-9]{40})\s+/)
+  if (match === null) {
+    throw new Error(`Branch ${branch} not found in ${owner}/${repository}`)
   }
-  const branchData = await branchResponse.json()
-  const commitSha = branchData.commit.sha
+
+  commitSha = match[1]
   info(`Branch ${branch} is at commit ${commitSha}`)
 
   // Use commit SHA for cache path to ensure each commit gets its own binary

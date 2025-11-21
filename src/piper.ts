@@ -141,7 +141,7 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   // Check unsafe variant first (new way - uses branch names)
   if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
     info('Building OS Piper from branch (unsafe-piper-version)')
-    return await buildPiperFromBranch(actionCfg.unsafePiperVersion, actionCfg.gitHubToken)
+    return await buildPiperFromBranch(actionCfg.unsafePiperVersion)
   }
   // Fall back to deprecated variant (uses commit SHAs)
   if (actionCfg.piperVersion.startsWith('devel:')) {
