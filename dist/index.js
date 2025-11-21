@@ -16931,6 +16931,7 @@ function buildPiperFromBranch(version, token = '') {
         const authToken = token || process.env.GITHUB_TOKEN || '';
         (0, core_2.debug)(`Token length: ${authToken.length}`);
         const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
+        (0, core_2.info)(`Fetching branch info from: ${branchUrl}`);
         const headers = {};
         if (authToken !== '') {
             headers.Authorization = `token ${authToken}`;

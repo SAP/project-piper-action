@@ -134,6 +134,7 @@ export async function buildPiperFromBranch (version: string, token: string = '')
   const authToken = token || process.env.GITHUB_TOKEN || ''
   debug(`Token length: ${authToken.length}`)
   const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
+  info(`Fetching branch info from: ${branchUrl}`)
   const headers: Record<string, string> = {}
   if (authToken !== '') {
     headers.Authorization = `token ${authToken}`
