@@ -123,21 +123,8 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
   if (branch.trim() === '') {
     throw new Error('branch is empty')
   }
-  // Use sanitized branch fragment for folder naming
-  const versionName = branch
-    .replace(/[^0-9A-Za-z._-]/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 40)
-  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
-  const piperPath = `${path}/piper`
-  if (fs.existsSync(piperPath)) {
-    return piperPath
-  }
-  // TODO
-  // check if cache is available
-  info(`Building Piper from ${version}`)
 
-  // Get the actual commit SHA for the branch
+  // Get the actual commit SHA for the branch first (before checking cache)
   info(`Fetching commit SHA for branch ${branch}`)
   const apiUrl = process.env.GITHUB_API_URL
   if (!apiUrl) {
@@ -151,6 +138,18 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
   const branchData = await branchResponse.json()
   const commitSha = branchData.commit.sha
   info(`Branch ${branch} is at commit ${commitSha}`)
+
+  // Use commit SHA for cache path to ensure each commit gets its own binary
+  const shortSha = commitSha.slice(0, 7)
+  const path = `${process.cwd()}/${owner}-${repository}-${shortSha}`
+  const piperPath = `${path}/piper`
+  if (fs.existsSync(piperPath)) {
+    info(`Using cached piper binary for commit ${shortSha}`)
+    return piperPath
+  }
+  // TODO
+  // check if cache is available
+  info(`Building Piper from ${version}`)
 
   const serverUrl = process.env.GITHUB_SERVER_URL
   if (!serverUrl) {
