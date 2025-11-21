@@ -26,7 +26,9 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const { owner, repository, branch } = parseDevVersion(version)
   const versionName = getVersionName(branch)
 
-  const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
+  // Support custom cache directory for cross-job caching (GitHub Actions cache)
+  const cacheBaseDir = process.env.PIPER_CACHE_DIR ?? process.cwd()
+  const path = `${cacheBaseDir}/${owner}-${repository}-${versionName}`
   info(`path: ${path}`)
   const piperPath = `${path}/sap-piper`
   info(`piperPath: ${piperPath}`)

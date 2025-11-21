@@ -15677,11 +15677,13 @@ function parseDevVersion(version) {
 }
 exports.parseDevVersion = parseDevVersion;
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, branch } = parseDevVersion(version);
         const versionName = getVersionName(branch);
-        const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
+        // Support custom cache directory for cross-job caching (GitHub Actions cache)
+        const cacheBaseDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : process.cwd();
+        const path = `${cacheBaseDir}/${owner}-${repository}-${versionName}`;
         (0, core_1.info)(`path: ${path}`);
         const piperPath = `${path}/sap-piper`;
         (0, core_1.info)(`piperPath: ${piperPath}`);
@@ -15690,7 +15692,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             return piperPath;
         }
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        const innerServerUrl = (_b = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _b !== void 0 ? _b : '';
         if (innerServerUrl === '') {
             (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
         }
@@ -15729,7 +15731,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
             return piperPath;
         }
         const wd = (0, process_1.cwd)();
-        const repositoryPath = (0, path_1.join)(path, (_b = fs_1.default.readdirSync(path).find((n) => n.includes(repository))) !== null && _b !== void 0 ? _b : '');
+        const repositoryPath = (0, path_1.join)(path, (_c = fs_1.default.readdirSync(path).find((n) => n.includes(repository))) !== null && _c !== void 0 ? _c : '');
         if (repositoryPath === '' || !fs_1.default.existsSync(repositoryPath)) {
             (0, core_1.setFailed)('Extracted repository directory not found');
             if (!fs_1.default.existsSync(piperPath)) {
@@ -15759,7 +15761,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         try {
             fs_1.default.rmSync(repositoryPath, { recursive: true, force: true });
         }
-        catch (_c) {
+        catch (_d) {
             // ignore
         }
         (0, core_1.info)(`Returning piperPath: ${piperPath}`);
