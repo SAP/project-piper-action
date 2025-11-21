@@ -112,7 +112,7 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 }
 
 // Format for development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
-export async function buildPiperFromBranch (version: string): Promise<string> {
+export async function buildPiperFromBranch (version: string, token: string = ''): Promise<string> {
   const versionComponents = version.split(':')
   if (versionComponents.length !== 4) {
     throw new Error('broken version')
@@ -131,7 +131,11 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
     throw new Error('GITHUB_API_URL environment variable is not set')
   }
   const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
-  const branchResponse = await fetch(branchUrl)
+  const headers: Record<string, string> = {}
+  if (token !== '') {
+    headers.Authorization = `token ${token}`
+  }
+  const branchResponse = await fetch(branchUrl, { headers })
   if (!branchResponse.ok) {
     throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`)
   }
