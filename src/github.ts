@@ -130,10 +130,13 @@ export async function buildPiperFromBranch (version: string, token: string = '')
   if (!apiUrl) {
     throw new Error('GITHUB_API_URL environment variable is not set')
   }
+  // Use provided token, or fall back to GITHUB_TOKEN from environment
+  const authToken = token || process.env.GITHUB_TOKEN || ''
+  debug(`Token length: ${authToken.length}`)
   const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
   const headers: Record<string, string> = {}
-  if (token !== '') {
-    headers.Authorization = `token ${token}`
+  if (authToken !== '') {
+    headers.Authorization = `token ${authToken}`
   }
   const branchResponse = await fetch(branchUrl, { headers })
   if (!branchResponse.ok) {

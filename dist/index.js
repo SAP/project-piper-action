@@ -16927,10 +16927,13 @@ function buildPiperFromBranch(version, token = '') {
         if (!apiUrl) {
             throw new Error('GITHUB_API_URL environment variable is not set');
         }
+        // Use provided token, or fall back to GITHUB_TOKEN from environment
+        const authToken = token || process.env.GITHUB_TOKEN || '';
+        (0, core_2.debug)(`Token length: ${authToken.length}`);
         const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`;
         const headers = {};
-        if (token !== '') {
-            headers.Authorization = `token ${token}`;
+        if (authToken !== '') {
+            headers.Authorization = `token ${authToken}`;
         }
         const branchResponse = yield fetch(branchUrl, { headers });
         if (!branchResponse.ok) {
