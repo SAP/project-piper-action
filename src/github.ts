@@ -136,7 +136,27 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
   // TODO
   // check if cache is available
   info(`Building Piper from ${version}`)
-  const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${branch}.zip`
+
+  // Get the actual commit SHA for the branch
+  info(`Fetching commit SHA for branch ${branch}`)
+  const apiUrl = process.env.GITHUB_API_URL
+  if (!apiUrl) {
+    throw new Error('GITHUB_API_URL environment variable is not set')
+  }
+  const branchUrl = `${apiUrl}/repos/${owner}/${repository}/branches/${encodeURIComponent(branch)}`
+  const branchResponse = await fetch(branchUrl)
+  if (!branchResponse.ok) {
+    throw new Error(`Failed to fetch branch info: ${branchResponse.status} ${branchResponse.statusText}`)
+  }
+  const branchData = await branchResponse.json()
+  const commitSha = branchData.commit.sha
+  info(`Branch ${branch} is at commit ${commitSha}`)
+
+  const serverUrl = process.env.GITHUB_SERVER_URL
+  if (!serverUrl) {
+    throw new Error('GITHUB_SERVER_URL environment variable is not set')
+  }
+  const url = `${serverUrl}/${owner}/${repository}/archive/${branch}.zip`
   info(`URL: ${url}`)
 
   await extractZip(
@@ -154,9 +174,9 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
     'go build -o ../piper',
     [
       '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${branch}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
+      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${serverUrl}/${owner}/${repository}
+      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${serverUrl}/${owner}/${repository}`
     ]
   )
   process.env.CGO_ENABLED = cgoEnabled
