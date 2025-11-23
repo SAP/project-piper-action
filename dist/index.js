@@ -16293,7 +16293,7 @@ function stopContainer(containerID) {
     });
 }
 exports.stopContainer = stopContainer;
-/** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/gitHubActions.go) */
+/** expose env vars needed for Piper orchestrator package (https://github.com/SAP/jenkins-library/blob/master/pkg/orchestrator/github_actions.go) */
 function getOrchestratorEnvVars() {
     return [
         // needed for Piper orchestrator detection
@@ -16309,6 +16309,8 @@ function getOrchestratorEnvVars() {
         '--env', 'GITHUB_REPOSITORY',
         '--env', 'GITHUB_SHA',
         '--env', 'GITHUB_WORKFLOW_REF',
+        '--env', 'GITHUB_EVENT_NAME',
+        '--env', 'GITHUB_WORKSPACE',
         // Pull Request Info (needed for sonarExecuteScan)
         '--env', 'GITHUB_HEAD_REF',
         '--env', 'GITHUB_BASE_REF',
