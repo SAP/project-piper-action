@@ -20,8 +20,11 @@ export async function downloadPiperBinary (
   const headers: any = {}
   const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
-  if (token !== '') {
-    debug('Fetching binary from GitHub API')
+  // Only use authenticated API for enterprise steps
+  // For OS piper (public releases), use unauthenticated download to avoid
+  // issues with enterprise tokens not being valid for github.com
+  if (isEnterprise && token !== '') {
+    debug('Fetching binary from GitHub API (enterprise)')
     headers.Accept = 'application/octet-stream'
     headers.Authorization = `token ${token}`
 
@@ -30,7 +33,7 @@ export async function downloadPiperBinary (
     binaryURL = binaryAssetURL
     version = tag
   } else {
-    debug('Fetching binary from URL')
+    debug('Fetching binary from public URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
     version = binaryURL.split('/').slice(-2)[0]
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)

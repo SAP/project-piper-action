@@ -16503,8 +16503,11 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
         (0, core_1.debug)(`version: ${version}`);
-        if (token !== '') {
-            (0, core_1.debug)('Fetching binary from GitHub API');
+        // Only use authenticated API for enterprise steps
+        // For OS piper (public releases), use unauthenticated download to avoid
+        // issues with enterprise tokens not being valid for github.com
+        if (isEnterprise && token !== '') {
+            (0, core_1.debug)('Fetching binary from GitHub API (enterprise)');
             headers.Accept = 'application/octet-stream';
             headers.Authorization = `token ${token}`;
             const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
@@ -16513,7 +16516,7 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
             version = tag;
         }
         else {
-            (0, core_1.debug)('Fetching binary from URL');
+            (0, core_1.debug)('Fetching binary from public URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
             version = binaryURL.split('/').slice(-2)[0];
             (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
