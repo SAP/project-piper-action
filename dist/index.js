@@ -15652,7 +15652,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getVersionName = exports.buildPiperInnerSource = exports.parseDevVersion = void 0;
+exports.getVersionName = exports.buildPiperInnerSource = exports.fetchCommitSha = exports.parseDevVersion = void 0;
 // Format for inner source development versions (all parts required): 'devel:GH_OWNER:REPOSITORY:BRANCH'
 const core_1 = __nccwpck_require__(2186);
 const path_1 = __nccwpck_require__(1017);
@@ -15676,26 +15676,62 @@ function parseDevVersion(version) {
     return { owner, repository, branch };
 }
 exports.parseDevVersion = parseDevVersion;
+function fetchCommitSha(owner, repository, branch, serverUrl, token = '') {
+    return __awaiter(this, void 0, void 0, function* () {
+        const host = serverUrl.replace(/^https?:\/\//, '');
+        const repoUrl = token !== ''
+            ? `https://${token}@${host}/${owner}/${repository}.git`
+            : `${serverUrl}/${owner}/${repository}.git`;
+        let stdout = '';
+        let stderr = '';
+        const exitCode = yield (0, exec_1.exec)('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
+            ignoreReturnCode: true,
+            silent: true,
+            listeners: {
+                stdout: (data) => {
+                    stdout += data.toString();
+                },
+                stderr: (data) => {
+                    stderr += data.toString();
+                }
+            }
+        });
+        if (exitCode !== 0) {
+            throw new Error(`Failed to fetch branch info: ${stderr}`);
+        }
+        // Parse output: "commit-sha\trefs/heads/branch-name"
+        const match = stdout.trim().match(/^([a-f0-9]{40})\s+/);
+        if (match === null) {
+            throw new Error(`Branch ${branch} not found in ${owner}/${repository}`);
+        }
+        return match[1];
+    });
+}
+exports.fetchCommitSha = fetchCommitSha;
 function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, branch } = parseDevVersion(version);
-        const versionName = getVersionName(branch);
+        const innerServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        if (innerServerUrl === '') {
+            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
+        }
+        // Fetch the actual commit SHA for proper caching
+        (0, core_1.info)(`Fetching commit SHA for branch ${branch}`);
+        const commitSha = yield fetchCommitSha(owner, repository, branch, innerServerUrl, wdfGithubEnterpriseToken);
+        const shortSha = commitSha.slice(0, 7);
+        (0, core_1.info)(`Branch ${branch} is at commit ${shortSha}`);
         // Support custom cache directory for cross-job caching (GitHub Actions cache)
-        const cacheBaseDir = (_a = process.env.PIPER_CACHE_DIR) !== null && _a !== void 0 ? _a : process.cwd();
-        const path = `${cacheBaseDir}/${owner}-${repository}-${versionName}`;
+        const cacheBaseDir = (_b = process.env.PIPER_CACHE_DIR) !== null && _b !== void 0 ? _b : process.cwd();
+        const path = `${cacheBaseDir}/${owner}-${repository}-${shortSha}`;
         (0, core_1.info)(`path: ${path}`);
         const piperPath = `${path}/sap-piper`;
         (0, core_1.info)(`piperPath: ${piperPath}`);
         if (fs_1.default.existsSync(piperPath)) {
-            (0, core_1.info)(`piperPath exists: ${piperPath}`);
+            (0, core_1.info)(`Using cached sap-piper binary for commit ${shortSha}`);
             return piperPath;
         }
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
-        const innerServerUrl = (_b = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _b !== void 0 ? _b : '';
-        if (innerServerUrl === '') {
-            (0, core_1.error)('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository');
-        }
         if (wdfGithubEnterpriseToken === '') {
             // Do not throw — tests expect continuing
             (0, core_1.setFailed)('WDF GitHub Token is not provided, please set PIPER_WDF_GITHUB_TOKEN');
@@ -15744,7 +15780,9 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         const prevCGO = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
         try {
-            yield (0, exec_1.exec)('go build -o ../sap-piper');
+            const innerServerUrl = (_d = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _d !== void 0 ? _d : '';
+            const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${innerServerUrl}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${innerServerUrl}/${owner}/${repository}`;
+            yield (0, exec_1.exec)('go', ['build', '-o', '../sap-piper', '-ldflags', ldflags]);
         }
         catch (e) {
             (0, core_1.setFailed)(`Build failed: ${e.message}`);
@@ -15761,7 +15799,7 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         try {
             fs_1.default.rmSync(repositoryPath, { recursive: true, force: true });
         }
-        catch (_d) {
+        catch (_e) {
             // ignore
         }
         (0, core_1.info)(`Returning piperPath: ${piperPath}`);
@@ -16817,6 +16855,7 @@ const core_1 = __nccwpck_require__(6762);
 const tool_cache_1 = __nccwpck_require__(7784);
 const core_2 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
+const build_1 = __nccwpck_require__(6793);
 exports.GITHUB_COM_SERVER_URL = 'https://github.com';
 exports.GITHUB_COM_API_URL = 'https://api.github.com';
 exports.PIPER_OWNER = 'SAP';
@@ -16897,12 +16936,8 @@ function buildPiperFromSource(version) {
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
-        yield (0, exec_1.exec)('go build -o ../piper', [
-            '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-        ]);
+        const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`;
+        yield (0, exec_1.exec)('go', ['build', '-o', '../piper', '-ldflags', ldflags]);
         process.env.CGO_ENABLED = cgoEnabled;
         (0, process_1.chdir)(wd);
         fs.rmSync(repositoryPath, { recursive: true, force: true });
@@ -16928,32 +16963,7 @@ function buildPiperFromBranch(version) {
         }
         // Get the actual commit SHA for the branch first (before checking cache)
         (0, core_2.info)(`Fetching commit SHA for branch ${branch}`);
-        // Use git ls-remote to get commit SHA (no API rate limits)
-        const repoUrl = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}.git`;
-        let commitSha = '';
-        let stdout = '';
-        let stderr = '';
-        const exitCode = yield (0, exec_1.exec)('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
-            ignoreReturnCode: true,
-            silent: true,
-            listeners: {
-                stdout: (data) => {
-                    stdout += data.toString();
-                },
-                stderr: (data) => {
-                    stderr += data.toString();
-                }
-            }
-        });
-        if (exitCode !== 0) {
-            throw new Error(`Failed to fetch branch info: ${stderr}`);
-        }
-        // Parse output: "commit-sha\trefs/heads/branch-name"
-        const match = stdout.trim().match(/^([a-f0-9]{40})\s+/);
-        if (match === null) {
-            throw new Error(`Branch ${branch} not found in ${owner}/${repository}`);
-        }
-        commitSha = match[1];
+        const commitSha = yield (0, build_1.fetchCommitSha)(owner, repository, branch, exports.GITHUB_COM_SERVER_URL);
         (0, core_2.info)(`Branch ${branch} is at commit ${commitSha}`);
         // Use commit SHA for cache path to ensure each commit gets its own binary
         const shortSha = commitSha.slice(0, 7);
@@ -16978,12 +16988,8 @@ function buildPiperFromBranch(version) {
         (0, process_1.chdir)(repositoryPath);
         const cgoEnabled = process.env.CGO_ENABLED;
         process.env.CGO_ENABLED = '0';
-        yield (0, exec_1.exec)('go build -o ../piper', [
-            '-ldflags',
-            `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-        ]);
+        const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}`;
+        yield (0, exec_1.exec)('go', ['build', '-o', '../piper', '-ldflags', ldflags]);
         process.env.CGO_ENABLED = cgoEnabled;
         (0, process_1.chdir)(wd);
         // Ensure binary exists when build is mocked in tests (placeholder file)

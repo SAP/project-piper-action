@@ -22,27 +22,73 @@ export function parseDevVersion (version: string): { owner: string, repository: 
   return { owner, repository, branch }
 }
 
+export async function fetchCommitSha (
+  owner: string,
+  repository: string,
+  branch: string,
+  serverUrl: string,
+  token: string = ''
+): Promise<string> {
+  const host = serverUrl.replace(/^https?:\/\//, '')
+  const repoUrl = token !== ''
+    ? `https://${token}@${host}/${owner}/${repository}.git`
+    : `${serverUrl}/${owner}/${repository}.git`
+
+  let stdout = ''
+  let stderr = ''
+  const exitCode = await exec('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
+    ignoreReturnCode: true,
+    silent: true,
+    listeners: {
+      stdout: (data: Buffer) => {
+        stdout += data.toString()
+      },
+      stderr: (data: Buffer) => {
+        stderr += data.toString()
+      }
+    }
+  })
+
+  if (exitCode !== 0) {
+    throw new Error(`Failed to fetch branch info: ${stderr}`)
+  }
+
+  // Parse output: "commit-sha\trefs/heads/branch-name"
+  const match = stdout.trim().match(/^([a-f0-9]{40})\s+/)
+  if (match === null) {
+    throw new Error(`Branch ${branch} not found in ${owner}/${repository}`)
+  }
+
+  return match[1]
+}
+
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   const { owner, repository, branch } = parseDevVersion(version)
-  const versionName = getVersionName(branch)
+
+  const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
+  if (innerServerUrl === '') {
+    error('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository')
+  }
+
+  // Fetch the actual commit SHA for proper caching
+  info(`Fetching commit SHA for branch ${branch}`)
+  const commitSha = await fetchCommitSha(owner, repository, branch, innerServerUrl, wdfGithubEnterpriseToken)
+  const shortSha = commitSha.slice(0, 7)
+  info(`Branch ${branch} is at commit ${shortSha}`)
 
   // Support custom cache directory for cross-job caching (GitHub Actions cache)
   const cacheBaseDir = process.env.PIPER_CACHE_DIR ?? process.cwd()
-  const path = `${cacheBaseDir}/${owner}-${repository}-${versionName}`
+  const path = `${cacheBaseDir}/${owner}-${repository}-${shortSha}`
   info(`path: ${path}`)
   const piperPath = `${path}/sap-piper`
   info(`piperPath: ${piperPath}`)
 
   if (fs.existsSync(piperPath)) {
-    info(`piperPath exists: ${piperPath}`)
+    info(`Using cached sap-piper binary for commit ${shortSha}`)
     return piperPath
   }
 
   info(`Building Inner Source Piper from ${version}`)
-  const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
-  if (innerServerUrl === '') {
-    error('PIPER_ENTERPRISE_SERVER_URL repository secret is not set. Add it in Settings of the repository')
-  }
 
   if (wdfGithubEnterpriseToken === '') {
     // Do not throw — tests expect continuing
@@ -96,7 +142,9 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   const prevCGO = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
   try {
-    await exec('go build -o ../sap-piper')
+    const innerServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
+    const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${innerServerUrl}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${innerServerUrl}/${owner}/${repository}`
+    await exec('go', ['build', '-o', '../sap-piper', '-ldflags', ldflags])
   } catch (e: any) {
     setFailed(`Build failed: ${e.message}`)
   }

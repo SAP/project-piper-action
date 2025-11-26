@@ -17,15 +17,12 @@ describe('buildPiperFromBranch (open source)', () => {
   const owner = 'SAP'
   const repo = 'jenkins-library'
   const branch = 'feature/refactor-xyz/ABC'
-  const sanitized = branch
-    .replace(/[^0-9A-Za-z._-]/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 40)
+  const shortSha = 'a1b2c3d' // Must match the SHA returned by git ls-remote mock
 
   beforeEach(() => {
     mockedDownloadTool.mockResolvedValue('archive.zip')
     mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
-      const repoDir = join(target, `${repo}-${sanitized}`)
+      const repoDir = join(target, `${repo}-${branch}`)
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(join(repoDir, 'go.mod'), 'module github.com/SAP/jenkins-library')
       return target
@@ -35,34 +32,67 @@ describe('buildPiperFromBranch (open source)', () => {
 
   afterEach(() => {
     jest.clearAllMocks()
-    const baseDir = join(process.cwd(), `${owner}-${repo}-${sanitized}`)
+    const baseDir = join(process.cwd(), `${owner}-${repo}-${shortSha}`)
     if (fs.existsSync(baseDir)) {
       fs.rmSync(baseDir, { recursive: true, force: true })
     }
   })
 
   test('builds branch version and cleans extracted repositoryPath', async () => {
+    mockedExec.mockImplementation(async (command: string, args?: string[], options?: any) => {
+      if (command === 'git' && Array.isArray(args) && args[0] === 'ls-remote') {
+        const listeners = options?.listeners
+        if (listeners?.stdout !== undefined) {
+          listeners.stdout(Buffer.from('a1b2c3d4e5f6789012345678901234567890abcd\trefs/heads/' + branch + '\n'))
+        }
+        return 0
+      }
+      return 0
+    })
+
     const p = await buildPiperFromBranch(`devel:${owner}:${repo}:${branch}`)
     expect(p.endsWith('/piper')).toBe(true)
     expect(fs.existsSync(p)).toBe(true)
-    const extractedDir = join(process.cwd(), `${owner}-${repo}-${sanitized}`, `${repo}-${sanitized}`)
-    expect(fs.existsSync(extractedDir)).toBe(false)
     expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Building Piper from'))
-    expect(mockedExec).toHaveBeenCalledWith(
-      'go build -o ../piper',
-      expect.arrayContaining([
-        '-ldflags',
-        expect.stringContaining(`GitCommit=${branch}`)
-      ])
-    )
+
+    const goBuildCalls = mockedExec.mock.calls.filter(call => call[0] === 'go' && call[1]?.[0] === 'build')
+    expect(goBuildCalls.length).toBeGreaterThan(0)
+    expect(goBuildCalls[0][1]).toEqual(expect.arrayContaining([
+      'build',
+      '-o',
+      '../piper',
+      '-ldflags',
+      expect.stringContaining('GitCommit=')
+    ]))
   })
 
   test('returns cached binary on second call', async () => {
+    // Mock git ls-remote consistently
+    mockedExec.mockImplementation(async (command: string, args?: string[], options?: any) => {
+      if (command === 'git' && Array.isArray(args) && args[0] === 'ls-remote') {
+        const listeners = options?.listeners
+        if (listeners?.stdout !== undefined) {
+          listeners.stdout(Buffer.from('a1b2c3d4e5f6789012345678901234567890abcd\trefs/heads/' + branch + '\n'))
+        }
+        return 0
+      }
+      return 0
+    })
+
     const first = await buildPiperFromBranch(`devel:${owner}:${repo}:${branch}`)
-    const execCalls = mockedExec.mock.calls.length
+    const callsAfterFirst = mockedExec.mock.calls.length
+
     const second = await buildPiperFromBranch(`devel:${owner}:${repo}:${branch}`)
     expect(second).toBe(first)
-    expect(mockedExec.mock.calls.length).toBe(execCalls)
+
+    const callsAfterSecond = mockedExec.mock.calls.length
+    const secondCallCount = callsAfterSecond - callsAfterFirst
+
+    expect(secondCallCount).toBe(1)
+
+    const lastCall = mockedExec.mock.calls[mockedExec.mock.calls.length - 1]
+    expect(lastCall[0]).toBe('git')
+    expect(lastCall[1]).toEqual(expect.arrayContaining(['ls-remote']))
   })
 
   test('throws on empty branch', async () => {

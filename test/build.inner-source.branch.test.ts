@@ -17,13 +17,24 @@ describe('buildPiperInnerSource (branch mode)', () => {
   const repo = 'my-repo'
   const branch = 'feature/X-123_add stuff'
   const version = `devel:${owner}:${repo}:${branch}`
-  const sanitized = getVersionName(branch)
 
   beforeEach(() => {
     process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.inner.example'
-    mockedExec.mockResolvedValue(0)
+
+    mockedExec.mockImplementation(async (command: string, args?: string[], options?: any) => {
+      if (command === 'git' && Array.isArray(args) && args[0] === 'ls-remote') {
+        const listeners = options?.listeners
+        if (listeners?.stdout !== undefined) {
+          listeners.stdout(Buffer.from('a1b2c3d4e5f6789012345678901234567890abcd\trefs/heads/' + branch + '\n'))
+        }
+        return 0
+      }
+      return 0
+    })
+
+    const shortSha = 'a1b2c3d'
     mockedExtractZip.mockImplementation(async (_zip: string, target: string) => {
-      const repoDir = join(target, `${repo}-${sanitized}`)
+      const repoDir = join(target, `${repo}-${shortSha}`)
       fs.mkdirSync(repoDir, { recursive: true })
       fs.writeFileSync(join(repoDir, 'go.mod'), 'module inner/repo')
       return target
@@ -37,8 +48,10 @@ describe('buildPiperInnerSource (branch mode)', () => {
 
   afterEach(() => {
     jest.clearAllMocks()
-    if (fs.existsSync(join(process.cwd(), `${owner}-${repo}-${sanitized}`))) {
-      fs.rmSync(join(process.cwd(), `${owner}-${repo}-${sanitized}`), { recursive: true, force: true })
+    const shortSha = 'a1b2c3d'
+    const dirPath = join(process.cwd(), `${owner}-${repo}-${shortSha}`)
+    if (fs.existsSync(dirPath)) {
+      fs.rmSync(dirPath, { recursive: true, force: true })
     }
   })
 
@@ -46,18 +59,29 @@ describe('buildPiperInnerSource (branch mode)', () => {
     const p = await buildPiperInnerSource(version, 'token123')
     expect(p.endsWith('/sap-piper')).toBe(true)
     expect(fs.existsSync(p)).toBe(true)
-    // repositoryPath should be removed
-    const extractedDir = join(process.cwd(), `${owner}-${repo}-${sanitized}`, `${repo}-${sanitized}`)
+    const shortSha = 'a1b2c3d'
+    const extractedDir = join(process.cwd(), `${owner}-${repo}-${shortSha}`, `${repo}-${shortSha}`)
     expect(fs.existsSync(extractedDir)).toBe(false)
-    expect(mockedExec).toHaveBeenCalledWith('go build -o ../sap-piper')
+
+    const goBuildCalls = mockedExec.mock.calls.filter(call => call[0] === 'go' && call[1]?.[0] === 'build')
+    expect(goBuildCalls.length).toBeGreaterThan(0)
   })
 
   test('caches binary on second invocation', async () => {
     const first = await buildPiperInnerSource(version, 'token123')
-    const execCalls = mockedExec.mock.calls.length
+    const callsAfterFirst = mockedExec.mock.calls.length
+
     const second = await buildPiperInnerSource(version, 'token123')
     expect(second).toBe(first)
-    expect(mockedExec.mock.calls.length).toBe(execCalls)
+
+    const callsAfterSecond = mockedExec.mock.calls.length
+    const secondCallCount = callsAfterSecond - callsAfterFirst
+
+    expect(secondCallCount).toBe(1)
+
+    const lastCall = mockedExec.mock.calls[mockedExec.mock.calls.length - 1]
+    expect(lastCall[0]).toBe('git')
+    expect(lastCall[1]).toEqual(expect.arrayContaining(['ls-remote']))
   })
 
   test('fails early on empty branch', async () => {

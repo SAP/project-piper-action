@@ -7,6 +7,7 @@ import { type OctokitResponse } from '@octokit/types'
 import { downloadTool, extractZip } from '@actions/tool-cache'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
+import { fetchCommitSha } from './build'
 
 export const GITHUB_COM_SERVER_URL = 'https://github.com'
 export const GITHUB_COM_API_URL = 'https://api.github.com'
@@ -94,15 +95,8 @@ export async function buildPiperFromSource (version: string): Promise<string> {
 
   const cgoEnabled = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
-  await exec(
-    'go build -o ../piper',
-    [
-      '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-    ]
-  )
+  const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitISH} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+  await exec('go', ['build', '-o', '../piper', '-ldflags', ldflags])
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
@@ -126,37 +120,7 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
 
   // Get the actual commit SHA for the branch first (before checking cache)
   info(`Fetching commit SHA for branch ${branch}`)
-
-  // Use git ls-remote to get commit SHA (no API rate limits)
-  const repoUrl = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}.git`
-  let commitSha: string = ''
-
-  let stdout = ''
-  let stderr = ''
-  const exitCode = await exec('git', ['ls-remote', repoUrl, `refs/heads/${branch}`], {
-    ignoreReturnCode: true,
-    silent: true,
-    listeners: {
-      stdout: (data: Buffer) => {
-        stdout += data.toString()
-      },
-      stderr: (data: Buffer) => {
-        stderr += data.toString()
-      }
-    }
-  })
-
-  if (exitCode !== 0) {
-    throw new Error(`Failed to fetch branch info: ${stderr}`)
-  }
-
-  // Parse output: "commit-sha\trefs/heads/branch-name"
-  const match = stdout.trim().match(/^([a-f0-9]{40})\s+/)
-  if (match === null) {
-    throw new Error(`Branch ${branch} not found in ${owner}/${repository}`)
-  }
-
-  commitSha = match[1]
+  const commitSha = await fetchCommitSha(owner, repository, branch, GITHUB_COM_SERVER_URL)
   info(`Branch ${branch} is at commit ${commitSha}`)
 
   // Use commit SHA for cache path to ensure each commit gets its own binary
@@ -189,15 +153,8 @@ export async function buildPiperFromBranch (version: string): Promise<string> {
 
   const cgoEnabled = process.env.CGO_ENABLED
   process.env.CGO_ENABLED = '0'
-  await exec(
-    'go build -o ../piper',
-    [
-      '-ldflags',
-      `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha}
-      -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}
-      -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
-    ]
-  )
+  const ldflags = `-X github.com/SAP/jenkins-library/cmd.GitCommit=${commitSha} -X github.com/SAP/jenkins-library/pkg/log.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository} -X github.com/SAP/jenkins-library/pkg/telemetry.LibraryRepository=${GITHUB_COM_SERVER_URL}/${owner}/${repository}`
+  await exec('go', ['build', '-o', '../piper', '-ldflags', ldflags])
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
   // Ensure binary exists when build is mocked in tests (placeholder file)
