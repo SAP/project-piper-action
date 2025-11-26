@@ -33,6 +33,8 @@ export interface ActionConfiguration {
   sapPiperVersion: string
   sapPiperOwner: string
   sapPiperRepo: string
+  unsafePiperVersion: string
+  unsafeSapPiperVersion: string
   gitHubServer: string
   gitHubApi: string
   gitHubToken: string
@@ -93,6 +95,8 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     sapPiperVersion: getValue('sap-piper-version'),
     sapPiperOwner: getValue('sap-piper-owner'),
     sapPiperRepo: getValue('sap-piper-repository'),
+    unsafePiperVersion: getValue('unsafe-piper-version'),
+    unsafeSapPiperVersion: getValue('unsafe-sap-piper-version'),
     gitHubToken: getValue('github-token'),
     gitHubServer: GITHUB_COM_SERVER_URL,
     gitHubApi: GITHUB_COM_API_URL,

@@ -1,5 +1,5 @@
 import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
-import { buildPiperFromSource } from './github'
+import { buildPiperFromBranch, buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -125,17 +125,27 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
 
   if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
     info('Preparing Piper binary for enterprise step')
-    // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+    // Check unsafe variant first (new way)
+    if (actionCfg.unsafeSapPiperVersion !== '' && actionCfg.unsafeSapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
+      info('Building Piper from inner source (unsafe-sap-piper-version)')
+      return await buildPiperInnerSource(actionCfg.unsafeSapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
+    }
+    // Fall back to deprecated variant
     if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
-      info('Building Piper from inner source')
+      info('Building Piper from inner source (deprecated sap-piper-version)')
       return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
     }
     info('Downloading Piper Inner source binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
-  // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
+  // Check unsafe variant first (new way - uses branch names)
+  if (actionCfg.unsafePiperVersion !== '' && actionCfg.unsafePiperVersion.startsWith('devel:')) {
+    info('Building OS Piper from branch (unsafe-piper-version)')
+    return await buildPiperFromBranch(actionCfg.unsafePiperVersion)
+  }
+  // Fall back to deprecated variant (uses commit SHAs)
   if (actionCfg.piperVersion.startsWith('devel:')) {
-    info('Building OS Piper from source')
+    info('Building OS Piper from source (deprecated piper-version)')
     return await buildPiperFromSource(actionCfg.piperVersion)
   }
   info('Downloading Piper OS binary')
