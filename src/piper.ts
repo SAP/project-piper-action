@@ -125,6 +125,14 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
 
   if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
     info('Preparing Piper binary for enterprise step')
+
+    // Check for pre-built SAP Piper binary from composite action
+    const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH
+    if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
+      info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
+      return prebuiltSapPiperPath
+    }
+
     // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
     if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
       info('Building Piper from inner source')
@@ -133,6 +141,14 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     info('Downloading Piper Inner source binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
+
+  // Check for pre-built OS Piper binary from composite action
+  const prebuiltPiperPath = process.env.PIPER_BINARY_PATH
+  if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
+    info(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`)
+    return prebuiltPiperPath
+  }
+
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
   if (actionCfg.piperVersion.startsWith('devel:')) {
     info('Building OS Piper from source')
