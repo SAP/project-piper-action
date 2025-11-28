@@ -17061,6 +17061,12 @@ function preparePiperPath(actionCfg) {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
         if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
+            // Check for pre-built SAP Piper binary from composite action
+            const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH;
+            if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
+                (0, core_1.info)(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`);
+                return prebuiltSapPiperPath;
+            }
             // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
                 (0, core_1.info)('Building Piper from inner source');
@@ -17068,6 +17074,12 @@ function preparePiperPath(actionCfg) {
             }
             (0, core_1.info)('Downloading Piper Inner source binary');
             return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        }
+        // Check for pre-built OS Piper binary from composite action
+        const prebuiltPiperPath = process.env.PIPER_BINARY_PATH;
+        if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
+            (0, core_1.info)(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`);
+            return prebuiltPiperPath;
         }
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
         if (actionCfg.piperVersion.startsWith('devel:')) {
