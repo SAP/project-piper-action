@@ -131,7 +131,6 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
   } catch (err: unknown) {
     // Ignore errors with messages containing 'Unable to find' or with 404 error code. Throw an error for all other cases.
     if (err instanceof Error && !(err.message.includes('Unable to find') || err.message.includes('404'))) throw err
-  
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
   }
