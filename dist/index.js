@@ -16346,6 +16346,8 @@ function getSystemTrustEnvVars() {
 exports.getSystemTrustEnvVars = getSystemTrustEnvVars;
 function getTelemetryEnvVars() {
     return [
+        '--env', 'PIPER_ACTION_VERSION',
+        '--env', 'PIPER_PIPELINE_VERSION',
         '--env', 'PIPER_PIPELINE_TEMPLATE_NAME',
         '--env', 'PIPER_PIPELINE_STAGE_TEMPLATE_NAME'
     ];
@@ -16600,7 +16602,9 @@ const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        process.env.PIPER_ACTION_VERSION = (_a = process.env.GITHUB_ACTION_REF) !== null && _a !== void 0 ? _a : 'n/a';
         if (process.env.GITHUB_JOB !== undefined)
             flags.push('--stageName', process.env.GITHUB_JOB);
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
