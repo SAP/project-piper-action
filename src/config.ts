@@ -129,9 +129,8 @@ export async function getDefaultConfig (server: string, apiURL: string, version:
     await restoreDefaultConfig()
     info('Defaults restored from artifact')
   } catch (err: unknown) {
-    // throws an error with message containing 'Unable to find' if artifact does not exist
-    if (err instanceof Error && !err.message.includes('Unable to find')) throw err
-    // continue with downloading defaults and upload as artifact
+    // Ignore errors with messages containing 'Unable to find' or with 404 error code. Throw an error for all other cases.
+    if (err instanceof Error && !(err.message.includes('Unable to find') || err.message.includes('404'))) throw err
     info('Downloading defaults')
     await downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths)
   }
