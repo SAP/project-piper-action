@@ -2,8 +2,6 @@ name: Release Piper Action
 
 on:
   workflow_dispatch:  # trigger release manually
-  # schedule:
-  #   - cron: '0 9 * * 1'  # at 9 am every Monday
 
 jobs:
   check_if_should_run:
