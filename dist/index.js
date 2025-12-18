@@ -16501,6 +16501,54 @@ function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
 
 /***/ }),
 
+/***/ 8627:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.executeEngine = exports.isV2Step = exports.v2StepsList = void 0;
+const exec_1 = __nccwpck_require__(1514);
+const fs_1 = __nccwpck_require__(7147);
+// V2 steps list - steps that should use engine instead of piper
+exports.v2StepsList = new Set([
+    'mavenBuild',
+    'detectExecuteScan',
+    'sonarExecuteScan',
+    'sampleItem'
+]);
+function isV2Step(stepName) {
+    return exports.v2StepsList.has(stepName);
+}
+exports.isV2Step = isV2Step;
+function executeEngine(binaryPath, stepName, flags) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Validate binary exists
+        if (!(0, fs_1.existsSync)(binaryPath)) {
+            throw new Error(`Engine binary not found at path: ${binaryPath}`);
+        }
+        // Ensure executable
+        (0, fs_1.chmodSync)(binaryPath, 0o775);
+        // Execute: engine <stepName> <flags>
+        const args = [stepName, ...flags];
+        const options = { ignoreReturnCode: true };
+        return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
+    });
+}
+exports.executeEngine = executeEngine;
+
+
+/***/ }),
+
 /***/ 4340:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -16975,9 +17023,11 @@ const utils_1 = __nccwpck_require__(1314);
 const build_1 = __nccwpck_require__(6793);
 const download_1 = __nccwpck_require__(6232);
 const debug_1 = __nccwpck_require__(1417);
+const engine_1 = __nccwpck_require__(8627);
 // Global runtime variables that is accessible within a single action execution
 exports.internalActionVariables = {
     piperBinPath: '',
+    engineBinPath: '',
     dockerContainerID: '',
     sidecarNetworkID: '',
     sidecarContainerID: '',
@@ -17002,6 +17052,8 @@ function run() {
             (0, utils_1.changeToWorkingDirectory)(actionCfg.workingDir);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
+            (0, core_1.info)('Checking for engine binary');
+            prepareEngineBinary();
             (0, core_1.info)('Loading pipeline environment');
             yield (0, pipelineEnv_1.loadPipelineEnv)();
             (0, core_1.endGroup)();
@@ -17027,7 +17079,17 @@ function run() {
                 if ((0, core_1.isDebug)())
                     (0, debug_1.debugDirectoryStructure)();
                 (0, core_1.startGroup)(actionCfg.stepName);
-                const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                let result;
+                if ((0, engine_1.isV2Step)(actionCfg.stepName) && exports.internalActionVariables.engineBinPath !== '') {
+                    (0, core_1.info)('Executing v2 step via engine');
+                    result = yield (0, engine_1.executeEngine)(exports.internalActionVariables.engineBinPath, actionCfg.stepName, flags);
+                }
+                else {
+                    if ((0, engine_1.isV2Step)(actionCfg.stepName)) {
+                        (0, core_1.info)('V2 step requested but engine unavailable, falling back to piper');
+                    }
+                    result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                }
                 if (result.exitCode !== 0) {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
@@ -17092,6 +17154,17 @@ function preparePiperPath(actionCfg) {
         (0, core_1.info)('Downloading Piper OS binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
+}
+function prepareEngineBinary() {
+    // Check for pre-built binary from prepare-binary composite action
+    const enginePath = process.env.ENGINE_BINARY_PATH;
+    if (enginePath !== undefined && enginePath !== '') {
+        exports.internalActionVariables.engineBinPath = enginePath;
+        (0, core_1.info)(`Using pre-built engine binary from: ${enginePath}`);
+    }
+    else {
+        (0, core_1.debug)('No engine binary configured (ENGINE_BINARY_PATH not set)');
+    }
 }
 
 

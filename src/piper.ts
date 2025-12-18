@@ -19,10 +19,12 @@ import {
 import { buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
 import { debugDirectoryStructure } from './debug'
+import { executeEngine, isV2Step } from './engine'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
   piperBinPath: '',
+  engineBinPath: '',
   dockerContainerID: '',
   sidecarNetworkID: '',
   sidecarContainerID: '',
@@ -51,6 +53,9 @@ export async function run (): Promise<void> {
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
+
+    info('Checking for engine binary')
+    prepareEngineBinary()
 
     info('Loading pipeline environment')
     await loadPipelineEnv()
@@ -89,7 +94,20 @@ export async function run (): Promise<void> {
       if (isDebug()) debugDirectoryStructure()
 
       startGroup(actionCfg.stepName)
-      const result = await executePiper(actionCfg.stepName, flags)
+      let result
+      if (isV2Step(actionCfg.stepName) && internalActionVariables.engineBinPath !== '') {
+        info('Executing v2 step via engine')
+        result = await executeEngine(
+          internalActionVariables.engineBinPath,
+          actionCfg.stepName,
+          flags
+        )
+      } else {
+        if (isV2Step(actionCfg.stepName)) {
+          info('V2 step requested but engine unavailable, falling back to piper')
+        }
+        result = await executePiper(actionCfg.stepName, flags)
+      }
       if (result.exitCode !== 0) {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
@@ -156,4 +174,15 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
+
+function prepareEngineBinary (): void {
+  // Check for pre-built binary from prepare-binary composite action
+  const enginePath = process.env.ENGINE_BINARY_PATH
+  if (enginePath !== undefined && enginePath !== '') {
+    internalActionVariables.engineBinPath = enginePath
+    info(`Using pre-built engine binary from: ${enginePath}`)
+  } else {
+    debug('No engine binary configured (ENGINE_BINARY_PATH not set)')
+  }
 }
