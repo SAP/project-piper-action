@@ -28,7 +28,24 @@ export async function executeEngine (
 
   // Execute: engine <stepName> <flags>
   const args: string[] = [stepName, ...flags]
-  const options: ExecOptions = { ignoreReturnCode: true }
+
+  // Set up environment with GitHub token for catalogue access
+  const env: { [key: string]: string } = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      env[key] = value
+    }
+  }
+
+  // Set GITHUB_TOKEN for catalogue access if not already set
+  if (process.env.PIPER_ACTION_GITHUB_ENTERPRISE_TOKEN !== undefined && env.GITHUB_TOKEN === undefined) {
+    env.GITHUB_TOKEN = process.env.PIPER_ACTION_GITHUB_ENTERPRISE_TOKEN
+  }
+
+  const options: ExecOptions = {
+    ignoreReturnCode: true,
+    env
+  }
 
   return await getExecOutput(binaryPath, args, options)
 }

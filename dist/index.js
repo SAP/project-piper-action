@@ -16540,7 +16540,21 @@ function executeEngine(binaryPath, stepName, flags) {
         (0, fs_1.chmodSync)(binaryPath, 0o775);
         // Execute: engine <stepName> <flags>
         const args = [stepName, ...flags];
-        const options = { ignoreReturnCode: true };
+        // Set up environment with GitHub token for catalogue access
+        const env = {};
+        for (const [key, value] of Object.entries(process.env)) {
+            if (value !== undefined) {
+                env[key] = value;
+            }
+        }
+        // Set GITHUB_TOKEN for catalogue access if not already set
+        if (process.env.PIPER_ACTION_GITHUB_ENTERPRISE_TOKEN !== undefined && env.GITHUB_TOKEN === undefined) {
+            env.GITHUB_TOKEN = process.env.PIPER_ACTION_GITHUB_ENTERPRISE_TOKEN;
+        }
+        const options = {
+            ignoreReturnCode: true,
+            env
+        };
         return yield (0, exec_1.getExecOutput)(binaryPath, args, options);
     });
 }
