@@ -84,18 +84,27 @@ export async function run (): Promise<void> {
       endGroup()
     }
     if (actionCfg.stepName !== '') {
-      startGroup('Step Configuration')
       const flags = tokenize(actionCfg.flags)
-      const contextConfig = await readContextConfig(actionCfg.stepName, flags)
-      endGroup()
+      let contextConfig: any = {}
 
-      await runContainers(actionCfg, contextConfig)
+      // Skip context config reading for v2 steps when engine is available
+      const useEngine = isV2Step(actionCfg.stepName) && internalActionVariables.engineBinPath !== ''
 
-      if (isDebug()) debugDirectoryStructure()
+      if (!useEngine) {
+        startGroup('Step Configuration')
+        contextConfig = await readContextConfig(actionCfg.stepName, flags)
+        endGroup()
+
+        await runContainers(actionCfg, contextConfig)
+
+        if (isDebug()) debugDirectoryStructure()
+      } else {
+        info('Skipping piper context config for v2 step (using engine)')
+      }
 
       startGroup(actionCfg.stepName)
       let result
-      if (isV2Step(actionCfg.stepName) && internalActionVariables.engineBinPath !== '') {
+      if (useEngine) {
         info('Executing v2 step via engine')
         result = await executeEngine(
           internalActionVariables.engineBinPath,

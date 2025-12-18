@@ -17071,16 +17071,24 @@ function run() {
                 (0, core_1.endGroup)();
             }
             if (actionCfg.stepName !== '') {
-                (0, core_1.startGroup)('Step Configuration');
                 const flags = (0, utils_1.tokenize)(actionCfg.flags);
-                const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
-                (0, core_1.endGroup)();
-                yield (0, docker_1.runContainers)(actionCfg, contextConfig);
-                if ((0, core_1.isDebug)())
-                    (0, debug_1.debugDirectoryStructure)();
+                let contextConfig = {};
+                // Skip context config reading for v2 steps when engine is available
+                const useEngine = (0, engine_1.isV2Step)(actionCfg.stepName) && exports.internalActionVariables.engineBinPath !== '';
+                if (!useEngine) {
+                    (0, core_1.startGroup)('Step Configuration');
+                    contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
+                    (0, core_1.endGroup)();
+                    yield (0, docker_1.runContainers)(actionCfg, contextConfig);
+                    if ((0, core_1.isDebug)())
+                        (0, debug_1.debugDirectoryStructure)();
+                }
+                else {
+                    (0, core_1.info)('Skipping piper context config for v2 step (using engine)');
+                }
                 (0, core_1.startGroup)(actionCfg.stepName);
                 let result;
-                if ((0, engine_1.isV2Step)(actionCfg.stepName) && exports.internalActionVariables.engineBinPath !== '') {
+                if (useEngine) {
                     (0, core_1.info)('Executing v2 step via engine');
                     result = yield (0, engine_1.executeEngine)(exports.internalActionVariables.engineBinPath, actionCfg.stepName, flags);
                 }
