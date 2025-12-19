@@ -4,7 +4,7 @@ import { existsSync, readdirSync, statSync } from 'fs'
 import { internalActionVariables } from './piper'
 
 export function debugDirectoryStructure (prefix: string): void {
-  startGroup(`=== ${prefix}: directory Structure ===`)
+  startGroup(`=== ${prefix}: directory structure ===`)
   info(`Current working directory: ${process.cwd()}`)
   info(`Original working directory: ${internalActionVariables.originalCwd}`)
 

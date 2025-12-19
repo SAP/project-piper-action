@@ -16136,7 +16136,7 @@ const path_1 = __importDefault(__nccwpck_require__(1017));
 const fs_1 = __nccwpck_require__(7147);
 const piper_1 = __nccwpck_require__(309);
 function debugDirectoryStructure(prefix) {
-    (0, core_1.startGroup)(`=== ${prefix}: directory Structure ===`);
+    (0, core_1.startGroup)(`=== ${prefix}: directory structure ===`);
     (0, core_1.info)(`Current working directory: ${process.cwd()}`);
     (0, core_1.info)(`Original working directory: ${piper_1.internalActionVariables.originalCwd}`);
     (0, core_1.info)('\n.pipeline directory:');
