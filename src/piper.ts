@@ -86,7 +86,7 @@ export async function run (): Promise<void> {
 
       await runContainers(actionCfg, contextConfig)
 
-      if (isDebug()) debugDirectoryStructure("Before step execution")
+      if (isDebug()) debugDirectoryStructure('Before step execution')
 
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
@@ -95,7 +95,7 @@ export async function run (): Promise<void> {
       }
       endGroup()
 
-      if (isDebug()) debugDirectoryStructure("After step execution")
+      if (isDebug()) debugDirectoryStructure('After step execution')
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)

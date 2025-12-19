@@ -17025,7 +17025,7 @@ function run() {
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 if ((0, core_1.isDebug)())
-                    (0, debug_1.debugDirectoryStructure)("Before step execution");
+                    (0, debug_1.debugDirectoryStructure)('Before step execution');
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
@@ -17033,7 +17033,7 @@ function run() {
                 }
                 (0, core_1.endGroup)();
                 if ((0, core_1.isDebug)())
-                    (0, debug_1.debugDirectoryStructure)("After step execution");
+                    (0, debug_1.debugDirectoryStructure)('After step execution');
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
