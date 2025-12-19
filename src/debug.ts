@@ -1,10 +1,10 @@
-import { debug, info } from '@actions/core'
+import { startGroup, endGroup, debug, info } from '@actions/core'
 import path from 'path'
 import { existsSync, readdirSync, statSync } from 'fs'
 import { internalActionVariables } from './piper'
 
-export function debugDirectoryStructure (): void {
-  info('\n=== Directory Structure ===')
+export function debugDirectoryStructure (prefix: string): void {
+  startGroup(`=== ${prefix}: directory Structure ===`)
   info(`Current working directory: ${process.cwd()}`)
   info(`Original working directory: ${internalActionVariables.originalCwd}`)
 
@@ -24,7 +24,7 @@ export function debugDirectoryStructure (): void {
     info('  (does not exist)')
   }
 
-  info('=== End Directory Structure ===\n')
+  endGroup()
 }
 
 // Debug logging functions

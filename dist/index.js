@@ -16135,8 +16135,8 @@ const core_1 = __nccwpck_require__(2186);
 const path_1 = __importDefault(__nccwpck_require__(1017));
 const fs_1 = __nccwpck_require__(7147);
 const piper_1 = __nccwpck_require__(309);
-function debugDirectoryStructure() {
-    (0, core_1.info)('\n=== Directory Structure ===');
+function debugDirectoryStructure(prefix) {
+    (0, core_1.startGroup)(`=== ${prefix}: directory Structure ===`);
     (0, core_1.info)(`Current working directory: ${process.cwd()}`);
     (0, core_1.info)(`Original working directory: ${piper_1.internalActionVariables.originalCwd}`);
     (0, core_1.info)('\n.pipeline directory:');
@@ -16155,7 +16155,7 @@ function debugDirectoryStructure() {
     else {
         (0, core_1.info)('  (does not exist)');
     }
-    (0, core_1.info)('=== End Directory Structure ===\n');
+    (0, core_1.endGroup)();
 }
 exports.debugDirectoryStructure = debugDirectoryStructure;
 // Debug logging functions
@@ -17025,7 +17025,7 @@ function run() {
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
                 if ((0, core_1.isDebug)())
-                    (0, debug_1.debugDirectoryStructure)();
+                    (0, debug_1.debugDirectoryStructure)("Before step execution");
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
@@ -17033,7 +17033,7 @@ function run() {
                 }
                 (0, core_1.endGroup)();
                 if ((0, core_1.isDebug)())
-                    (0, debug_1.debugDirectoryStructure)();
+                    (0, debug_1.debugDirectoryStructure)("After step execution");
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
