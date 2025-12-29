@@ -15887,7 +15887,8 @@ function getActionConfig(options) {
             customDefaultsPaths: getValue('custom-defaults-paths'),
             customStageConditionsPath: getValue('custom-stage-conditions-path'),
             createCheckIfStepActiveMaps: getValue('create-check-if-step-active-maps') === 'true',
-            exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true'
+            exportPipelineEnvironment: getValue('export-pipeline-environment') === 'true',
+            workingDir: getValue('working-dir', '.')
         };
     });
 }
@@ -15907,10 +15908,9 @@ function getDefaultConfig(server, apiURL, version, token, owner, repository, cus
             (0, core_1.info)('Defaults restored from artifact');
         }
         catch (err) {
-            // throws an error with message containing 'Unable to find' if artifact does not exist
-            if (err instanceof Error && !err.message.includes('Unable to find'))
+            // Ignore errors with messages containing 'Unable to find' or with 404 error code. Throw an error for all other cases.
+            if (err instanceof Error && !(err.message.includes('Unable to find') || err.message.includes('404')))
                 throw err;
-            // continue with downloading defaults and upload as artifact
             (0, core_1.info)('Downloading defaults');
             yield downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths);
         }
@@ -16121,6 +16121,75 @@ exports.readContextConfig = readContextConfig;
 
 /***/ }),
 
+/***/ 1417:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.debugDirectoryStructure = void 0;
+const core_1 = __nccwpck_require__(2186);
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const fs_1 = __nccwpck_require__(7147);
+const piper_1 = __nccwpck_require__(309);
+function debugDirectoryStructure(prefix) {
+    (0, core_1.startGroup)(`=== ${prefix}: directory structure ===`);
+    (0, core_1.info)(`Current working directory: ${process.cwd()}`);
+    (0, core_1.info)(`Original working directory: ${piper_1.internalActionVariables.originalCwd}`);
+    (0, core_1.info)('\n.pipeline directory:');
+    const pipelineDir = path_1.default.join(process.cwd(), '.pipeline');
+    if ((0, fs_1.existsSync)(pipelineDir)) {
+        printDirectoryTree(pipelineDir, '', 2, 0);
+    }
+    else {
+        (0, core_1.info)('  (does not exist)');
+    }
+    (0, core_1.info)('\n.pipeline/commonPipelineEnvironment files:');
+    const cpeDir = path_1.default.join(process.cwd(), '.pipeline', 'commonPipelineEnvironment');
+    if ((0, fs_1.existsSync)(cpeDir)) {
+        printDirectoryTree(cpeDir, '', 3, 0);
+    }
+    else {
+        (0, core_1.info)('  (does not exist)');
+    }
+    (0, core_1.endGroup)();
+}
+exports.debugDirectoryStructure = debugDirectoryStructure;
+// Debug logging functions
+function printDirectoryTree(dirPath, prefix = '', maxDepth = 2, currentDepth = 0) {
+    if (currentDepth >= maxDepth)
+        return;
+    try {
+        const items = (0, fs_1.readdirSync)(dirPath);
+        items.forEach((item, index) => {
+            const itemPath = path_1.default.join(dirPath, item);
+            const isLast = index === items.length - 1;
+            const connector = isLast ? '└── ' : '├── ';
+            try {
+                const stats = (0, fs_1.statSync)(itemPath);
+                const itemType = stats.isDirectory() ? '📁' : '📄';
+                (0, core_1.info)(`${prefix}${connector}${itemType} ${item}`);
+                if (stats.isDirectory() && !item.startsWith('.git') && item !== 'node_modules') {
+                    const newPrefix = prefix + (isLast ? '    ' : '│   ');
+                    printDirectoryTree(itemPath, newPrefix, maxDepth, currentDepth + 1);
+                }
+            }
+            catch (err) {
+                (0, core_1.debug)(`Cannot access ${itemPath}`);
+            }
+        });
+    }
+    catch (error) {
+        (0, core_1.debug)(`Cannot read directory ${dirPath}`);
+    }
+}
+
+
+/***/ }),
+
 /***/ 6512:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -16162,9 +16231,17 @@ function startContainer(actionCfg, ctxConfig) {
             return;
         const piperPath = piper_1.internalActionVariables.piperBinPath;
         const containerID = (0, uuid_1.v4)();
-        const cwd = process.cwd();
+        // Since we already changed to the working directory with process.chdir(),
+        // process.cwd() now returns the correct directory (e.g., /repo/backend)
+        const workingDir = process.cwd();
+        // We need the repository root for volume mounting
+        const repoRoot = piper_1.internalActionVariables.originalCwd !== ''
+            ? piper_1.internalActionVariables.originalCwd
+            : workingDir;
         piper_1.internalActionVariables.dockerContainerID = containerID;
         (0, core_1.info)(`Starting image ${dockerImage} as container ${containerID}`);
+        (0, core_1.debug)(`Repository root: ${repoRoot}`);
+        (0, core_1.debug)(`Docker working directory: ${workingDir}`);
         let dockerOptionsArray = [];
         const dockerOptions = actionCfg.dockerOptions !== '' ? actionCfg.dockerOptions : ctxConfig.dockerOptions;
         if (dockerOptions !== undefined) {
@@ -16178,9 +16255,9 @@ function startContainer(actionCfg, ctxConfig) {
             '--detach',
             '--rm',
             '--user', '1000:1000',
-            '--volume', `${cwd}:${cwd}`,
+            '--volume', `${repoRoot}:${repoRoot}`,
             '--volume', `${(0, path_1.dirname)(piperPath)}:/piper`,
-            '--workdir', cwd,
+            '--workdir', workingDir,
             ...dockerOptionsArray,
             '--name', containerID
         ];
@@ -16211,7 +16288,7 @@ function stopContainer(containerID) {
             (0, core_1.debug)('no container to stop');
             return;
         }
-        yield dockerExecReadOutput(['stop', '--timeout=1', containerID]);
+        yield dockerExecReadOutput(['stop', '--time=1', containerID]);
     });
 }
 exports.stopContainer = stopContainer;
@@ -16268,7 +16345,10 @@ function getSystemTrustEnvVars() {
 exports.getSystemTrustEnvVars = getSystemTrustEnvVars;
 function getTelemetryEnvVars() {
     return [
-        '--env', 'PIPER_PIPELINE_TEMPLATE_NAME'
+        '--env', 'PIPER_ACTION_VERSION',
+        '--env', 'PIPER_PIPELINE_VERSION',
+        '--env', 'PIPER_PIPELINE_TEMPLATE_NAME',
+        '--env', 'PIPER_PIPELINE_STAGE_TEMPLATE_NAME'
     ];
 }
 exports.getTelemetryEnvVars = getTelemetryEnvVars;
@@ -16357,9 +16437,9 @@ const tool_cache_1 = __nccwpck_require__(7784);
 const enterprise_1 = __nccwpck_require__(4340);
 const github_1 = __nccwpck_require__(978);
 const fetch_1 = __nccwpck_require__(7560);
-function downloadPiperBinary(stepName, version, apiURL, token, owner, repo) {
+function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName);
+        const isEnterprise = (0, enterprise_1.isEnterpriseStep)(stepName, flags);
         if (isEnterprise && token === '')
             throw new Error('Token is not provided for enterprise step');
         if (owner === '')
@@ -16445,10 +16525,17 @@ exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
-function isEnterpriseStep(stepName) {
+function isEnterpriseStep(stepName, flags = '') {
     if (stepName === '') {
         // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
         return false;
+    }
+    if (stepName === 'getConfig') {
+        // in this case getConfig could be used to get enterprise step config
+        if (flags.includes(`--stepName ${ENTERPRISE_STEPNAME_PREFIX}`) ||
+            flags.includes(`--stepName=${ENTERPRISE_STEPNAME_PREFIX}`)) {
+            return true;
+        }
     }
     return stepName.startsWith(ENTERPRISE_STEPNAME_PREFIX);
 }
@@ -16514,7 +16601,9 @@ const path_1 = __importDefault(__nccwpck_require__(1017));
 const piper_1 = __nccwpck_require__(309);
 const core_1 = __nccwpck_require__(2186);
 function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
+        process.env.PIPER_ACTION_VERSION = (_a = process.env.GITHUB_ACTION_REF) !== null && _a !== void 0 ? _a : 'n/a';
         if (process.env.GITHUB_JOB !== undefined)
             flags.push('--stageName', process.env.GITHUB_JOB);
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
@@ -16813,9 +16902,17 @@ exports.exportPipelineEnv = exports.loadPipelineEnv = void 0;
 const fs_1 = __nccwpck_require__(7147);
 const core_1 = __nccwpck_require__(2186);
 const execute_1 = __nccwpck_require__(5938);
+const piper_1 = __nccwpck_require__(309);
 function loadPipelineEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        if ((0, fs_1.existsSync)('.pipeline/commonPipelineEnvironment') || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+        // When running from subdirectory, CPE is in root .pipeline, not subdirectory .pipeline
+        const workingDir = piper_1.internalActionVariables.workingDir;
+        const isSubdirectory = workingDir !== '.' && workingDir !== '';
+        const pipelineEnvPath = isSubdirectory
+            ? '../.pipeline/commonPipelineEnvironment'
+            : '.pipeline/commonPipelineEnvironment';
+        if ((0, fs_1.existsSync)(pipelineEnvPath) || process.env.PIPER_ACTION_PIPELINE_ENV === undefined) {
+            (0, core_1.debug)(`Pipeline environment check: path=${pipelineEnvPath}, exists=${(0, fs_1.existsSync)(pipelineEnvPath)}`);
             return;
         }
         (0, core_1.debug)('Loading pipeline environment...');
@@ -16877,12 +16974,17 @@ const enterprise_1 = __nccwpck_require__(4340);
 const utils_1 = __nccwpck_require__(1314);
 const build_1 = __nccwpck_require__(6793);
 const download_1 = __nccwpck_require__(6232);
+const debug_1 = __nccwpck_require__(1417);
 // Global runtime variables that is accessible within a single action execution
 exports.internalActionVariables = {
     piperBinPath: '',
     dockerContainerID: '',
     sidecarNetworkID: '',
-    sidecarContainerID: ''
+    sidecarContainerID: '',
+    workingDir: '.',
+    gitSymlinkCreated: false,
+    pipelineSymlinkCreated: false,
+    originalCwd: ''
 };
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -16891,6 +16993,13 @@ function run() {
             (0, core_1.info)('Getting action configuration');
             const actionCfg = yield (0, config_1.getActionConfig)({ required: false });
             (0, core_1.debug)(`Action configuration: ${JSON.stringify(actionCfg)}`);
+            // Set up symlinks BEFORE changing directory
+            (0, core_1.info)('Setting working directory');
+            exports.internalActionVariables.workingDir = actionCfg.workingDir;
+            (0, core_1.info)('Setting up symlinks for subdirectory (git and pipeline)');
+            (0, utils_1.setupMonorepoSymlinks)(actionCfg.workingDir);
+            // Change to working directory after symlinks are created
+            (0, utils_1.changeToWorkingDirectory)(actionCfg.workingDir);
             (0, core_1.info)('Preparing Piper binary');
             yield preparePiperBinary(actionCfg);
             (0, core_1.info)('Loading pipeline environment');
@@ -16915,12 +17024,16 @@ function run() {
                 const contextConfig = yield (0, config_1.readContextConfig)(actionCfg.stepName, flags);
                 (0, core_1.endGroup)();
                 yield (0, docker_1.runContainers)(actionCfg, contextConfig);
+                if ((0, core_1.isDebug)())
+                    (0, debug_1.debugDirectoryStructure)('Before step execution');
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
                     throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
                 }
                 (0, core_1.endGroup)();
+                if ((0, core_1.isDebug)())
+                    (0, debug_1.debugDirectoryStructure)('After step execution');
             }
             yield (0, pipelineEnv_1.exportPipelineEnv)(actionCfg.exportPipelineEnvironment);
         }
@@ -16929,6 +17042,8 @@ function run() {
         }
         finally {
             yield (0, docker_1.cleanupContainers)();
+            (0, utils_1.restoreOriginalDirectory)();
+            (0, utils_1.cleanupMonorepoSymlinks)();
         }
     });
 }
@@ -16947,15 +17062,27 @@ function preparePiperBinary(actionCfg) {
 function preparePiperPath(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
-        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName)) {
+        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
             (0, core_1.info)('Preparing Piper binary for enterprise step');
+            // Check for pre-built SAP Piper binary from composite action
+            const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH;
+            if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
+                (0, core_1.info)(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`);
+                return prebuiltSapPiperPath;
+            }
             // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
             if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
                 (0, core_1.info)('Building Piper from inner source');
                 return yield (0, build_1.buildPiperInnerSource)(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken);
             }
             (0, core_1.info)('Downloading Piper Inner source binary');
-            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        }
+        // Check for pre-built OS Piper binary from composite action
+        const prebuiltPiperPath = process.env.PIPER_BINARY_PATH;
+        if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
+            (0, core_1.info)(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`);
+            return prebuiltPiperPath;
         }
         // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
         if (actionCfg.piperVersion.startsWith('devel:')) {
@@ -16963,7 +17090,7 @@ function preparePiperPath(actionCfg) {
             return yield (0, github_1.buildPiperFromSource)(actionCfg.piperVersion);
         }
         (0, core_1.info)('Downloading Piper OS binary');
-        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }
 
@@ -17077,14 +17204,21 @@ exports.parseDockerEnvVars = parseDockerEnvVars;
 /***/ }),
 
 /***/ 1314:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.tokenize = void 0;
+exports.cleanupMonorepoSymlinks = exports.setupMonorepoSymlinks = exports.restoreOriginalDirectory = exports.changeToWorkingDirectory = exports.tokenize = void 0;
 // tokenize functions splits a string of CLI flags by whitespace, additionally handling double-quoted
 // and space separated string values
+const core_1 = __nccwpck_require__(2186);
+const path_1 = __importDefault(__nccwpck_require__(1017));
+const fs_1 = __nccwpck_require__(7147);
+const piper_1 = __nccwpck_require__(309);
 function tokenize(input) {
     // This regular expression looks for:
     // 1. Sequences inside double quotes which may contain spaces (captured including the quotes)
@@ -17103,6 +17237,123 @@ function tokenize(input) {
     });
 }
 exports.tokenize = tokenize;
+// workingDir - The working directory from action configuration (e.g., 'backend')
+function changeToWorkingDirectory(workingDir) {
+    // Only change directory if running from a subdirectory
+    const isSubdirectory = workingDir !== '.' && workingDir !== '';
+    if (!isSubdirectory) {
+        (0, core_1.debug)('Running from root directory, no directory change needed');
+        piper_1.internalActionVariables.originalCwd = process.cwd();
+        return;
+    }
+    try {
+        const originalCwd = process.cwd();
+        const targetDir = path_1.default.join(originalCwd, workingDir);
+        piper_1.internalActionVariables.originalCwd = originalCwd;
+        (0, core_1.info)(`Changing directory from ${originalCwd} to ${targetDir}`);
+        // Verify target directory exists
+        if (!(0, fs_1.existsSync)(targetDir)) {
+            throw new Error(`Working directory does not exist: ${targetDir}`);
+        }
+        // Change Node.js working directory
+        process.chdir(targetDir);
+        (0, core_1.info)(`Successfully changed to working directory: ${process.cwd()}`);
+        (0, core_1.debug)(`Original directory stored: ${originalCwd}`);
+    }
+    catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed to change to working directory '${workingDir}': ${errorMsg}`);
+    }
+}
+exports.changeToWorkingDirectory = changeToWorkingDirectory;
+function restoreOriginalDirectory() {
+    if (piper_1.internalActionVariables.originalCwd === '' || piper_1.internalActionVariables.originalCwd === process.cwd()) {
+        return;
+    }
+    try {
+        (0, core_1.info)(`Restoring original directory: ${piper_1.internalActionVariables.originalCwd}`);
+        process.chdir(piper_1.internalActionVariables.originalCwd);
+        (0, core_1.debug)('Directory restored successfully');
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to restore original directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+exports.restoreOriginalDirectory = restoreOriginalDirectory;
+// IMPORTANT: Must be called BEFORE changeToWorkingDirectory() so symlinks are created
+function setupMonorepoSymlinks(workingDir) {
+    // Only create symlinks if running from a subdirectory
+    const isSubdirectory = workingDir !== '.' && workingDir !== '';
+    if (!isSubdirectory) {
+        (0, core_1.debug)('Running from root directory, no symlinks needed');
+        return;
+    }
+    const repoRoot = process.cwd();
+    const subdirPath = path_1.default.join(repoRoot, workingDir);
+    (0, core_1.debug)(`Repository root: ${repoRoot}`);
+    (0, core_1.debug)(`Subdirectory path: ${subdirPath}`);
+    const gitSymlinkPath = path_1.default.join(subdirPath, '.git');
+    const parentGitPath = path_1.default.join(repoRoot, '.git');
+    try {
+        if ((0, fs_1.existsSync)(gitSymlinkPath)) {
+            const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
+            if (stats.isSymbolicLink()) {
+                (0, core_1.debug)('.git symlink already exists');
+            }
+            else {
+                (0, core_1.debug)('.git directory already exists (not a symlink)');
+            }
+        }
+        else if (!(0, fs_1.existsSync)(parentGitPath)) {
+            (0, core_1.warning)(`Parent .git directory not found at ${parentGitPath}`);
+        }
+        else {
+            // Determine if parent .git is a file or directory
+            const symlinkType = (0, fs_1.lstatSync)(parentGitPath).isDirectory() ? 'dir' : 'file';
+            // Use relative path for symlink target
+            const relativeParentGitPath = path_1.default.relative(subdirPath, parentGitPath);
+            (0, core_1.info)(`Creating .git symlink: ${subdirPath}/.git -> ${relativeParentGitPath}`);
+            (0, fs_1.symlinkSync)(relativeParentGitPath, gitSymlinkPath, symlinkType);
+            piper_1.internalActionVariables.gitSymlinkCreated = true;
+            (0, core_1.debug)('.git symlink created successfully');
+        }
+    }
+    catch (error) {
+        (0, core_1.warning)(`Failed to create .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+exports.setupMonorepoSymlinks = setupMonorepoSymlinks;
+// Removes the symlinks created by setupMonorepoSymlinks().
+// Called in the finally block to ensure cleanup even if the action fails.
+// Must be called AFTER restoreOriginalDirectory() to access the symlinks.
+function cleanupMonorepoSymlinks() {
+    const workingDir = piper_1.internalActionVariables.workingDir;
+    const originalCwd = piper_1.internalActionVariables.originalCwd;
+    if (workingDir === '.' || workingDir === '') {
+        return;
+    }
+    const repoRoot = originalCwd !== '' ? originalCwd : process.cwd();
+    const subdirPath = path_1.default.join(repoRoot, workingDir);
+    // Remove .git symlink
+    if (piper_1.internalActionVariables.gitSymlinkCreated) {
+        try {
+            const gitSymlinkPath = path_1.default.join(subdirPath, '.git');
+            if ((0, fs_1.existsSync)(gitSymlinkPath)) {
+                const stats = (0, fs_1.lstatSync)(gitSymlinkPath);
+                if (stats.isSymbolicLink()) {
+                    (0, core_1.info)(`Removing .git symlink: ${gitSymlinkPath}`);
+                    (0, fs_1.unlinkSync)(gitSymlinkPath);
+                    (0, core_1.debug)('.git symlink removed successfully');
+                }
+            }
+            piper_1.internalActionVariables.gitSymlinkCreated = false;
+        }
+        catch (error) {
+            (0, core_1.warning)(`Failed to remove .git symlink: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+}
+exports.cleanupMonorepoSymlinks = cleanupMonorepoSymlinks;
 
 
 /***/ }),

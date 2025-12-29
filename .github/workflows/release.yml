@@ -2,8 +2,6 @@ name: Release Piper Action
 
 on:
   workflow_dispatch:  # trigger release manually
-  schedule:
-    - cron: '0 9 * * 1'  # at 9 am every Monday
 
 jobs:
   check_if_should_run:
@@ -46,6 +44,10 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      major_tag: ${{ steps.update_tags.outputs.major }}
+      minor_tag: ${{ steps.update_tags.outputs.minor }}
+      patch_tag: ${{ steps.update_tags.outputs.patch }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,15 +60,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update/create dynamic tags
+        id: update_tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           .github/scripts/update_dynamic_tags.sh "${{ steps.publish_release.outputs.tag_name }}"
 
+  trigger-mirror:
+    name: Trigger tag mirroring
+    needs: release
+    strategy:
+      matrix:
+        released-tag: ["${{ needs.release.outputs.major_tag }}", "${{ needs.release.outputs.minor_tag }}", "${{ needs.release.outputs.patch_tag }}"]
+    uses: ./.github/workflows/mirror.yml
+    with:
+      released-tag: ${{ matrix.released-tag }}
+    secrets: inherit
+
   post:
     name: Post Action
     runs-on: ubuntu-latest
-    needs: [release]
+    needs: trigger-mirror
     if: always()
     steps:
       # Check status of the worklfow

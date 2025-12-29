@@ -9,6 +9,7 @@ import * as github from '../src/github'
 import * as download from '../src/download'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
+import * as utils from '../src/utils'
 import { GITHUB_COM_API_URL } from '../src/github'
 import { internalActionVariables } from '../src/piper'
 
@@ -38,7 +39,8 @@ describe('Piper', () => {
       'custom-defaults-paths': '',
       'custom-stage-conditions-path': '',
       'create-check-if-step-active-maps': '',
-      'export-pipeline-environment': ''
+      'export-pipeline-environment': '',
+      'working-dir': '.'
     }
 
     fs.chmodSync = jest.fn()
@@ -52,6 +54,11 @@ describe('Piper', () => {
     jest.spyOn(docker, 'cleanupContainers').mockImplementation()
     jest.spyOn(pipelineEnv, 'loadPipelineEnv').mockImplementation()
     jest.spyOn(pipelineEnv, 'exportPipelineEnv').mockImplementation()
+    jest.spyOn(utils, 'setupMonorepoSymlinks').mockImplementation()
+    jest.spyOn(utils, 'changeToWorkingDirectory').mockImplementation()
+    // jest.spyOn(utils, 'ensurePipelineSymlinksAfterLoad').mockImplementation()
+    jest.spyOn(utils, 'restoreOriginalDirectory').mockImplementation()
+    jest.spyOn(utils, 'cleanupMonorepoSymlinks').mockImplementation()
     jest.spyOn(core, 'setFailed').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
@@ -62,7 +69,7 @@ describe('Piper', () => {
         }
       }
 
-      return val.trim()
+      return val !== undefined ? val.trim() : ''
     })
   })
 
@@ -91,6 +98,7 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
+      '',
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -123,11 +131,38 @@ describe('Piper', () => {
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
+      '',
       inputs['piper-version'],
       GITHUB_COM_API_URL,
       inputs['github-token'],
       inputs['piper-owner'],
       inputs['piper-repository']
+    )
+    expect(docker.cleanupContainers).toHaveBeenCalled()
+  })
+
+  test('getConfig command to get enterprise step config', async () => {
+    inputs['step-name'] = 'getConfig'
+    inputs.flags = '--stepName sapGenerateEnvironmentInfo'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    inputs['create-check-if-step-active-maps'] = 'true'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
+
+    await piper.run()
+
+    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
+      inputs['step-name'],
+      inputs.flags,
+      inputs['sap-piper-version'],
+      'https://api.githubenterprise.test.com/',
+      inputs['github-enterprise-token'],
+      inputs['sap-piper-owner'],
+      inputs['sap-piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })

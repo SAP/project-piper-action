@@ -83,3 +83,8 @@ for t in "$MAJOR_TAG" "$MINOR_TAG" "$NEW_TAG"; do
     sha=$(echo "$resp" | jq -r '.object.sha')
     echo "   $t -> $sha"
 done
+
+# Output tags for the next steps
+echo "major=$MAJOR_TAG" >> $GITHUB_OUTPUT
+echo "minor=$MINOR_TAG" >> $GITHUB_OUTPUT
+echo "patch=$NEW_TAG" >> $GITHUB_OUTPUT

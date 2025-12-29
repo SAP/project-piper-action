@@ -1,4 +1,4 @@
-import { debug, setFailed, info, startGroup, endGroup } from '@actions/core'
+import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
 import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
@@ -12,16 +12,24 @@ import {
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
 import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
-import { tokenize } from './utils'
+import {
+  changeToWorkingDirectory, cleanupMonorepoSymlinks,
+  restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
+} from './utils'
 import { buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
+import { debugDirectoryStructure } from './debug'
 
 // Global runtime variables that is accessible within a single action execution
 export const internalActionVariables = {
   piperBinPath: '',
   dockerContainerID: '',
   sidecarNetworkID: '',
-  sidecarContainerID: ''
+  sidecarContainerID: '',
+  workingDir: '.',
+  gitSymlinkCreated: false,
+  pipelineSymlinkCreated: false,
+  originalCwd: ''
 }
 
 export async function run (): Promise<void> {
@@ -30,6 +38,16 @@ export async function run (): Promise<void> {
     info('Getting action configuration')
     const actionCfg: ActionConfiguration = await getActionConfig({ required: false })
     debug(`Action configuration: ${JSON.stringify(actionCfg)}`)
+
+    // Set up symlinks BEFORE changing directory
+    info('Setting working directory')
+    internalActionVariables.workingDir = actionCfg.workingDir
+
+    info('Setting up symlinks for subdirectory (git and pipeline)')
+    setupMonorepoSymlinks(actionCfg.workingDir)
+
+    // Change to working directory after symlinks are created
+    changeToWorkingDirectory(actionCfg.workingDir)
 
     info('Preparing Piper binary')
     await preparePiperBinary(actionCfg)
@@ -68,12 +86,16 @@ export async function run (): Promise<void> {
 
       await runContainers(actionCfg, contextConfig)
 
+      if (isDebug()) debugDirectoryStructure('Before step execution')
+
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
+
+      if (isDebug()) debugDirectoryStructure('After step execution')
     }
 
     await exportPipelineEnv(actionCfg.exportPipelineEnvironment)
@@ -81,6 +103,8 @@ export async function run (): Promise<void> {
     setFailed(error instanceof Error ? error.message : String(error))
   } finally {
     await cleanupContainers()
+    restoreOriginalDirectory()
+    cleanupMonorepoSymlinks()
   }
 }
 
@@ -99,21 +123,37 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
-  if (isEnterpriseStep(actionCfg.stepName)) {
+  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
     info('Preparing Piper binary for enterprise step')
+
+    // Check for pre-built SAP Piper binary from composite action
+    const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH
+    if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
+      info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
+      return prebuiltSapPiperPath
+    }
+
     // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
     if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
       info('Building Piper from inner source')
       return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
     }
     info('Downloading Piper Inner source binary')
-    return await downloadPiperBinary(actionCfg.stepName, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+    return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
+
+  // Check for pre-built OS Piper binary from composite action
+  const prebuiltPiperPath = process.env.PIPER_BINARY_PATH
+  if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
+    info(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`)
+    return prebuiltPiperPath
+  }
+
   // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
   if (actionCfg.piperVersion.startsWith('devel:')) {
     info('Building OS Piper from source')
     return await buildPiperFromSource(actionCfg.piperVersion)
   }
   info('Downloading Piper OS binary')
-  return await downloadPiperBinary(actionCfg.stepName, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
