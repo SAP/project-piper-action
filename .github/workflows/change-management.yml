@@ -1,10 +1,9 @@
 name: Trigger Change Management
 
 on:
-  workflow_run:
-    workflows: ["Release Piper Action"]
-    types:
-      - completed
+  workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -13,7 +12,6 @@ jobs:
   trigger_change_management:
     name: Trigger Change Management Workflow
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
