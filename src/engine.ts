@@ -6,7 +6,8 @@ export const v2StepsList = new Set<string>([
   'mavenBuild',
   'detectExecuteScan',
   'sonarExecuteScan',
-  'sampleItem'
+  'sampleItem',
+  'artifact-prepare-version'
 ])
 
 export function isV2Step (stepName: string): boolean {

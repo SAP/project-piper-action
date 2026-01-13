@@ -16524,7 +16524,8 @@ exports.v2StepsList = new Set([
     'mavenBuild',
     'detectExecuteScan',
     'sonarExecuteScan',
-    'sampleItem'
+    'sampleItem',
+    'artifact-prepare-version'
 ]);
 function isV2Step(stepName) {
     return exports.v2StepsList.has(stepName);
