@@ -93,4 +93,13 @@ describe('Execute', () => {
     expect(piperFlags).toEqual(expect.arrayContaining(stageNameArg))
     expect(piperExec.exitCode).toBe(0)
   })
+
+  test('should not add stageName if already present', async () => {
+    const stepName = 'version'
+    const piperFlags = ['--stageName', 'customStage']
+
+    await executePiper(stepName, piperFlags)
+    expect(exec.getExecOutput).toHaveBeenCalledWith(piperPath, [stepName, ...piperFlags], expectedOptions)
+    expect(piperFlags).not.toContain(process.env.GITHUB_JOB)
+  })
 })
