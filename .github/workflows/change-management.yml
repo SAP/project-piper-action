@@ -3,7 +3,7 @@ name: Trigger Change Management
 on:
   workflow_dispatch:
   release:
-    types: [published]
+    types: [released]
 
 permissions:
   contents: read
