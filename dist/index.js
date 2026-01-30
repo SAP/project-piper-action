@@ -15880,9 +15880,11 @@ function getActionConfig(options) {
             dockerImage: getValue('docker-image'),
             dockerOptions: getValue('docker-options'),
             dockerEnvVars: getValue('docker-env-vars'),
+            dockerEnvInherit: getValue('docker-env-inherit'),
             sidecarImage: getValue('sidecar-image'),
             sidecarOptions: getValue('sidecar-options'),
             sidecarEnvVars: getValue('sidecar-env-vars'),
+            sidecarEnvInherit: getValue('sidecar-env-inherit'),
             retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
             customDefaultsPaths: getValue('custom-defaults-paths'),
             customStageConditionsPath: getValue('custom-stage-conditions-path'),
@@ -16205,7 +16207,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.dockerExecReadOutput = exports.getDockerImageFromEnvVar = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
+exports.dockerExecReadOutput = exports.parseDockerEnvInherit = exports.getDockerImageFromEnvVar = exports.getTelemetryEnvVars = exports.getSystemTrustEnvVars = exports.getProxyEnvVars = exports.getVaultEnvVars = exports.getOrchestratorEnvVars = exports.stopContainer = exports.cleanupContainers = exports.startContainer = exports.runContainers = void 0;
 const path_1 = __nccwpck_require__(1017);
 const core_1 = __nccwpck_require__(2186);
 const exec_1 = __nccwpck_require__(1514);
@@ -16269,7 +16271,7 @@ function startContainer(actionCfg, ctxConfig) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(dockerImage), dockerImage, 'cat');
+        dockerRunArgs.push(...(0, sidecar_1.parseDockerEnvVars)(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars), ...parseDockerEnvInherit(actionCfg.dockerEnvInherit !== '' ? actionCfg.dockerEnvInherit : ctxConfig.dockerEnvInherit), ...getProxyEnvVars(), ...getOrchestratorEnvVars(), ...getVaultEnvVars(), ...getSystemTrustEnvVars(), ...getTelemetryEnvVars(), ...getDockerImageFromEnvVar(dockerImage), dockerImage, 'cat');
         yield dockerExecReadOutput(dockerRunArgs);
     });
 }
@@ -16308,6 +16310,8 @@ function getOrchestratorEnvVars() {
         '--env', 'GITHUB_REPOSITORY',
         '--env', 'GITHUB_SHA',
         '--env', 'GITHUB_WORKFLOW_REF',
+        // Workspace (needed for copying artifacts from container builds)
+        '--env', 'GITHUB_WORKSPACE',
         // Pull Request Info (needed for sonarExecuteScan)
         '--env', 'GITHUB_HEAD_REF',
         '--env', 'GITHUB_BASE_REF',
@@ -16358,6 +16362,38 @@ function getDockerImageFromEnvVar(dockerImage) {
     ];
 }
 exports.getDockerImageFromEnvVar = getDockerImageFromEnvVar;
+/**
+ * Parse docker-env-inherit input to inherit environment variables from runner.
+ * Accepts comma-separated list of env var names or an array (from config.yml).
+ * Example inputs:
+ *   - "MY_VAR,ANOTHER_VAR" (comma-separated string)
+ *   - ["MY_VAR", "ANOTHER_VAR"] (array from config.yml)
+ * @param envInherit - The env-inherit input value (from action input or context config)
+ * @returns Array of --env arguments for docker run
+ */
+function parseDockerEnvInherit(envInherit) {
+    if (envInherit === undefined || envInherit === '') {
+        return [];
+    }
+    const result = [];
+    let envVarNames = [];
+    if (Array.isArray(envInherit)) {
+        // Already an array from context config (config.yml)
+        envVarNames = envInherit;
+    }
+    else if (typeof envInherit === 'string') {
+        // Parse as comma-separated list
+        envVarNames = envInherit.split(',').map(name => name.trim()).filter(name => name !== '');
+    }
+    // Generate --env arguments for each variable name (inherits value from host)
+    for (const name of envVarNames) {
+        if (typeof name === 'string' && name.trim() !== '') {
+            result.push('--env', name.trim());
+        }
+    }
+    return result;
+}
+exports.parseDockerEnvInherit = parseDockerEnvInherit;
 function dockerExecReadOutput(dockerRunArgs) {
     return __awaiter(this, void 0, void 0, function* () {
         let dockerOutput = '';
@@ -17148,7 +17184,7 @@ function startSidecar(actionCfg, ctxConfig, sidecarImage) {
                 dockerRunArgs.push('--network-alias', networkAlias);
             }
         }
-        dockerRunArgs.push(...parseDockerEnvVars(actionCfg.sidecarEnvVars, ctxConfig.sidecarEnvVars), ...(0, docker_1.getProxyEnvVars)(), ...(0, docker_1.getOrchestratorEnvVars)(), ...(0, docker_1.getVaultEnvVars)(), sidecarImage);
+        dockerRunArgs.push(...parseDockerEnvVars(actionCfg.sidecarEnvVars, ctxConfig.sidecarEnvVars), ...(0, docker_1.parseDockerEnvInherit)(actionCfg.sidecarEnvInherit !== '' ? actionCfg.sidecarEnvInherit : ctxConfig.sidecarEnvInherit), ...(0, docker_1.getProxyEnvVars)(), ...(0, docker_1.getOrchestratorEnvVars)(), ...(0, docker_1.getVaultEnvVars)(), sidecarImage);
         yield (0, exec_1.exec)('docker', dockerRunArgs);
     });
 }

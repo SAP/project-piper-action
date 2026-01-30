@@ -43,9 +43,11 @@ export interface ActionConfiguration {
   dockerImage: string
   dockerOptions: string
   dockerEnvVars: string
+  dockerEnvInherit: string
   sidecarImage: string
   sidecarOptions: string
   sidecarEnvVars: string
+  sidecarEnvInherit: string
   retrieveDefaultConfig: boolean
   customDefaultsPaths: string
   customStageConditionsPath: string
@@ -103,9 +105,11 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
+    dockerEnvInherit: getValue('docker-env-inherit'),
     sidecarImage: getValue('sidecar-image'),
     sidecarOptions: getValue('sidecar-options'),
     sidecarEnvVars: getValue('sidecar-env-vars'),
+    sidecarEnvInherit: getValue('sidecar-env-inherit'),
     retrieveDefaultConfig: getValue('retrieve-default-config') === 'true',
     customDefaultsPaths: getValue('custom-defaults-paths'),
     customStageConditionsPath: getValue('custom-stage-conditions-path'),

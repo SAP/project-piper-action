@@ -53,6 +53,12 @@ inputs:
   sidecar-env-vars:
     description: 'The environment variables to pass to the sidecar container'
     required: false
+  docker-env-inherit:
+    description: 'Environment variable names to inherit from runner to docker container (comma-separated list or array in config.yml)'
+    required: false
+  sidecar-env-inherit:
+    description: 'Environment variable names to inherit from runner to sidecar container (comma-separated list or array in config.yml)'
+    required: false
   custom-defaults-paths:
     description: 'Specify comma-separated custom defaults paths'
     required: false

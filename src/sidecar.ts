@@ -3,7 +3,8 @@ import {
   dockerExecReadOutput,
   getOrchestratorEnvVars,
   getProxyEnvVars,
-  getVaultEnvVars
+  getVaultEnvVars,
+  parseDockerEnvInherit
 } from './docker'
 import { v4 as uuidv4 } from 'uuid'
 import { debug, info, warning } from '@actions/core'
@@ -45,6 +46,7 @@ export async function startSidecar (actionCfg: ActionConfiguration, ctxConfig: a
 
   dockerRunArgs.push(
     ...parseDockerEnvVars(actionCfg.sidecarEnvVars, ctxConfig.sidecarEnvVars),
+    ...parseDockerEnvInherit(actionCfg.sidecarEnvInherit !== '' ? actionCfg.sidecarEnvInherit : ctxConfig.sidecarEnvInherit),
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
