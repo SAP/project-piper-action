@@ -1,4 +1,4 @@
-name: Trigger Change Management
+name: Trigger Change Management workflow
 
 on:
   workflow_dispatch:
