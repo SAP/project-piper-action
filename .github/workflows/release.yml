@@ -57,12 +57,12 @@ jobs:
         with:
           publish: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 
       - name: Update/create dynamic tags
         id: update_tags
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           .github/scripts/update_dynamic_tags.sh "${{ steps.publish_release.outputs.tag_name }}"
 
