@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   trigger_change_management:
-    name: Trigger Change Management Workflow
+    name: Trigger Change Management internal Workflow
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
