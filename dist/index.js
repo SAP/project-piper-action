@@ -16604,8 +16604,9 @@ function executePiper(stepName, flags = [], ignoreDefaults = false, execOptions)
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         process.env.PIPER_ACTION_VERSION = (_a = process.env.GITHUB_ACTION_REF) !== null && _a !== void 0 ? _a : 'n/a';
-        if (process.env.GITHUB_JOB !== undefined)
-            flags.push('--stageName', process.env.GITHUB_JOB);
+        if (process.env.GITHUB_JOB !== undefined && !flags.includes('--stageName')) {
+            flags.unshift('--stageName', process.env.GITHUB_JOB);
+        }
         flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
             ? flags.concat(JSON.parse(process.env.defaultsFlags))
             : flags;
