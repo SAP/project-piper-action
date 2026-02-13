@@ -16,7 +16,8 @@ import {
   startContainer,
   stopContainer,
   dockerExecReadOutput,
-  getDockerImageFromEnvVar
+  getDockerImageFromEnvVar,
+  parseDockerEnvInherit
 } from '../src/docker'
 
 jest.mock('@actions/core')
@@ -42,9 +43,11 @@ describe('Docker', () => {
     dockerImage: '',
     dockerOptions: '',
     dockerEnvVars: '',
+    dockerEnvInherit: '',
     sidecarImage: '',
     sidecarOptions: '',
     sidecarEnvVars: '',
+    sidecarEnvInherit: '',
     retrieveDefaultConfig: false,
     customDefaultsPaths: '',
     customStageConditionsPath: '',
@@ -305,5 +308,49 @@ describe('Docker', () => {
     jest.spyOn(exec, 'exec').mockReturnValue(Promise.resolve(1))
 
     await expect(dockerExecReadOutput(dockerArgs)).rejects.toThrow('docker execute failed with exit code')
+  })
+
+  test('getOrchestratorEnvVars includes GITHUB_WORKSPACE', () => {
+    const envVars = getOrchestratorEnvVars()
+    const idx = envVars.indexOf('GITHUB_WORKSPACE')
+    expect(idx).toBeGreaterThan(0)
+    expect(envVars[idx - 1]).toBe('--env')
+  })
+
+  describe('parseDockerEnvInherit', () => {
+    test('returns empty array for undefined input', () => {
+      const result = parseDockerEnvInherit(undefined)
+      expect(result).toEqual([])
+    })
+
+    test('returns empty array for empty string', () => {
+      const result = parseDockerEnvInherit('')
+      expect(result).toEqual([])
+    })
+
+    test('parses comma-separated list', () => {
+      const result = parseDockerEnvInherit('MY_VAR,ANOTHER_VAR')
+      expect(result).toEqual(['--env', 'MY_VAR', '--env', 'ANOTHER_VAR'])
+    })
+
+    test('parses comma-separated list with spaces', () => {
+      const result = parseDockerEnvInherit('MY_VAR, ANOTHER_VAR , THIRD_VAR')
+      expect(result).toEqual(['--env', 'MY_VAR', '--env', 'ANOTHER_VAR', '--env', 'THIRD_VAR'])
+    })
+
+    test('handles array input (from config.yml)', () => {
+      const result = parseDockerEnvInherit(['MY_VAR', 'ANOTHER_VAR'])
+      expect(result).toEqual(['--env', 'MY_VAR', '--env', 'ANOTHER_VAR'])
+    })
+
+    test('handles single value', () => {
+      const result = parseDockerEnvInherit('MY_VAR')
+      expect(result).toEqual(['--env', 'MY_VAR'])
+    })
+
+    test('filters empty values in comma-separated list', () => {
+      const result = parseDockerEnvInherit('MY_VAR,,ANOTHER_VAR,')
+      expect(result).toEqual(['--env', 'MY_VAR', '--env', 'ANOTHER_VAR'])
+    })
   })
 })

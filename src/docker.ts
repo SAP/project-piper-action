@@ -70,6 +70,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
 
   dockerRunArgs.push(
     ...parseDockerEnvVars(actionCfg.dockerEnvVars, ctxConfig.dockerEnvVars),
+    ...parseDockerEnvInherit(actionCfg.dockerEnvInherit !== '' ? actionCfg.dockerEnvInherit : ctxConfig.dockerEnvInherit),
     ...getProxyEnvVars(),
     ...getOrchestratorEnvVars(),
     ...getVaultEnvVars(),
@@ -114,6 +115,8 @@ export function getOrchestratorEnvVars (): string[] {
     '--env', 'GITHUB_REPOSITORY',
     '--env', 'GITHUB_SHA',
     '--env', 'GITHUB_WORKFLOW_REF',
+    // Workspace (needed for copying artifacts from container builds)
+    '--env', 'GITHUB_WORKSPACE',
     // Pull Request Info (needed for sonarExecuteScan)
     '--env', 'GITHUB_HEAD_REF',
     '--env', 'GITHUB_BASE_REF',
@@ -162,6 +165,41 @@ export function getDockerImageFromEnvVar (dockerImage: string): string[] {
   return [
     '--env', `PIPER_dockerImage=${dockerImage}`
   ]
+}
+
+/**
+ * Parse docker-env-inherit input to inherit environment variables from runner.
+ * Accepts comma-separated list of env var names or an array (from config.yml).
+ * Example inputs:
+ *   - "MY_VAR,ANOTHER_VAR" (comma-separated string)
+ *   - ["MY_VAR", "ANOTHER_VAR"] (array from config.yml)
+ * @param envInherit - The env-inherit input value (from action input or context config)
+ * @returns Array of --env arguments for docker run
+ */
+export function parseDockerEnvInherit (envInherit: string | string[] | undefined): string[] {
+  if (envInherit === undefined || envInherit === '') {
+    return []
+  }
+
+  const result: string[] = []
+  let envVarNames: string[] = []
+
+  if (Array.isArray(envInherit)) {
+    // Already an array from context config (config.yml)
+    envVarNames = envInherit
+  } else if (typeof envInherit === 'string') {
+    // Parse as comma-separated list
+    envVarNames = envInherit.split(',').map(name => name.trim()).filter(name => name !== '')
+  }
+
+  // Generate --env arguments for each variable name (inherits value from host)
+  for (const name of envVarNames) {
+    if (typeof name === 'string' && name.trim() !== '') {
+      result.push('--env', name.trim())
+    }
+  }
+
+  return result
 }
 
 export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<string> {
