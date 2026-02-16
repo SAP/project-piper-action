@@ -24,8 +24,6 @@ export interface PrereleaseConfig {
  */
 export function parsePrereleaseVersion (
   version: string,
-  defaultOwner: string,
-  defaultRepository: string,
   defaultApiURL: string,
   defaultServer: string,
   defaultToken: string
@@ -100,7 +98,7 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
   if (version.startsWith('prerelease:')) {
-    const config = parsePrereleaseVersion(version, owner, repository, apiURL, '', token)
+    const config = parsePrereleaseVersion(version, apiURL, '', token)
     owner = config.owner
     repository = config.repository
     version = config.version

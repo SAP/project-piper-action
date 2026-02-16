@@ -165,7 +165,7 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
   if (version.startsWith('prerelease:')) {
-    const config = parsePrereleaseVersion(version, owner, repository, apiURL, server, token)
+    const config = parsePrereleaseVersion(version, apiURL, server, token)
     owner = config.owner
     repository = config.repository
     version = config.version
@@ -263,8 +263,6 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
     const config = parsePrereleaseVersion(
       actionCfg.sapPiperVersion,
-      actionCfg.sapPiperOwner,
-      actionCfg.sapPiperRepo,
       actionCfg.gitHubEnterpriseApi,
       server,
       token

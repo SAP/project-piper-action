@@ -15942,7 +15942,7 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
         if (version.startsWith('prerelease:')) {
-            const config = (0, enterprise_1.parsePrereleaseVersion)(version, owner, repository, apiURL, server, token);
+            const config = (0, enterprise_1.parsePrereleaseVersion)(version, apiURL, server, token);
             owner = config.owner;
             repository = config.repository;
             version = config.version;
@@ -16026,7 +16026,7 @@ function downloadStageConfig(actionCfg) {
         let token = actionCfg.gitHubEnterpriseToken;
         // For prerelease versions, use enterprise server and token
         if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
-            const config = (0, enterprise_1.parsePrereleaseVersion)(actionCfg.sapPiperVersion, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo, actionCfg.gitHubEnterpriseApi, server, token);
+            const config = (0, enterprise_1.parsePrereleaseVersion)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
             server = config.server;
             token = config.token;
         }
@@ -16549,7 +16549,7 @@ const ENTERPRISE_STEPNAME_PREFIX = 'sap';
  * Format: prerelease:OWNER:REPO:TAG
  * Also applies enterprise server URL and token overrides from environment variables.
  */
-function parsePrereleaseVersion(version, defaultOwner, defaultRepository, defaultApiURL, defaultServer, defaultToken) {
+function parsePrereleaseVersion(version, defaultApiURL, defaultServer, defaultToken) {
     var _a, _b;
     const parts = version.split(':');
     if (parts.length < 4 || parts[1] === '' || parts[2] === '' || parts[3] === '') {
@@ -16616,7 +16616,7 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
         if (version.startsWith('prerelease:')) {
-            const config = parsePrereleaseVersion(version, owner, repository, apiURL, '', token);
+            const config = parsePrereleaseVersion(version, apiURL, '', token);
             owner = config.owner;
             repository = config.repository;
             version = config.version;

@@ -196,8 +196,6 @@ describe('test enterprise.ts', () => {
     test('parses valid prerelease version correctly', () => {
       const result = parsePrereleaseVersion(
         'prerelease:my-owner:my-repo:v1.0.0',
-        'default-owner',
-        'default-repo',
         'https://default-api.com',
         'https://default-server.com',
         'default-token'
@@ -216,8 +214,6 @@ describe('test enterprise.ts', () => {
 
       const result = parsePrereleaseVersion(
         'prerelease:owner:repo:tag',
-        'default-owner',
-        'default-repo',
         'https://default-api.com',
         'https://default-server.com',
         'default-token'
@@ -232,8 +228,6 @@ describe('test enterprise.ts', () => {
 
       const result = parsePrereleaseVersion(
         'prerelease:owner:repo:tag',
-        'default-owner',
-        'default-repo',
         'https://default-api.com',
         'https://default-server.com',
         'default-token'
@@ -245,8 +239,6 @@ describe('test enterprise.ts', () => {
     test('throws error for missing parts', () => {
       expect(() => parsePrereleaseVersion(
         'prerelease:owner:repo:',
-        'default-owner',
-        'default-repo',
         'https://default-api.com',
         'https://default-server.com',
         'default-token'
@@ -256,8 +248,6 @@ describe('test enterprise.ts', () => {
     test('throws error for insufficient parts', () => {
       expect(() => parsePrereleaseVersion(
         'prerelease:owner',
-        'default-owner',
-        'default-repo',
         'https://default-api.com',
         'https://default-server.com',
         'default-token'
