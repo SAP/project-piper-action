@@ -7,7 +7,9 @@ export async function executePiper (
   stepName: string, flags: string[] = [], ignoreDefaults: boolean = false, execOptions?: ExecOptions
 ): Promise<ExecOutput> {
   process.env.PIPER_ACTION_VERSION = process.env.GITHUB_ACTION_REF ?? 'n/a'
-  if (process.env.GITHUB_JOB !== undefined) flags.push('--stageName', process.env.GITHUB_JOB)
+  if (process.env.GITHUB_JOB !== undefined && !flags.includes('--stageName')) {
+    flags.unshift('--stageName', process.env.GITHUB_JOB)
+  }
 
   flags = !ignoreDefaults && process.env.defaultsFlags !== undefined
     ? flags.concat(JSON.parse(process.env.defaultsFlags))
