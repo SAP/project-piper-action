@@ -15942,7 +15942,7 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
         if (version.startsWith('prerelease:')) {
-            const config = (0, enterprise_1.parsePrereleaseVersion)(version, apiURL, server, token);
+            const config = (0, enterprise_1.getPrereleaseConfig)(version, apiURL, server, token);
             owner = config.owner;
             repository = config.repository;
             version = config.version;
@@ -16026,7 +16026,7 @@ function downloadStageConfig(actionCfg) {
         let token = actionCfg.gitHubEnterpriseToken;
         // For prerelease versions, use enterprise server and token
         if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
-            const config = (0, enterprise_1.parsePrereleaseVersion)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
+            const config = (0, enterprise_1.getPrereleaseConfig)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
             server = config.server;
             token = config.token;
         }
@@ -16535,7 +16535,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.parsePrereleaseVersion = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
+exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.getPrereleaseConfig = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
 const github_1 = __nccwpck_require__(978);
 const core_1 = __nccwpck_require__(2186);
 exports.DEFAULT_CONFIG = 'DefaultConfig';
@@ -16545,27 +16545,24 @@ exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
 /**
- * Parses a prerelease version string and returns the extracted configuration.
+ * Resolves prerelease configuration from version string and environment variables.
  * Format: prerelease:OWNER:REPO:TAG
  * Also applies enterprise server URL and token overrides from environment variables.
  */
-function parsePrereleaseVersion(version, defaultApiURL, defaultServer, defaultToken) {
+function getPrereleaseConfig(version, apiURL, server, token) {
     var _a, _b;
     const parts = version.split(':');
     if (parts.length < 4 || parts[1] === '' || parts[2] === '' || parts[3] === '') {
         throw new Error(`Invalid prerelease version format: '${version}'. Expected format: 'prerelease:OWNER:REPO:TAG'`);
     }
-    let apiURL = defaultApiURL;
-    let server = defaultServer;
-    let token = defaultToken;
     const enterpriseServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
     if (enterpriseServerUrl !== '') {
         apiURL = `${enterpriseServerUrl}/api/v3`;
         server = enterpriseServerUrl;
     }
-    const wdfToken = (_b = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN) !== null && _b !== void 0 ? _b : '';
-    if (wdfToken !== '') {
-        token = wdfToken;
+    const enterpriseToken = (_b = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN) !== null && _b !== void 0 ? _b : '';
+    if (enterpriseToken !== '') {
+        token = enterpriseToken;
     }
     return {
         owner: parts[1],
@@ -16576,7 +16573,7 @@ function parsePrereleaseVersion(version, defaultApiURL, defaultServer, defaultTo
         token
     };
 }
-exports.parsePrereleaseVersion = parsePrereleaseVersion;
+exports.getPrereleaseConfig = getPrereleaseConfig;
 function isEnterpriseStep(stepName, flags = '') {
     if (stepName === '') {
         // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
@@ -16616,7 +16613,7 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
         if (version.startsWith('prerelease:')) {
-            const config = parsePrereleaseVersion(version, apiURL, '', token);
+            const config = getPrereleaseConfig(version, apiURL, '', token);
             owner = config.owner;
             repository = config.repository;
             version = config.version;

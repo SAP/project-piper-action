@@ -18,7 +18,7 @@ import {
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
   onGitHubEnterprise,
-  parsePrereleaseVersion
+  getPrereleaseConfig
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -165,7 +165,7 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
   if (version.startsWith('prerelease:')) {
-    const config = parsePrereleaseVersion(version, apiURL, server, token)
+    const config = getPrereleaseConfig(version, apiURL, server, token)
     owner = config.owner
     repository = config.repository
     version = config.version
@@ -261,7 +261,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
 
   // For prerelease versions, use enterprise server and token
   if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
-    const config = parsePrereleaseVersion(
+    const config = getPrereleaseConfig(
       actionCfg.sapPiperVersion,
       actionCfg.gitHubEnterpriseApi,
       server,

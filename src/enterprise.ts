@@ -18,24 +18,20 @@ export interface PrereleaseConfig {
 }
 
 /**
- * Parses a prerelease version string and returns the extracted configuration.
+ * Resolves prerelease configuration from version string and environment variables.
  * Format: prerelease:OWNER:REPO:TAG
  * Also applies enterprise server URL and token overrides from environment variables.
  */
-export function parsePrereleaseVersion (
+export function getPrereleaseConfig (
   version: string,
-  defaultApiURL: string,
-  defaultServer: string,
-  defaultToken: string
+  apiURL: string,
+  server: string,
+  token: string
 ): PrereleaseConfig {
   const parts = version.split(':')
   if (parts.length < 4 || parts[1] === '' || parts[2] === '' || parts[3] === '') {
     throw new Error(`Invalid prerelease version format: '${version}'. Expected format: 'prerelease:OWNER:REPO:TAG'`)
   }
-
-  let apiURL = defaultApiURL
-  let server = defaultServer
-  let token = defaultToken
 
   const enterpriseServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
   if (enterpriseServerUrl !== '') {
@@ -43,9 +39,9 @@ export function parsePrereleaseVersion (
     server = enterpriseServerUrl
   }
 
-  const wdfToken = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN ?? ''
-  if (wdfToken !== '') {
-    token = wdfToken
+  const enterpriseToken = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN ?? ''
+  if (enterpriseToken !== '') {
+    token = enterpriseToken
   }
 
   return {
@@ -98,7 +94,7 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
   if (version.startsWith('prerelease:')) {
-    const config = parsePrereleaseVersion(version, apiURL, '', token)
+    const config = getPrereleaseConfig(version, apiURL, '', token)
     owner = config.owner
     repository = config.repository
     version = config.version

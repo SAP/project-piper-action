@@ -5,7 +5,7 @@ import {
   getEnterpriseConfigUrl,
   isEnterpriseStep,
   onGitHubEnterprise,
-  parsePrereleaseVersion
+  getPrereleaseConfig
 } from '../src/enterprise'
 import { GITHUB_COM_SERVER_URL } from '../src/github'
 import * as github from '../src/github'
@@ -186,7 +186,7 @@ describe('test enterprise.ts', () => {
     })
   })
 
-  describe('parsePrereleaseVersion', () => {
+  describe('getPrereleaseConfig', () => {
     const envClone = Object.assign({}, process.env)
 
     afterEach(() => {
@@ -194,7 +194,7 @@ describe('test enterprise.ts', () => {
     })
 
     test('parses valid prerelease version correctly', () => {
-      const result = parsePrereleaseVersion(
+      const result = getPrereleaseConfig(
         'prerelease:my-owner:my-repo:v1.0.0',
         'https://default-api.com',
         'https://default-server.com',
@@ -212,7 +212,7 @@ describe('test enterprise.ts', () => {
     test('applies enterprise server URL override', () => {
       process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.enterprise.example.com'
 
-      const result = parsePrereleaseVersion(
+      const result = getPrereleaseConfig(
         'prerelease:owner:repo:tag',
         'https://default-api.com',
         'https://default-server.com',
@@ -226,7 +226,7 @@ describe('test enterprise.ts', () => {
     test('applies enterprise token override', () => {
       process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'enterprise-token'
 
-      const result = parsePrereleaseVersion(
+      const result = getPrereleaseConfig(
         'prerelease:owner:repo:tag',
         'https://default-api.com',
         'https://default-server.com',
@@ -237,7 +237,7 @@ describe('test enterprise.ts', () => {
     })
 
     test('throws error for missing parts', () => {
-      expect(() => parsePrereleaseVersion(
+      expect(() => getPrereleaseConfig(
         'prerelease:owner:repo:',
         'https://default-api.com',
         'https://default-server.com',
@@ -246,7 +246,7 @@ describe('test enterprise.ts', () => {
     })
 
     test('throws error for insufficient parts', () => {
-      expect(() => parsePrereleaseVersion(
+      expect(() => getPrereleaseConfig(
         'prerelease:owner',
         'https://default-api.com',
         'https://default-server.com',
