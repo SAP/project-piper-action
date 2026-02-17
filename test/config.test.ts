@@ -265,9 +265,9 @@ describe('Config', () => {
 
     expect(fs.existsSync).toHaveBeenCalledWith(config.CONFIG_DIR)
     expect(fs.mkdirSync).toHaveBeenCalledWith(config.CONFIG_DIR, { recursive: true })
-    for (const [index, configPath] of expectedPaths.entries()) {
+    expectedPaths.forEach((configPath, index) => {
       expect(fs.writeFileSync).toHaveBeenCalledWith(configPath, defaultConfigs[index].content)
-    }
+    })
     expect(savedPaths).toEqual(expectedPaths)
   })
 
