@@ -4,7 +4,7 @@ import { chdir, cwd } from 'process'
 import { Octokit } from '@octokit/core'
 import { type OctokitOptions } from '@octokit/core/dist-types/types'
 import { type OctokitResponse } from '@octokit/types'
-import { downloadTool, extractZip } from '@actions/tool-cache'
+import { downloadTool, extractZip, cacheFile, find } from '@actions/tool-cache'
 import { debug, info } from '@actions/core'
 import { exec } from '@actions/exec'
 
@@ -71,13 +71,26 @@ export async function buildPiperFromSource (version: string): Promise<string> {
     }
     return commitISH.slice(0, 7)
   })()
+
+  const toolName = `${owner}-${repository}-piper`
+  const piperBinaryName = 'piper'
+
+  // Check tool cache first
+  const cachedPath = find(toolName, versionName)
+  if (cachedPath !== '') {
+    const cachedBinary = `${cachedPath}/${piperBinaryName}`
+    info(`Using cached binary from tool cache: ${cachedBinary}`)
+    return cachedBinary
+  }
+
+  // Check legacy path for backwards compatibility
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   const piperPath = `${path}/piper`
   if (fs.existsSync(piperPath)) {
+    info(`Using existing binary from legacy path: ${piperPath}`)
     return piperPath
   }
-  // TODO
-  // check if cache is available
+
   info(`Building Piper from ${version}`)
   const url = `${GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`
   info(`URL: ${url}`)
@@ -105,9 +118,25 @@ export async function buildPiperFromSource (version: string): Promise<string> {
   process.env.CGO_ENABLED = cgoEnabled
   chdir(wd)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
-  // TODO
-  // await download cache
-  return piperPath
+
+  // Cache the built binary using @actions/tool-cache
+  info(`Caching built binary as ${toolName}@${versionName}`)
+  const cachedDir = await cacheFile(
+    piperPath,
+    piperBinaryName,
+    toolName,
+    versionName
+  )
+
+  const finalPath = `${cachedDir}/${piperBinaryName}`
+  info(`Binary cached at: ${finalPath}`)
+
+  // Clean up the temporary build directory
+  if (fs.existsSync(path)) {
+    fs.rmSync(path, { recursive: true, force: true })
+  }
+
+  return finalPath
 }
 
 export function getTag (version: string, forAPICall: boolean): string {

@@ -1,6 +1,6 @@
 import * as fs from 'fs'
 import { debug, info } from '@actions/core'
-import { downloadTool } from '@actions/tool-cache'
+import { downloadTool, cacheFile, find } from '@actions/tool-cache'
 import { isEnterpriseStep } from './enterprise'
 import {
   getDownloadUrlByTag,
@@ -20,6 +20,8 @@ export async function downloadPiperBinary (
   const headers: any = {}
   const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
+
+  let resolvedVersion: string
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -28,28 +30,51 @@ export async function downloadPiperBinary (
     const [binaryAssetURL, tag] = await getReleaseAssetUrl(piperBinaryName, version, apiURL, token, owner, repo)
     debug(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`)
     binaryURL = binaryAssetURL
-    version = tag
+    resolvedVersion = tag
   } else {
     debug('Fetching binary from URL')
     binaryURL = await getPiperDownloadURL(piperBinaryName, version)
-    version = binaryURL.split('/').slice(-2)[0]
-    debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
+    resolvedVersion = binaryURL.split('/').slice(-2)[0]
+    debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${resolvedVersion}`)
   }
-  version = version.replace(/\./g, '_')
-  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
+
+  // Try to find binary in tool cache first
+  const toolName = `${owner}-${repo}-${piperBinaryName}`
+  const cachedPath = find(toolName, resolvedVersion)
+  if (cachedPath !== '') {
+    const cachedBinary = `${cachedPath}/${piperBinaryName}`
+    info(`Using cached binary from tool cache: ${cachedBinary}`)
+    return cachedBinary
+  }
+
+  // Check if binary exists in current working directory (legacy support)
+  const versionForPath = resolvedVersion.replace(/\./g, '_')
+  const piperPath = `${process.cwd()}/${versionForPath}/${piperBinaryName}`
   if (fs.existsSync(piperPath)) {
+    info(`Using existing binary: ${piperPath}`)
     return piperPath
   }
 
-  info(`Downloading '${binaryURL}' as '${piperPath}'`)
-  await downloadTool(
+  info(`Downloading '${binaryURL}' to tool cache`)
+  const downloadedPath = await downloadTool(
     binaryURL,
-    piperPath,
+    undefined,
     undefined,
     headers
   )
 
-  return piperPath
+  // Cache the downloaded binary using @actions/tool-cache
+  info(`Caching binary as ${toolName}@${resolvedVersion}`)
+  const cachedDir = await cacheFile(
+    downloadedPath,
+    piperBinaryName,
+    toolName,
+    resolvedVersion
+  )
+
+  const finalPath = `${cachedDir}/${piperBinaryName}`
+  info(`Binary cached at: ${finalPath}`)
+  return finalPath
 }
 
 export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
