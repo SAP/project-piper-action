@@ -15665,12 +15665,22 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
     return __awaiter(this, void 0, void 0, function* () {
         const { owner, repository, commitISH } = parseDevVersion(version);
         const versionName = getVersionName(commitISH);
+        const toolName = `${owner}-${repository}-sap-piper`;
+        const piperBinaryName = 'sap-piper';
+        // Check tool cache first
+        const cachedPath = (0, tool_cache_1.find)(toolName, versionName);
+        if (cachedPath !== '') {
+            const cachedBinary = `${cachedPath}/${piperBinaryName}`;
+            (0, core_1.info)(`Using cached binary from tool cache: ${cachedBinary}`);
+            return cachedBinary;
+        }
+        // Check legacy path for backwards compatibility
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         (0, core_1.info)(`path: ${path}`);
         const piperPath = `${path}/sap-piper`;
         (0, core_1.info)(`piperPath: ${piperPath}`);
         if (fs_1.default.existsSync(piperPath)) {
-            (0, core_1.info)(`piperPath exists: ${piperPath}`);
+            (0, core_1.info)(`Using existing binary from legacy path: ${piperPath}`);
             return piperPath;
         }
         (0, core_1.info)(`Building Inner Source Piper from ${version}`);
@@ -15705,8 +15715,17 @@ function buildPiperInnerSource(version, wdfGithubEnterpriseToken = '') {
         (0, process_1.chdir)(wd);
         (0, core_1.info)('Removing repositoryPath: ' + repositoryPath);
         fs_1.default.rmSync(repositoryPath, { recursive: true, force: true });
-        (0, core_1.info)(`Returning piperPath: ${piperPath}`);
-        return piperPath;
+        // Cache the built binary using @actions/tool-cache
+        (0, core_1.info)(`Caching built binary as ${toolName}@${versionName}`);
+        const cachedDir = yield (0, tool_cache_1.cacheFile)(piperPath, piperBinaryName, toolName, versionName);
+        const finalPath = `${cachedDir}/${piperBinaryName}`;
+        (0, core_1.info)(`Binary cached at: ${finalPath}`);
+        // Clean up the temporary build directory
+        if (fs_1.default.existsSync(path)) {
+            fs_1.default.rmSync(path, { recursive: true, force: true });
+        }
+        (0, core_1.info)(`Returning piperPath: ${finalPath}`);
+        return finalPath;
     });
 }
 exports.buildPiperInnerSource = buildPiperInnerSource;
@@ -16450,6 +16469,7 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
         const headers = {};
         const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
         (0, core_1.debug)(`version: ${version}`);
+        let resolvedVersion;
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -16457,22 +16477,37 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
             const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(piperBinaryName, version, apiURL, token, owner, repo);
             (0, core_1.debug)(`downloadPiperBinary: binaryAssetURL: ${binaryAssetURL}, tag: ${tag}`);
             binaryURL = binaryAssetURL;
-            version = tag;
+            resolvedVersion = tag;
         }
         else {
             (0, core_1.debug)('Fetching binary from URL');
             binaryURL = yield getPiperDownloadURL(piperBinaryName, version);
-            version = binaryURL.split('/').slice(-2)[0];
-            (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
+            resolvedVersion = binaryURL.split('/').slice(-2)[0];
+            (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${resolvedVersion}`);
         }
-        version = version.replace(/\./g, '_');
-        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
+        // Try to find binary in tool cache first
+        const toolName = `${owner}-${repo}-${piperBinaryName}`;
+        const cachedPath = (0, tool_cache_1.find)(toolName, resolvedVersion);
+        if (cachedPath !== '') {
+            const cachedBinary = `${cachedPath}/${piperBinaryName}`;
+            (0, core_1.info)(`Using cached binary from tool cache: ${cachedBinary}`);
+            return cachedBinary;
+        }
+        // Check if binary exists in current working directory (legacy support)
+        const versionForPath = resolvedVersion.replace(/\./g, '_');
+        const piperPath = `${process.cwd()}/${versionForPath}/${piperBinaryName}`;
         if (fs.existsSync(piperPath)) {
+            (0, core_1.info)(`Using existing binary: ${piperPath}`);
             return piperPath;
         }
-        (0, core_1.info)(`Downloading '${binaryURL}' as '${piperPath}'`);
-        yield (0, tool_cache_1.downloadTool)(binaryURL, piperPath, undefined, headers);
-        return piperPath;
+        (0, core_1.info)(`Downloading '${binaryURL}' to tool cache`);
+        const downloadedPath = yield (0, tool_cache_1.downloadTool)(binaryURL, undefined, undefined, headers);
+        // Cache the downloaded binary using @actions/tool-cache
+        (0, core_1.info)(`Caching binary as ${toolName}@${resolvedVersion}`);
+        const cachedDir = yield (0, tool_cache_1.cacheFile)(downloadedPath, piperBinaryName, toolName, resolvedVersion);
+        const finalPath = `${cachedDir}/${piperBinaryName}`;
+        (0, core_1.info)(`Binary cached at: ${finalPath}`);
+        return finalPath;
     });
 }
 exports.downloadPiperBinary = downloadPiperBinary;
@@ -16824,13 +16859,22 @@ function buildPiperFromSource(version) {
             }
             return commitISH.slice(0, 7);
         })();
+        const toolName = `${owner}-${repository}-piper`;
+        const piperBinaryName = 'piper';
+        // Check tool cache first
+        const cachedPath = (0, tool_cache_1.find)(toolName, versionName);
+        if (cachedPath !== '') {
+            const cachedBinary = `${cachedPath}/${piperBinaryName}`;
+            (0, core_2.info)(`Using cached binary from tool cache: ${cachedBinary}`);
+            return cachedBinary;
+        }
+        // Check legacy path for backwards compatibility
         const path = `${process.cwd()}/${owner}-${repository}-${versionName}`;
         const piperPath = `${path}/piper`;
         if (fs.existsSync(piperPath)) {
+            (0, core_2.info)(`Using existing binary from legacy path: ${piperPath}`);
             return piperPath;
         }
-        // TODO
-        // check if cache is available
         (0, core_2.info)(`Building Piper from ${version}`);
         const url = `${exports.GITHUB_COM_SERVER_URL}/${owner}/${repository}/archive/${commitISH}.zip`;
         (0, core_2.info)(`URL: ${url}`);
@@ -16851,9 +16895,16 @@ function buildPiperFromSource(version) {
         process.env.CGO_ENABLED = cgoEnabled;
         (0, process_1.chdir)(wd);
         fs.rmSync(repositoryPath, { recursive: true, force: true });
-        // TODO
-        // await download cache
-        return piperPath;
+        // Cache the built binary using @actions/tool-cache
+        (0, core_2.info)(`Caching built binary as ${toolName}@${versionName}`);
+        const cachedDir = yield (0, tool_cache_1.cacheFile)(piperPath, piperBinaryName, toolName, versionName);
+        const finalPath = `${cachedDir}/${piperBinaryName}`;
+        (0, core_2.info)(`Binary cached at: ${finalPath}`);
+        // Clean up the temporary build directory
+        if (fs.existsSync(path)) {
+            fs.rmSync(path, { recursive: true, force: true });
+        }
+        return finalPath;
     });
 }
 exports.buildPiperFromSource = buildPiperFromSource;
