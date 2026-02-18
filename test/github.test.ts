@@ -53,6 +53,9 @@ describe('GitHub package tests', () => {
 
   test('downloadPiperBinary - OS step latest, no token', async () => {
     jest.spyOn(fs, 'existsSync').mockReturnValue(false)
+    jest.spyOn(toolCache, 'find').mockReturnValue('') // No cache hit
+    jest.spyOn(toolCache, 'downloadTool').mockResolvedValue('/tmp/downloaded-piper')
+    jest.spyOn(toolCache, 'cacheFile').mockResolvedValue('/tool-cache/piper/v1.1.1')
     jest.spyOn(global, 'fetch').mockImplementation(async () => {
       return {
         status: 200,
@@ -64,12 +67,16 @@ describe('GitHub package tests', () => {
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
     expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from URL')
     expect(core.debug).toHaveBeenCalledTimes(4)
-    expect(core.info).toHaveBeenCalledWith(`Downloading 'https://github.com/SAP/jenkins-library/releases/download/v1.1.1/piper' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
-    expect(core.info).toHaveBeenCalledTimes(1)
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Downloading'))
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Caching binary as'))
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Binary cached at'))
   })
 
   test('downloadPiperBinary - SAP step latest', async () => {
     const assetUrl = `${githubApiURL}/release/assets/123456`
+    jest.spyOn(toolCache, 'find').mockReturnValue('') // No cache hit
+    jest.spyOn(toolCache, 'downloadTool').mockResolvedValue('/tmp/downloaded-sap-piper')
+    jest.spyOn(toolCache, 'cacheFile').mockResolvedValue('/tool-cache/sap-piper/v1.1.1')
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
       return {
         request: async () => {
@@ -93,12 +100,16 @@ describe('GitHub package tests', () => {
     expect(core.debug).toHaveBeenNthCalledWith(6, 'Found tag: v1.1.1')
     expect(core.debug).toHaveBeenNthCalledWith(7, `Found asset URL: ${assetUrl} and tag: ${version}`)
     expect(core.debug).toHaveBeenCalledTimes(8)
-    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/sap-piper'`))
-    expect(core.info).toHaveBeenCalledTimes(1)
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Downloading'))
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Caching binary as'))
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Binary cached at'))
   })
 
   test('downloadPiperBinary - OS step, exact version', async () => {
     const assetUrl = `${githubApiURL}/release/assets/123456`
+    jest.spyOn(toolCache, 'find').mockReturnValue('') // No cache hit
+    jest.spyOn(toolCache, 'downloadTool').mockResolvedValue('/tmp/downloaded-piper')
+    jest.spyOn(toolCache, 'cacheFile').mockResolvedValue('/tool-cache/piper/v1.1.1')
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
       return {
         request: async () => {
@@ -122,8 +133,8 @@ describe('GitHub package tests', () => {
     expect(core.debug).toHaveBeenNthCalledWith(6, 'Found tag: v1.1.1')
     expect(core.debug).toHaveBeenNthCalledWith(7, `Found asset URL: ${assetUrl} and tag: ${version}`)
     expect(core.debug).toHaveBeenCalledTimes(8)
-    expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`))
-    expect(core.info).toHaveBeenCalledTimes(1)
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Downloading'))
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Caching binary as'))
   })
 
   test('Get dev Piper', async () => {
@@ -131,15 +142,54 @@ describe('GitHub package tests', () => {
     const repository = 'jenkins-library'
     const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
     const shortCommitSHA = commitISH.slice(0, 7)
+    jest.spyOn(toolCache, 'find').mockReturnValue('') // No cache hit
     jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
     jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
+    jest.spyOn(toolCache, 'cacheFile').mockResolvedValue(`/tool-cache/${owner}-${repository}-piper/${shortCommitSHA}`)
     jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
     jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
     jest.spyOn(fs, 'readdirSync').mockReturnValue([])
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false)
+    jest.spyOn(fs, 'rmSync').mockImplementation(jest.fn())
     jest.spyOn([], 'find').mockImplementation(jest.fn())
     expect(
       await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
+    ).toBe(`/tool-cache/${owner}-${repository}-piper/${shortCommitSHA}/piper`)
+  })
+
+  test('downloadPiperBinary - cache hit, reuses cached binary', async () => {
+    const cachedPath = '/tool-cache/someOwner-SomeRepo-piper/v1.1.1'
+    jest.spyOn(toolCache, 'find').mockReturnValue(cachedPath) // Cache hit
+    jest.spyOn(global, 'fetch').mockImplementation(async () => {
+      return {
+        status: 200,
+        url: 'https://github.com/SAP/jenkins-library/releases/tag/v1.1.1'
+      } as unknown as Response
+    })
+
+    const result = await downloadPiperBinary(osStep, '', 'latest', githubApiURL, '', owner, repo)
+    expect(result).toBe(`${cachedPath}/piper`)
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Using cached binary from tool cache'))
+    // Should not download or cache again
+    expect(toolCache.downloadTool).not.toHaveBeenCalled()
+    expect(toolCache.cacheFile).not.toHaveBeenCalled()
+  })
+
+  test('buildPiperFromSource - cache hit, reuses cached binary', async () => {
+    const owner = 'SAP'
+    const repository = 'jenkins-library'
+    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
+    const shortCommitSHA = commitISH.slice(0, 7)
+    const cachedPath = `/tool-cache/${owner}-${repository}-piper/${shortCommitSHA}`
+
+    jest.spyOn(toolCache, 'find').mockReturnValue(cachedPath) // Cache hit
+
+    const result = await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
+    expect(result).toBe(`${cachedPath}/piper`)
+    expect(core.info).toHaveBeenCalledWith(expect.stringContaining('Using cached binary from tool cache'))
+    // Should not build or download
+    expect(toolCache.downloadTool).not.toHaveBeenCalled()
+    expect(toolCache.extractZip).not.toHaveBeenCalled()
   })
 })
 

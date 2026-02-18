@@ -4,19 +4,31 @@ import { dirname, join } from 'path'
 import fs from 'fs'
 import { chdir, cwd } from 'process'
 import { exec } from '@actions/exec'
-import { extractZip } from '@actions/tool-cache'
+import { extractZip, cacheFile, find } from '@actions/tool-cache'
 
 export async function buildPiperInnerSource (version: string, wdfGithubEnterpriseToken: string = ''): Promise<string> {
   const { owner, repository, commitISH } = parseDevVersion(version)
   const versionName = getVersionName(commitISH)
 
+  const toolName = `${owner}-${repository}-sap-piper`
+  const piperBinaryName = 'sap-piper'
+
+  // Check tool cache first
+  const cachedPath = find(toolName, versionName)
+  if (cachedPath !== '') {
+    const cachedBinary = `${cachedPath}/${piperBinaryName}`
+    info(`Using cached binary from tool cache: ${cachedBinary}`)
+    return cachedBinary
+  }
+
+  // Check legacy path for backwards compatibility
   const path = `${process.cwd()}/${owner}-${repository}-${versionName}`
   info(`path: ${path}`)
   const piperPath = `${path}/sap-piper`
   info(`piperPath: ${piperPath}`)
 
   if (fs.existsSync(piperPath)) {
-    info(`piperPath exists: ${piperPath}`)
+    info(`Using existing binary from legacy path: ${piperPath}`)
     return piperPath
   }
 
@@ -59,8 +71,25 @@ export async function buildPiperInnerSource (version: string, wdfGithubEnterpris
   info('Removing repositoryPath: ' + repositoryPath)
   fs.rmSync(repositoryPath, { recursive: true, force: true })
 
-  info(`Returning piperPath: ${piperPath}`)
-  return piperPath
+  // Cache the built binary using @actions/tool-cache
+  info(`Caching built binary as ${toolName}@${versionName}`)
+  const cachedDir = await cacheFile(
+    piperPath,
+    piperBinaryName,
+    toolName,
+    versionName
+  )
+
+  const finalPath = `${cachedDir}/${piperBinaryName}`
+  info(`Binary cached at: ${finalPath}`)
+
+  // Clean up the temporary build directory
+  if (fs.existsSync(path)) {
+    fs.rmSync(path, { recursive: true, force: true })
+  }
+
+  info(`Returning piperPath: ${finalPath}`)
+  return finalPath
 }
 
 async function downloadWithAuth (url: string, destination: string, wdfGithubToken: string): Promise<string> {
