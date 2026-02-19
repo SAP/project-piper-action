@@ -68,7 +68,7 @@
     "jest-sonar": "0.2.16",
     "process": "0.11.10",
     "ts-jest": "29.1.1",
-    "typescript": "5.2.2"
+    "typescript": "5.9.3"
   },
   "engines": {
     "node": ">=v16.17.1"
