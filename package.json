@@ -45,7 +45,7 @@
     "@octokit/rest": "19.0.13",
     "@octokit/types": "11.0.0",
     "expect": "29.7.0",
-    "node-fetch": "2.7.0",
+    "node-fetch": "3.3.2",
     "ts-node": "10.9.2",
     "uuid": "9.0.0"
   },
