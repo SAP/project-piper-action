@@ -8,6 +8,52 @@ export const ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.ym
 export const ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml'
 const ENTERPRISE_STEPNAME_PREFIX = 'sap'
 
+export interface PrereleaseConfig {
+  owner: string
+  repository: string
+  version: string
+  apiURL: string
+  server: string
+  token: string
+}
+
+/**
+ * Resolves prerelease configuration from version string and environment variables.
+ * Format: prerelease:OWNER:REPO:TAG
+ * Also applies enterprise server URL and token overrides from environment variables.
+ */
+export function getPrereleaseConfig (
+  version: string,
+  apiURL: string,
+  server: string,
+  token: string
+): PrereleaseConfig {
+  const parts = version.split(':')
+  if (parts.length < 4 || parts[1] === '' || parts[2] === '' || parts[3] === '') {
+    throw new Error(`Invalid prerelease version format: '${version}'. Expected format: 'prerelease:OWNER:REPO:TAG'`)
+  }
+
+  const enterpriseServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
+  if (enterpriseServerUrl !== '') {
+    apiURL = `${enterpriseServerUrl}/api/v3`
+    server = enterpriseServerUrl
+  }
+
+  const enterpriseToken = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN ?? ''
+  if (enterpriseToken !== '') {
+    token = enterpriseToken
+  }
+
+  return {
+    owner: parts[1],
+    repository: parts[2],
+    version: parts[3],
+    apiURL,
+    server,
+    token
+  }
+}
+
 export function isEnterpriseStep (stepName: string, flags: string = ''): boolean {
   if (stepName === '') {
     // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
@@ -44,6 +90,16 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
   // if version starts with devel: then it should use inner source Piper
   if (version.startsWith('devel:')) {
     version = 'latest'
+  }
+  // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
+  // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
+  if (version.startsWith('prerelease:')) {
+    const config = getPrereleaseConfig(version, apiURL, '', token)
+    owner = config.owner
+    repository = config.repository
+    version = config.version
+    apiURL = config.apiURL
+    token = config.token
   }
   // get URL of defaults from the release (gh api, authenticated)
   const [url] = await getReleaseAssetUrl(assetName, version, apiURL, token, owner, repository)

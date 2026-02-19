@@ -17,7 +17,8 @@ import {
   DEFAULT_CONFIG,
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
-  onGitHubEnterprise
+  onGitHubEnterprise,
+  getPrereleaseConfig
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -161,6 +162,17 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   if (version.startsWith('devel:')) {
     version = 'latest'
   }
+  // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
+  // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
+  if (version.startsWith('prerelease:')) {
+    const config = getPrereleaseConfig(version, apiURL, server, token)
+    owner = config.owner
+    repository = config.repository
+    version = config.version
+    apiURL = config.apiURL
+    server = config.server
+    token = config.token
+  }
   const enterpriseDefaultsURL = await getEnterpriseConfigUrl(DEFAULT_CONFIG, apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
@@ -244,6 +256,21 @@ export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguratio
 
 export async function downloadStageConfig (actionCfg: ActionConfiguration): Promise<void> {
   let stageConfigPath = ''
+  let server = actionCfg.gitHubEnterpriseServer
+  let token = actionCfg.gitHubEnterpriseToken
+
+  // For prerelease versions, use enterprise server and token
+  if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
+    const config = getPrereleaseConfig(
+      actionCfg.sapPiperVersion,
+      actionCfg.gitHubEnterpriseApi,
+      server,
+      token
+    )
+    server = config.server
+    token = config.token
+  }
+
   if (actionCfg.customStageConditionsPath !== '') {
     info(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`)
     stageConfigPath = actionCfg.customStageConditionsPath
@@ -253,7 +280,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
       STAGE_CONFIG,
       actionCfg.gitHubEnterpriseApi,
       actionCfg.sapPiperVersion,
-      actionCfg.gitHubEnterpriseToken,
+      token,
       actionCfg.sapPiperOwner,
       actionCfg.sapPiperRepo)
     if (stageConfigPath === '') {
@@ -267,7 +294,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   }
   const flags: string[] = ['--useV1']
   flags.push('--defaultsFile', stageConfigPath)
-  flags.push('--gitHubTokens', `${getHost(actionCfg.gitHubEnterpriseServer)}:${actionCfg.gitHubEnterpriseToken}`)
+  flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
   const { stdout } = await executePiper('getDefaults', flags)
   const config = JSON.parse(stdout)
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
