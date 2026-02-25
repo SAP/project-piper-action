@@ -80,13 +80,12 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version:
 }
 
 export async function downloadFromMirror (binaryName: string, version: string, owner: string, repo: string): Promise<string> {
-  const mirrorServerURL = process.env.GITHUB_SERVER_URL ?? ''
+  const mirrorApiURL = process.env.GITHUB_API_URL ?? ''
   const mirrorToken = process.env.GITHUB_TOKEN ?? ''
-  if (mirrorServerURL === '' || mirrorToken === '') {
-    debug('Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
+  if (mirrorApiURL === '' || mirrorToken === '') {
+    debug('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available')
     return ''
   }
-  const mirrorApiURL = `${mirrorServerURL}/api/v3`
 
   info('Trying to download from GHE mirror')
   const [binaryAssetURL, tag] = await getReleaseAssetUrl(binaryName, version, mirrorApiURL, mirrorToken, owner, repo)

@@ -38763,13 +38763,12 @@ function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
 function downloadFromMirror(binaryName, version, owner, repo) {
     var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        const mirrorServerURL = (_a = process.env.GITHUB_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+        const mirrorApiURL = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : '';
         const mirrorToken = (_b = process.env.GITHUB_TOKEN) !== null && _b !== void 0 ? _b : '';
-        if (mirrorServerURL === '' || mirrorToken === '') {
-            (0, core_1.debug)('Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available');
+        if (mirrorApiURL === '' || mirrorToken === '') {
+            (0, core_1.debug)('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available');
             return '';
         }
-        const mirrorApiURL = `${mirrorServerURL}/api/v3`;
         (0, core_1.info)('Trying to download from GHE mirror');
         const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(binaryName, version, mirrorApiURL, mirrorToken, owner, repo);
         if (binaryAssetURL === '') {

@@ -156,8 +156,7 @@ describe('Mirror download tests', () => {
   const version = 'v1.1.1'
   const owner = 'someOwner'
   const repo = 'SomeRepo'
-  const mirrorServerURL = 'https://github.example.com'
-  const mirrorApiURL = `${mirrorServerURL}/api/v3`
+  const mirrorApiURL = 'https://github.example.com/api/v3'
   const mirrorToken = 'someToken'
   const mirrorAssetUrl = `${mirrorApiURL}/releases/assets/99999`
 
@@ -169,26 +168,26 @@ describe('Mirror download tests', () => {
     delete process.env.GITHUB_SERVER_URL
   })
 
-  test('downloadFromMirror - skips when GITHUB_SERVER_URL is not set', async () => {
-    delete process.env.GITHUB_SERVER_URL
+  test('downloadFromMirror - skips when GITHUB_API_URL is not set', async () => {
+    delete process.env.GITHUB_API_URL
     process.env.GITHUB_TOKEN = mirrorToken
 
     const result = await downloadFromMirror('piper', version, owner, repo)
     expect(result).toBe('')
-    expect(core.debug).toHaveBeenCalledWith('Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
+    expect(core.debug).toHaveBeenCalledWith('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available')
   })
 
   test('downloadFromMirror - skips when GITHUB_TOKEN is not set', async () => {
-    process.env.GITHUB_SERVER_URL = mirrorServerURL
+    process.env.GITHUB_API_URL = mirrorApiURL
     delete process.env.GITHUB_TOKEN
 
     const result = await downloadFromMirror('piper', version, owner, repo)
     expect(result).toBe('')
-    expect(core.debug).toHaveBeenCalledWith('Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
+    expect(core.debug).toHaveBeenCalledWith('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available')
   })
 
   test('downloadFromMirror - downloads from mirror successfully', async () => {
-    process.env.GITHUB_SERVER_URL = mirrorServerURL
+    process.env.GITHUB_API_URL = mirrorApiURL
     process.env.GITHUB_TOKEN = mirrorToken
     jest.spyOn(fs, 'existsSync').mockReturnValue(false)
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
@@ -215,7 +214,7 @@ describe('Mirror download tests', () => {
   })
 
   test('downloadFromMirror - throws when binary not found on mirror', async () => {
-    process.env.GITHUB_SERVER_URL = mirrorServerURL
+    process.env.GITHUB_API_URL = mirrorApiURL
     process.env.GITHUB_TOKEN = mirrorToken
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
       return {
@@ -234,7 +233,7 @@ describe('Mirror download tests', () => {
   })
 
   test('downloadFromMirror - returns cached path if binary exists', async () => {
-    process.env.GITHUB_SERVER_URL = mirrorServerURL
+    process.env.GITHUB_API_URL = mirrorApiURL
     process.env.GITHUB_TOKEN = mirrorToken
     jest.spyOn(fs, 'existsSync').mockReturnValue(true)
     jest.spyOn(octokit, 'Octokit').mockImplementationOnce(() => {
@@ -255,7 +254,8 @@ describe('Mirror download tests', () => {
   })
 
   test('downloadPiperBinary - falls back to github.com when mirror fails', async () => {
-    process.env.GITHUB_SERVER_URL = mirrorServerURL
+    process.env.GITHUB_SERVER_URL = 'https://github.example.com'
+    process.env.GITHUB_API_URL = mirrorApiURL
     process.env.GITHUB_TOKEN = mirrorToken
     jest.spyOn(fs, 'existsSync').mockReturnValue(false)
 
