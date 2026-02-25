@@ -17,9 +17,15 @@ export async function downloadPiperBinary (
   if (repo === '') throw new Error('repository is not provided')
 
   let binaryURL: string
-  const headers: any = {}
-  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  const headers: Record<string, string> = {}
+  const piperBinaryName: 'piper' | 'sap-piper' = getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
+
+  // Check if the binary already exists in the expected location before downloading
+  // Will only work for exact versions but not for 'master', 'latest' or 'prerelease:...')
+  const versionPath = version.replace(/\./g, '_')
+  let piperPath = `${process.cwd()}/${versionPath}/${piperBinaryName}`
+  if (fs.existsSync(piperPath)) return piperPath
 
   if (onGitHubEnterprise()) {
     try {
@@ -45,8 +51,10 @@ export async function downloadPiperBinary (
     version = binaryURL.split('/').slice(-2)[0]
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
-  version = version.replace(/\./g, '_')
-  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
+
+  // Check if the binary already exists in the expected location before downloading
+  const resolvedVersionPath = version.replace(/\./g, '_')
+  piperPath = `${process.cwd()}/${resolvedVersionPath}/${piperBinaryName}`
   if (fs.existsSync(piperPath)) {
     return piperPath
   }
@@ -73,7 +81,7 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   }
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
+function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): 'piper' | 'sap-piper' {
   if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
 
   return isEnterpriseStep ? 'sap-piper' : 'piper'
