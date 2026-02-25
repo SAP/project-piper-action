@@ -22,9 +22,18 @@ describe('GitHub package tests', () => {
   const token = 'someToken'
   const owner = 'someOwner'
   const repo = 'SomeRepo'
+  const origGitHubServerURL = process.env.GITHUB_SERVER_URL
+  beforeEach(() => {
+    process.env.GITHUB_SERVER_URL = 'https://github.com'
+  })
   afterEach(() => {
     jest.resetAllMocks()
     jest.clearAllMocks()
+    if (origGitHubServerURL !== undefined) {
+      process.env.GITHUB_SERVER_URL = origGitHubServerURL
+    } else {
+      delete process.env.GITHUB_SERVER_URL
+    }
   })
 
   test('downloadPiperBinary - inner source piper, no token', async () => {
@@ -62,9 +71,8 @@ describe('GitHub package tests', () => {
 
     await downloadPiperBinary(osStep, '', 'latest', githubApiURL, '', owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
-    expect(core.debug).toHaveBeenNthCalledWith(2, 'Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
-    expect(core.debug).toHaveBeenNthCalledWith(3, 'Fetching binary from URL')
-    expect(core.debug).toHaveBeenCalledTimes(5)
+    expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from URL')
+    expect(core.debug).toHaveBeenCalledTimes(4)
     expect(core.info).toHaveBeenCalledWith(`Downloading 'https://github.com/SAP/jenkins-library/releases/download/v1.1.1/piper' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`)
     expect(core.info).toHaveBeenCalledTimes(1)
   })
@@ -87,14 +95,13 @@ describe('GitHub package tests', () => {
 
     await downloadPiperBinary(sapStep, '', 'latest', githubApiURL, token, owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: latest')
-    expect(core.debug).toHaveBeenNthCalledWith(2, 'Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
-    expect(core.debug).toHaveBeenNthCalledWith(3, 'Fetching binary from GitHub API')
-    expect(core.debug).toHaveBeenNthCalledWith(4, 'Using latest tag')
-    expect(core.debug).toHaveBeenNthCalledWith(5, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
-    expect(core.debug).toHaveBeenNthCalledWith(6, `Found assets: [{"name":"sap-piper","url":"${assetUrl}"}]`)
-    expect(core.debug).toHaveBeenNthCalledWith(7, 'Found tag: v1.1.1')
-    expect(core.debug).toHaveBeenNthCalledWith(8, `Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.debug).toHaveBeenCalledTimes(9)
+    expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from GitHub API')
+    expect(core.debug).toHaveBeenNthCalledWith(3, 'Using latest tag')
+    expect(core.debug).toHaveBeenNthCalledWith(4, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/latest`)
+    expect(core.debug).toHaveBeenNthCalledWith(5, `Found assets: [{"name":"sap-piper","url":"${assetUrl}"}]`)
+    expect(core.debug).toHaveBeenNthCalledWith(6, 'Found tag: v1.1.1')
+    expect(core.debug).toHaveBeenNthCalledWith(7, `Found asset URL: ${assetUrl} and tag: ${version}`)
+    expect(core.debug).toHaveBeenCalledTimes(8)
     expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/sap-piper'`))
     expect(core.info).toHaveBeenCalledTimes(1)
   })
@@ -117,14 +124,13 @@ describe('GitHub package tests', () => {
 
     await downloadPiperBinary(osStep, '', version, githubApiURL, token, owner, repo)
     expect(core.debug).toHaveBeenNthCalledWith(1, 'version: v1.1.1')
-    expect(core.debug).toHaveBeenNthCalledWith(2, 'Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
-    expect(core.debug).toHaveBeenNthCalledWith(3, 'Fetching binary from GitHub API')
-    expect(core.debug).toHaveBeenNthCalledWith(4, 'getTag returns: tags/v1.1.1')
-    expect(core.debug).toHaveBeenNthCalledWith(5, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/tags/${version}`)
-    expect(core.debug).toHaveBeenNthCalledWith(6, `Found assets: [{"name":"piper","url":"${assetUrl}"}]`)
-    expect(core.debug).toHaveBeenNthCalledWith(7, 'Found tag: v1.1.1')
-    expect(core.debug).toHaveBeenNthCalledWith(8, `Found asset URL: ${assetUrl} and tag: ${version}`)
-    expect(core.debug).toHaveBeenCalledTimes(9)
+    expect(core.debug).toHaveBeenNthCalledWith(2, 'Fetching binary from GitHub API')
+    expect(core.debug).toHaveBeenNthCalledWith(3, 'getTag returns: tags/v1.1.1')
+    expect(core.debug).toHaveBeenNthCalledWith(4, `Fetching release info from ${githubApiURL}/repos/${owner}/${repo}/releases/tags/${version}`)
+    expect(core.debug).toHaveBeenNthCalledWith(5, `Found assets: [{"name":"piper","url":"${assetUrl}"}]`)
+    expect(core.debug).toHaveBeenNthCalledWith(6, 'Found tag: v1.1.1')
+    expect(core.debug).toHaveBeenNthCalledWith(7, `Found asset URL: ${assetUrl} and tag: ${version}`)
+    expect(core.debug).toHaveBeenCalledTimes(8)
     expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`))
     expect(core.info).toHaveBeenCalledTimes(1)
   })
