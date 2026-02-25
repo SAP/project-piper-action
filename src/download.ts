@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
-import { isEnterpriseStep } from './enterprise'
+import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import {
   getDownloadUrlByTag,
   getReleaseAssetUrl
@@ -20,6 +20,16 @@ export async function downloadPiperBinary (
   const headers: any = {}
   const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
+
+  if (onGitHubEnterprise()) {
+    try {
+      const mirrorPath = await downloadFromMirror(piperBinaryName, version, owner, repo)
+      if (mirrorPath !== '') return mirrorPath
+    } catch (err) {
+      debug(`Mirror download failed, falling back to github.com: ${(err as Error).message}`)
+    }
+  }
+
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -67,4 +77,35 @@ async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version:
   if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
 
   return isEnterpriseStep ? 'sap-piper' : 'piper'
+}
+
+export async function downloadFromMirror (binaryName: string, version: string, owner: string, repo: string): Promise<string> {
+  const mirrorServerURL = process.env.GITHUB_SERVER_URL ?? ''
+  const mirrorToken = process.env.GITHUB_TOKEN ?? ''
+  if (mirrorServerURL === '' || mirrorToken === '') {
+    debug('Mirror download skipped: GITHUB_SERVER_URL or GITHUB_TOKEN not available')
+    return ''
+  }
+  const mirrorApiURL = `${mirrorServerURL}/api/v3`
+
+  info('Trying to download from GHE mirror')
+  const [binaryAssetURL, tag] = await getReleaseAssetUrl(binaryName, version, mirrorApiURL, mirrorToken, owner, repo)
+  if (binaryAssetURL === '') {
+    throw new Error(`Binary '${binaryName}' not found on mirror`)
+  }
+
+  const normalizedVersion = tag.replace(/\./g, '_')
+  const piperPath = `${process.cwd()}/${normalizedVersion}/${binaryName}`
+  if (fs.existsSync(piperPath)) {
+    info(`Using cached binary from mirror: ${piperPath}`)
+    return piperPath
+  }
+
+  info(`Downloading from mirror: '${binaryAssetURL}' as '${piperPath}'`)
+  await downloadTool(binaryAssetURL, piperPath, undefined, {
+    Accept: 'application/octet-stream',
+    Authorization: `token ${mirrorToken}`
+  })
+
+  return piperPath
 }
