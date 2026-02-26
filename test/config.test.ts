@@ -415,6 +415,67 @@ describe('Config', () => {
       expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     })
 
+    test('downloadDefaultConfig passes both tokens when prerelease server differs from original', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.tools.sap'
+      process.env.GITHUB_API_URL = 'https://github.tools.sap/api/v3'
+      // Prerelease is hosted on a different server (github.wdf.sap.corp)
+      process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.wdf.sap.corp'
+      process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'wdf-token'
+
+      const originalServer = 'https://github.tools.sap'
+      const originalToken = 'tools-sap-token'
+      const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+      const customDefaultsPath = 'https://github.tools.sap/api/v3/repos/org/repo/contents/.pipeline/config.yml'
+
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl, customDefaultsPath])
+      jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapDefaultsUrl, 'v1.0.0'])
+
+      await config.downloadDefaultConfig(
+        originalServer,
+        'https://github.tools.sap/api/v3',
+        'prerelease:ContinuousDelivery:piper-library:1.400.0',
+        originalToken,
+        'default-owner',
+        'default-repo',
+        customDefaultsPath
+      )
+
+      // Should include both tokens: wdf token for prerelease defaults, and original token for custom defaults
+      expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+        '--gitHubTokens', 'github.wdf.sap.corp:wdf-token,github.tools.sap:tools-sap-token'
+      ]))
+    })
+
+    test('downloadDefaultConfig passes single token when prerelease server matches original', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.wdf.sap.corp'
+      process.env.GITHUB_API_URL = 'https://github.wdf.sap.corp/api/v3'
+      // Prerelease is on the same server as original
+      process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.wdf.sap.corp'
+      process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'wdf-token'
+
+      const originalServer = 'https://github.wdf.sap.corp'
+      const originalToken = 'original-token'
+      const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl])
+      jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapDefaultsUrl, 'v1.0.0'])
+
+      await config.downloadDefaultConfig(
+        originalServer,
+        'https://github.wdf.sap.corp/api/v3',
+        'prerelease:ContinuousDelivery:piper-library:1.400.0',
+        originalToken,
+        'default-owner',
+        'default-repo',
+        ''
+      )
+
+      // Should only include one token since servers match
+      expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+        '--gitHubTokens', 'github.wdf.sap.corp:wdf-token'
+      ]))
+    })
+
     test('downloadStageConfig uses original server and token when not prerelease', async () => {
       process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
       process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'

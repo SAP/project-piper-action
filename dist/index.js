@@ -15941,7 +15941,12 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         }
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
+        // Keep track of original server/token since custom defaults paths may use a different host
+        let originalServer = '';
+        let originalToken = '';
         if (version.startsWith('prerelease:')) {
+            originalServer = server;
+            originalToken = token;
             const config = (0, enterprise_1.getPrereleaseConfig)(version, apiURL, server, token);
             owner = config.owner;
             repository = config.repository;
@@ -15963,7 +15968,12 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         }
         const flags = [];
         flags.push(...defaultsPathsArgs);
-        flags.push('--gitHubTokens', `${(0, github_1.getHost)(server)}:${token}`);
+        // Build gitHubTokens - for prerelease, include both prerelease server token and original server token if they differ
+        const gitHubTokens = [`${(0, github_1.getHost)(server)}:${token}`];
+        if (originalServer !== '' && originalToken !== '' && (0, github_1.getHost)(originalServer) !== (0, github_1.getHost)(server)) {
+            gitHubTokens.push(`${(0, github_1.getHost)(originalServer)}:${originalToken}`);
+        }
+        flags.push('--gitHubTokens', gitHubTokens.join(','));
         const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
         let defaultConfigs = JSON.parse(stdout);
         if (customDefaultsPathsArray.length === 0) {
