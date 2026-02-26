@@ -1,7 +1,7 @@
 import * as fs from 'fs'
 import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
-import { isEnterpriseStep } from './enterprise'
+import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
 import {
   getDownloadUrlByTag,
   getReleaseAssetUrl
@@ -17,9 +17,25 @@ export async function downloadPiperBinary (
   if (repo === '') throw new Error('repository is not provided')
 
   let binaryURL: string
-  const headers: any = {}
-  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  const headers: Record<string, string> = {}
+  const piperBinaryName: 'piper' | 'sap-piper' = getPiperBinaryNameFromInputs(isEnterprise, version)
   debug(`version: ${version}`)
+
+  // Check if the binary already exists in the expected location before downloading
+  // Will only work for exact versions but not for 'master', 'latest' or 'prerelease:...')
+  const versionPath = version.replace(/\./g, '_')
+  let piperPath = `${process.cwd()}/${versionPath}/${piperBinaryName}`
+  if (fs.existsSync(piperPath)) return piperPath
+
+  if (onGitHubEnterprise()) {
+    try {
+      const mirrorPath = await downloadFromMirror(piperBinaryName, version, owner, repo)
+      if (mirrorPath !== '') return mirrorPath
+    } catch (err) {
+      debug(`Mirror download failed, falling back to github.com: ${(err as Error).message}`)
+    }
+  }
+
   if (token !== '') {
     debug('Fetching binary from GitHub API')
     headers.Accept = 'application/octet-stream'
@@ -35,8 +51,10 @@ export async function downloadPiperBinary (
     version = binaryURL.split('/').slice(-2)[0]
     debug(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`)
   }
-  version = version.replace(/\./g, '_')
-  const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`
+
+  // Check if the binary already exists in the expected location before downloading
+  const resolvedVersionPath = version.replace(/\./g, '_')
+  piperPath = `${process.cwd()}/${resolvedVersionPath}/${piperBinaryName}`
   if (fs.existsSync(piperPath)) {
     return piperPath
   }
@@ -63,8 +81,38 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   }
 }
 
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
+function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): 'piper' | 'sap-piper' {
   if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
 
   return isEnterpriseStep ? 'sap-piper' : 'piper'
+}
+
+export async function downloadFromMirror (binaryName: string, version: string, owner: string, repo: string): Promise<string> {
+  const mirrorApiURL = process.env.GITHUB_API_URL ?? ''
+  const mirrorToken = process.env.GITHUB_TOKEN ?? ''
+  if (mirrorApiURL === '' || mirrorToken === '') {
+    debug('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available')
+    return ''
+  }
+
+  info('Trying to download from GHE mirror')
+  const [binaryAssetURL, tag] = await getReleaseAssetUrl(binaryName, version, mirrorApiURL, mirrorToken, owner, repo)
+  if (binaryAssetURL === '') {
+    throw new Error(`Binary '${binaryName}' not found on mirror`)
+  }
+
+  const normalizedVersion = tag.replace(/\./g, '_')
+  const piperPath = `${process.cwd()}/${normalizedVersion}/${binaryName}`
+  if (fs.existsSync(piperPath)) {
+    info(`Using cached binary from mirror: ${piperPath}`)
+    return piperPath
+  }
+
+  info(`Downloading from mirror: '${binaryAssetURL}' as '${piperPath}'`)
+  await downloadTool(binaryAssetURL, piperPath, undefined, {
+    Accept: 'application/octet-stream',
+    Authorization: `token ${mirrorToken}`
+  })
+
+  return piperPath
 }

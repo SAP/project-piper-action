@@ -16449,7 +16449,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPiperDownloadURL = exports.downloadPiperBinary = void 0;
+exports.downloadFromMirror = exports.getPiperDownloadURL = exports.downloadPiperBinary = void 0;
 const fs = __importStar(__nccwpck_require__(7147));
 const core_1 = __nccwpck_require__(2186);
 const tool_cache_1 = __nccwpck_require__(7784);
@@ -16467,8 +16467,24 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
             throw new Error('repository is not provided');
         let binaryURL;
         const headers = {};
-        const piperBinaryName = yield getPiperBinaryNameFromInputs(isEnterprise, version);
+        const piperBinaryName = getPiperBinaryNameFromInputs(isEnterprise, version);
         (0, core_1.debug)(`version: ${version}`);
+        // Check if the binary already exists in the expected location before downloading
+        // Will only work for exact versions but not for 'master', 'latest' or 'prerelease:...')
+        const versionPath = version.replace(/\./g, '_');
+        let piperPath = `${process.cwd()}/${versionPath}/${piperBinaryName}`;
+        if (fs.existsSync(piperPath))
+            return piperPath;
+        if ((0, enterprise_1.onGitHubEnterprise)()) {
+            try {
+                const mirrorPath = yield downloadFromMirror(piperBinaryName, version, owner, repo);
+                if (mirrorPath !== '')
+                    return mirrorPath;
+            }
+            catch (err) {
+                (0, core_1.debug)(`Mirror download failed, falling back to github.com: ${err.message}`);
+            }
+        }
         if (token !== '') {
             (0, core_1.debug)('Fetching binary from GitHub API');
             headers.Accept = 'application/octet-stream';
@@ -16484,8 +16500,9 @@ function downloadPiperBinary(stepName, flags, version, apiURL, token, owner, rep
             version = binaryURL.split('/').slice(-2)[0];
             (0, core_1.debug)(`downloadPiperBinary: binaryURL: ${binaryURL}, version: ${version}`);
         }
-        version = version.replace(/\./g, '_');
-        const piperPath = `${process.cwd()}/${version}/${piperBinaryName}`;
+        // Check if the binary already exists in the expected location before downloading
+        const resolvedVersionPath = version.replace(/\./g, '_');
+        piperPath = `${process.cwd()}/${resolvedVersionPath}/${piperBinaryName}`;
         if (fs.existsSync(piperPath)) {
             return piperPath;
         }
@@ -16510,12 +16527,39 @@ function getPiperDownloadURL(piper, version) {
 }
 exports.getPiperDownloadURL = getPiperDownloadURL;
 function getPiperBinaryNameFromInputs(isEnterpriseStep, version) {
+    if (version === 'master')
+        (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
+    return isEnterpriseStep ? 'sap-piper' : 'piper';
+}
+function downloadFromMirror(binaryName, version, owner, repo) {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
-        if (version === 'master')
-            (0, core_1.info)('using _master binaries is deprecated. Using latest release version instead.');
-        return isEnterpriseStep ? 'sap-piper' : 'piper';
+        const mirrorApiURL = (_a = process.env.GITHUB_API_URL) !== null && _a !== void 0 ? _a : '';
+        const mirrorToken = (_b = process.env.GITHUB_TOKEN) !== null && _b !== void 0 ? _b : '';
+        if (mirrorApiURL === '' || mirrorToken === '') {
+            (0, core_1.debug)('Mirror download skipped: GITHUB_API_URL or GITHUB_TOKEN not available');
+            return '';
+        }
+        (0, core_1.info)('Trying to download from GHE mirror');
+        const [binaryAssetURL, tag] = yield (0, github_1.getReleaseAssetUrl)(binaryName, version, mirrorApiURL, mirrorToken, owner, repo);
+        if (binaryAssetURL === '') {
+            throw new Error(`Binary '${binaryName}' not found on mirror`);
+        }
+        const normalizedVersion = tag.replace(/\./g, '_');
+        const piperPath = `${process.cwd()}/${normalizedVersion}/${binaryName}`;
+        if (fs.existsSync(piperPath)) {
+            (0, core_1.info)(`Using cached binary from mirror: ${piperPath}`);
+            return piperPath;
+        }
+        (0, core_1.info)(`Downloading from mirror: '${binaryAssetURL}' as '${piperPath}'`);
+        yield (0, tool_cache_1.downloadTool)(binaryAssetURL, piperPath, undefined, {
+            Accept: 'application/octet-stream',
+            Authorization: `token ${mirrorToken}`
+        });
+        return piperPath;
     });
 }
+exports.downloadFromMirror = downloadFromMirror;
 
 
 /***/ }),
