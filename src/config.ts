@@ -24,6 +24,30 @@ import { internalActionVariables } from './piper'
 export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
+/**
+ * Builds the --gitHubTokens flag value, including additional enterprise server
+ * tokens from env vars (PIPER_ENTERPRISE_SERVER_URL and PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN)
+ * when they are set and differ from the primary server.
+ */
+export function buildGitHubTokens (server: string, token: string): string {
+  const tokens: string[] = []
+  const primaryHost = getHost(server)
+  if (primaryHost !== '' && token !== '') {
+    tokens.push(`${primaryHost}:${token}`)
+  }
+
+  const enterpriseServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
+  const enterpriseToken = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN ?? ''
+  if (enterpriseServerUrl !== '' && enterpriseToken !== '') {
+    const enterpriseHost = getHost(enterpriseServerUrl)
+    if (enterpriseHost !== '' && enterpriseHost !== primaryHost) {
+      tokens.push(`${enterpriseHost}:${enterpriseToken}`)
+    }
+  }
+
+  return tokens.join(',')
+}
+
 export interface ActionConfiguration {
   stepName: string
   flags: string
@@ -172,7 +196,7 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   }
   const flags: string[] = []
   flags.push(...defaultsPathsArgs)
-  flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+  flags.push('--gitHubTokens', buildGitHubTokens(server, token))
   const { stdout } = await executePiper('getDefaults', flags)
   let defaultConfigs = JSON.parse(stdout)
   if (customDefaultsPathsArray.length === 0) {
@@ -264,7 +288,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   }
   const flags: string[] = ['--useV1']
   flags.push('--defaultsFile', stageConfigPath)
-  flags.push('--gitHubTokens', `${getHost(server)}:${token}`)
+  flags.push('--gitHubTokens', buildGitHubTokens(server, token))
   const { stdout } = await executePiper('getDefaults', flags)
   const config = JSON.parse(stdout)
   fs.writeFileSync(path.join(CONFIG_DIR, ENTERPRISE_STAGE_CONFIG_FILENAME), config.content)
