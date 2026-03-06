@@ -3,9 +3,9 @@ import {
   DEFAULT_CONFIG,
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
+  getPrereleaseConfig,
   isEnterpriseStep,
-  onGitHubEnterprise,
-  getPrereleaseConfig
+  onGitHubEnterprise
 } from '../src/enterprise'
 import { GITHUB_COM_SERVER_URL } from '../src/github'
 import * as github from '../src/github'
@@ -92,7 +92,6 @@ describe('test enterprise.ts', () => {
         const version = 'prerelease:custom-owner:custom-repo:v1.2.3'
         await getEnterpriseConfigUrl(DEFAULT_CONFIG, 'https://api.github.com', version, 'token', 'default-owner', 'default-repo')
 
-        // Should call getReleaseAssetUrl with parsed owner, repo, and tag
         expect(github.getReleaseAssetUrl).toHaveBeenCalledWith(
           expect.any(String),
           'v1.2.3',
@@ -110,7 +109,6 @@ describe('test enterprise.ts', () => {
         const version = 'prerelease:test-owner:test-repo:v1.0.0'
         await getEnterpriseConfigUrl(DEFAULT_CONFIG, 'https://original-api.com', version, 'token', 'default-owner', 'default-repo')
 
-        // Should use the enterprise server URL for the API
         expect(github.getReleaseAssetUrl).toHaveBeenCalledWith(
           expect.any(String),
           'v1.0.0',
@@ -121,14 +119,13 @@ describe('test enterprise.ts', () => {
         )
       })
 
-      test('uses PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN when set', async () => {
+      test('uses enterprise token env var when set', async () => {
         process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'enterprise-token'
         process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
 
         const version = 'prerelease:owner:repo:tag'
         await getEnterpriseConfigUrl(DEFAULT_CONFIG, 'https://api.test.com', version, 'original-token', 'default-owner', 'default-repo')
 
-        // Should use the enterprise token instead of original token
         expect(github.getReleaseAssetUrl).toHaveBeenCalledWith(
           expect.any(String),
           'tag',
