@@ -17,8 +17,7 @@ import {
   DEFAULT_CONFIG,
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
-  onGitHubEnterprise,
-  getPrereleaseConfig
+  onGitHubEnterprise
 } from './enterprise'
 import { internalActionVariables } from './piper'
 
@@ -40,7 +39,6 @@ export interface ActionConfiguration {
   gitHubEnterpriseServer: string
   gitHubEnterpriseApi: string
   gitHubEnterpriseToken: string
-  wdfGithubEnterpriseToken: string
   dockerImage: string
   dockerOptions: string
   dockerEnvVars: string
@@ -100,7 +98,6 @@ export async function getActionConfig (options: InputOptions): Promise<ActionCon
     gitHubEnterpriseServer: enterpriseHost,
     gitHubEnterpriseApi: enterpriseApi,
     gitHubEnterpriseToken: getValue('github-enterprise-token'),
-    wdfGithubEnterpriseToken: getValue('wdf-github-enterprise-token'),
     dockerImage: getValue('docker-image'),
     dockerOptions: getValue('docker-options'),
     dockerEnvVars: getValue('docker-env-vars'),
@@ -158,21 +155,6 @@ function processCustomDefaultsPath (path: string): string {
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  // Since defaults file is located in release assets, we will take it from latest release
-  if (version.startsWith('devel:')) {
-    version = 'latest'
-  }
-  // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
-  // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
-  if (version.startsWith('prerelease:')) {
-    const config = getPrereleaseConfig(version, apiURL, server, token)
-    owner = config.owner
-    repository = config.repository
-    version = config.version
-    apiURL = config.apiURL
-    server = config.server
-    token = config.token
-  }
   const enterpriseDefaultsURL = await getEnterpriseConfigUrl(DEFAULT_CONFIG, apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
@@ -256,20 +238,8 @@ export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguratio
 
 export async function downloadStageConfig (actionCfg: ActionConfiguration): Promise<void> {
   let stageConfigPath = ''
-  let server = actionCfg.gitHubEnterpriseServer
-  let token = actionCfg.gitHubEnterpriseToken
-
-  // For prerelease versions, use enterprise server and token
-  if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
-    const config = getPrereleaseConfig(
-      actionCfg.sapPiperVersion,
-      actionCfg.gitHubEnterpriseApi,
-      server,
-      token
-    )
-    server = config.server
-    token = config.token
-  }
+  const server = actionCfg.gitHubEnterpriseServer
+  const token = actionCfg.gitHubEnterpriseToken
 
   if (actionCfg.customStageConditionsPath !== '') {
     info(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`)

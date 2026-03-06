@@ -1,12 +1,9 @@
 import fs from 'fs'
 
-import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
-import { buildPiperFromSource } from '../src/github'
 import { downloadPiperBinary } from '../src/download'
-import { parseDevVersion } from '../src/build'
 
 jest.mock('@actions/core')
 jest.mock('@actions/exec')
@@ -124,36 +121,5 @@ describe('GitHub package tests', () => {
     expect(core.debug).toHaveBeenCalledTimes(8)
     expect(core.info).toHaveBeenNthCalledWith(1, expect.stringContaining(`Downloading '${assetUrl}' as '${process.cwd()}/${version.replace(/\./g, '_')}/piper'`))
     expect(core.info).toHaveBeenCalledTimes(1)
-  })
-
-  test('Get dev Piper', async () => {
-    const owner = 'SAP'
-    const repository = 'jenkins-library'
-    const commitISH = '2866ef5592e13ac3afb693a7a5596eda37f085aa'
-    const shortCommitSHA = commitISH.slice(0, 7)
-    jest.spyOn(toolCache, 'downloadTool').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}/source-code.zip`))
-    jest.spyOn(toolCache, 'extractZip').mockReturnValue(Promise.resolve(`./${owner}-${repository}-${shortCommitSHA}`))
-    jest.spyOn(process, 'chdir').mockImplementation(jest.fn())
-    jest.spyOn(process, 'cwd').mockImplementation(jest.fn())
-    jest.spyOn(fs, 'readdirSync').mockReturnValue([])
-    jest.spyOn([], 'find').mockImplementation(jest.fn())
-    expect(
-      await buildPiperFromSource(`devel:${owner}:${repository}:${commitISH}`)
-    ).toBe(`${process.cwd()}/${owner}-${repository}-${shortCommitSHA}/piper`)
-  })
-})
-
-describe('parseVersion', () => {
-  it('should parse a valid version string', () => {
-    const version = 'devel:GH_OWNER:REPOSITORY:COMMITISH'
-    const { owner, repository, commitISH } = parseDevVersion(version)
-    expect(owner).toBe('GH_OWNER')
-    expect(repository).toBe('REPOSITORY')
-    expect(commitISH).toBe('COMMITISH')
-  })
-
-  it('should throw an error for an invalid version string', () => {
-    const version = 'invalid:version:string'
-    expect(() => parseDevVersion(version)).toThrow('broken version')
   })
 })
