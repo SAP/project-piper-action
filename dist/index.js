@@ -15684,23 +15684,22 @@ const piper_1 = __nccwpck_require__(309);
 exports.CONFIG_DIR = '.pipeline';
 exports.ARTIFACT_NAME = 'Pipeline defaults';
 /**
- * Builds the --gitHubTokens flag value, including additional enterprise server
- * tokens from env vars (PIPER_ENTERPRISE_SERVER_URL and PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN)
- * when they are set and differ from the primary server.
+ * Builds the --gitHubTokens flag value.
+ * Includes additional host:token pairs when provided to support multi-server auth
+ * (e.g. prerelease assets on one server, custom defaults on another).
  */
-function buildGitHubTokens(server, token) {
-    var _a, _b;
+function buildGitHubTokens(server, token, additionalServer, additionalToken) {
     const tokens = [];
+    const hosts = new Set();
     const primaryHost = (0, github_1.getHost)(server);
     if (primaryHost !== '' && token !== '') {
         tokens.push(`${primaryHost}:${token}`);
+        hosts.add(primaryHost);
     }
-    const enterpriseServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
-    const enterpriseToken = (_b = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN) !== null && _b !== void 0 ? _b : '';
-    if (enterpriseServerUrl !== '' && enterpriseToken !== '') {
-        const enterpriseHost = (0, github_1.getHost)(enterpriseServerUrl);
-        if (enterpriseHost !== '' && enterpriseHost !== primaryHost) {
-            tokens.push(`${enterpriseHost}:${enterpriseToken}`);
+    if (additionalServer != null && additionalToken != null && additionalServer !== '' && additionalToken !== '') {
+        const additionalHost = (0, github_1.getHost)(additionalServer);
+        if (additionalHost !== '' && !hosts.has(additionalHost)) {
+            tokens.push(`${additionalHost}:${additionalToken}`);
         }
     }
     return tokens.join(',');
@@ -15809,6 +15808,21 @@ function processCustomDefaultsPath(path) {
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
+        // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
+        // Keep track of original server/token since custom defaults paths may use a different host
+        let originalServer = '';
+        let originalToken = '';
+        if (version.startsWith('prerelease:')) {
+            originalServer = server;
+            originalToken = token;
+            const config = (0, enterprise_1.getPrereleaseConfig)(version, apiURL, server, token);
+            owner = config.owner;
+            repository = config.repository;
+            version = config.version;
+            apiURL = config.apiURL;
+            server = config.server;
+            token = config.token;
+        }
         const enterpriseDefaultsURL = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.DEFAULT_CONFIG, apiURL, version, token, owner, repository);
         if (enterpriseDefaultsURL !== '') {
             defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL]);
@@ -15822,7 +15836,7 @@ function downloadDefaultConfig(server, apiURL, version, token, owner, repository
         }
         const flags = [];
         flags.push(...defaultsPathsArgs);
-        flags.push('--gitHubTokens', buildGitHubTokens(server, token));
+        flags.push('--gitHubTokens', buildGitHubTokens(server, token, originalServer, originalToken));
         const { stdout } = yield (0, execute_1.executePiper)('getDefaults', flags);
         let defaultConfigs = JSON.parse(stdout);
         if (customDefaultsPathsArray.length === 0) {
@@ -15881,8 +15895,14 @@ exports.createCheckIfStepActiveMaps = createCheckIfStepActiveMaps;
 function downloadStageConfig(actionCfg) {
     return __awaiter(this, void 0, void 0, function* () {
         let stageConfigPath = '';
-        const server = actionCfg.gitHubEnterpriseServer;
-        const token = actionCfg.gitHubEnterpriseToken;
+        let server = actionCfg.gitHubEnterpriseServer;
+        let token = actionCfg.gitHubEnterpriseToken;
+        // For prerelease versions, use enterprise server and token
+        if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
+            const config = (0, enterprise_1.getPrereleaseConfig)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
+            server = config.server;
+            token = config.token;
+        }
         if (actionCfg.customStageConditionsPath !== '') {
             (0, core_1.info)(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`);
             stageConfigPath = actionCfg.customStageConditionsPath;
@@ -16388,7 +16408,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
+exports.getEnterpriseConfigUrl = exports.onGitHubEnterprise = exports.isEnterpriseStep = exports.getPrereleaseConfig = exports.ENTERPRISE_STAGE_CONFIG_FILENAME = exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = exports.ENTERPRISE_DEFAULTS_FILENAME = exports.STAGE_CONFIG = exports.DEFAULT_CONFIG = void 0;
 const github_1 = __nccwpck_require__(978);
 const core_1 = __nccwpck_require__(2186);
 exports.DEFAULT_CONFIG = 'DefaultConfig';
@@ -16397,6 +16417,35 @@ exports.ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml';
 exports.ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml';
 exports.ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml';
 const ENTERPRISE_STEPNAME_PREFIX = 'sap';
+/**
+ * Parses prerelease version format: prerelease:OWNER:REPO:TAG
+ * Applies enterprise server URL and token overrides from environment variables.
+ */
+function getPrereleaseConfig(version, apiURL, server, token) {
+    var _a, _b;
+    const parts = version.split(':');
+    if (parts.length < 4 || parts[1] === '' || parts[2] === '' || parts[3] === '') {
+        throw new Error(`Invalid prerelease version format: '${version}'. Expected format: 'prerelease:OWNER:REPO:TAG'`);
+    }
+    const enterpriseServerUrl = (_a = process.env.PIPER_ENTERPRISE_SERVER_URL) !== null && _a !== void 0 ? _a : '';
+    if (enterpriseServerUrl !== '') {
+        apiURL = `${enterpriseServerUrl}/api/v3`;
+        server = enterpriseServerUrl;
+    }
+    const enterpriseToken = (_b = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN) !== null && _b !== void 0 ? _b : '';
+    if (enterpriseToken !== '') {
+        token = enterpriseToken;
+    }
+    return {
+        owner: parts[1],
+        repository: parts[2],
+        version: parts[3],
+        apiURL,
+        server,
+        token
+    };
+}
+exports.getPrereleaseConfig = getPrereleaseConfig;
 function isEnterpriseStep(stepName, flags = '') {
     if (stepName === '') {
         // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
@@ -16428,6 +16477,15 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             (0, core_1.debug)('configType is STAGE_CONFIG');
             assetName = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
             filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
+        }
+        // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
+        if (version.startsWith('prerelease:')) {
+            const config = getPrereleaseConfig(version, apiURL, '', token);
+            owner = config.owner;
+            repository = config.repository;
+            version = config.version;
+            apiURL = config.apiURL;
+            token = config.token;
         }
         // get URL of defaults from the release (gh api, authenticated)
         const [url] = yield (0, github_1.getReleaseAssetUrl)(assetName, version, apiURL, token, owner, repository);

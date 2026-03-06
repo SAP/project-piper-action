@@ -17,6 +17,7 @@ import {
   DEFAULT_CONFIG,
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
+  getPrereleaseConfig,
   onGitHubEnterprise
 } from './enterprise'
 import { internalActionVariables } from './piper'
@@ -25,23 +26,23 @@ export const CONFIG_DIR = '.pipeline'
 export const ARTIFACT_NAME = 'Pipeline defaults'
 
 /**
- * Builds the --gitHubTokens flag value, including additional enterprise server
- * tokens from env vars (PIPER_ENTERPRISE_SERVER_URL and PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN)
- * when they are set and differ from the primary server.
+ * Builds the --gitHubTokens flag value.
+ * Includes additional host:token pairs when provided to support multi-server auth
+ * (e.g. prerelease assets on one server, custom defaults on another).
  */
-export function buildGitHubTokens (server: string, token: string): string {
+export function buildGitHubTokens (server: string, token: string, additionalServer?: string, additionalToken?: string): string {
   const tokens: string[] = []
+  const hosts = new Set<string>()
   const primaryHost = getHost(server)
   if (primaryHost !== '' && token !== '') {
     tokens.push(`${primaryHost}:${token}`)
+    hosts.add(primaryHost)
   }
 
-  const enterpriseServerUrl = process.env.PIPER_ENTERPRISE_SERVER_URL ?? ''
-  const enterpriseToken = process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN ?? ''
-  if (enterpriseServerUrl !== '' && enterpriseToken !== '') {
-    const enterpriseHost = getHost(enterpriseServerUrl)
-    if (enterpriseHost !== '' && enterpriseHost !== primaryHost) {
-      tokens.push(`${enterpriseHost}:${enterpriseToken}`)
+  if (additionalServer != null && additionalToken != null && additionalServer !== '' && additionalToken !== '') {
+    const additionalHost = getHost(additionalServer)
+    if (additionalHost !== '' && !hosts.has(additionalHost)) {
+      tokens.push(`${additionalHost}:${additionalToken}`)
     }
   }
 
@@ -179,6 +180,22 @@ function processCustomDefaultsPath (path: string): string {
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
+  // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
+  // Keep track of original server/token since custom defaults paths may use a different host
+  let originalServer = ''
+  let originalToken = ''
+  if (version.startsWith('prerelease:')) {
+    originalServer = server
+    originalToken = token
+    const config = getPrereleaseConfig(version, apiURL, server, token)
+    owner = config.owner
+    repository = config.repository
+    version = config.version
+    apiURL = config.apiURL
+    server = config.server
+    token = config.token
+  }
+
   const enterpriseDefaultsURL = await getEnterpriseConfigUrl(DEFAULT_CONFIG, apiURL, version, token, owner, repository)
   if (enterpriseDefaultsURL !== '') {
     defaultsPaths = defaultsPaths.concat([enterpriseDefaultsURL])
@@ -196,7 +213,7 @@ export async function downloadDefaultConfig (server: string, apiURL: string, ver
   }
   const flags: string[] = []
   flags.push(...defaultsPathsArgs)
-  flags.push('--gitHubTokens', buildGitHubTokens(server, token))
+  flags.push('--gitHubTokens', buildGitHubTokens(server, token, originalServer, originalToken))
   const { stdout } = await executePiper('getDefaults', flags)
   let defaultConfigs = JSON.parse(stdout)
   if (customDefaultsPathsArray.length === 0) {
@@ -262,8 +279,20 @@ export async function createCheckIfStepActiveMaps (actionCfg: ActionConfiguratio
 
 export async function downloadStageConfig (actionCfg: ActionConfiguration): Promise<void> {
   let stageConfigPath = ''
-  const server = actionCfg.gitHubEnterpriseServer
-  const token = actionCfg.gitHubEnterpriseToken
+  let server = actionCfg.gitHubEnterpriseServer
+  let token = actionCfg.gitHubEnterpriseToken
+
+  // For prerelease versions, use enterprise server and token
+  if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
+    const config = getPrereleaseConfig(
+      actionCfg.sapPiperVersion,
+      actionCfg.gitHubEnterpriseApi,
+      server,
+      token
+    )
+    server = config.server
+    token = config.token
+  }
 
   if (actionCfg.customStageConditionsPath !== '') {
     info(`using custom stage conditions from ${actionCfg.customStageConditionsPath}`)
