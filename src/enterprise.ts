@@ -86,6 +86,11 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
     filename = ENTERPRISE_STAGE_CONFIG_FILENAME
   }
 
+  // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+  if (version.startsWith('dev:')) {
+    version = 'latest'
+  }
+
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   if (version.startsWith('prerelease:')) {
     const config = getPrereleaseConfig(version, apiURL, '', token)

@@ -181,6 +181,30 @@ describe('test enterprise.ts', () => {
         )
       })
     })
+
+    describe('with dev version', () => {
+      beforeEach(() => {
+        jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue(['http://mock.test/asset/piper-defaults.yml', 'v1.0.0'])
+      })
+
+      afterEach(() => {
+        jest.restoreAllMocks()
+      })
+
+      test('normalizes dev:OWNER:REPO:BRANCH to latest', async () => {
+        const version = 'dev:some-org:some-repo:main'
+        await getEnterpriseConfigUrl(DEFAULT_CONFIG, 'https://api.github.com', version, 'token', 'default-owner', 'default-repo')
+
+        expect(github.getReleaseAssetUrl).toHaveBeenCalledWith(
+          expect.any(String),
+          'latest',
+          'https://api.github.com',
+          'token',
+          'default-owner',
+          'default-repo'
+        )
+      })
+    })
   })
 
   describe('getPrereleaseConfig', () => {

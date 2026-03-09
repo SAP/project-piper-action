@@ -180,6 +180,11 @@ function processCustomDefaultsPath (path: string): string {
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
+  // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+  if (version.startsWith('dev:')) {
+    version = 'latest'
+  }
+
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
   // Keep track of original server/token since custom defaults paths may use a different host
   let originalServer = ''
@@ -282,10 +287,16 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
   let server = actionCfg.gitHubEnterpriseServer
   let token = actionCfg.gitHubEnterpriseToken
 
+  // For dev versions, normalize to latest before resolving enterprise config
+  let sapPiperVersion = actionCfg.sapPiperVersion
+  if (sapPiperVersion.startsWith('dev:')) {
+    sapPiperVersion = 'latest'
+  }
+
   // For prerelease versions, use enterprise server and token
-  if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
+  if (sapPiperVersion.startsWith('prerelease:')) {
     const config = getPrereleaseConfig(
-      actionCfg.sapPiperVersion,
+      sapPiperVersion,
       actionCfg.gitHubEnterpriseApi,
       server,
       token
@@ -302,7 +313,7 @@ export async function downloadStageConfig (actionCfg: ActionConfiguration): Prom
     stageConfigPath = await getEnterpriseConfigUrl(
       STAGE_CONFIG,
       actionCfg.gitHubEnterpriseApi,
-      actionCfg.sapPiperVersion,
+      sapPiperVersion,
       token,
       actionCfg.sapPiperOwner,
       actionCfg.sapPiperRepo)
