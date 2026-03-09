@@ -15808,6 +15808,10 @@ function processCustomDefaultsPath(path) {
 function downloadDefaultConfig(server, apiURL, version, token, owner, repository, customDefaultsPaths) {
     return __awaiter(this, void 0, void 0, function* () {
         let defaultsPaths = [];
+        // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+        if (version.startsWith('dev:')) {
+            version = 'latest';
+        }
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         // Keep track of original server/token since custom defaults paths may use a different host
         let originalServer = '';
@@ -15897,9 +15901,14 @@ function downloadStageConfig(actionCfg) {
         let stageConfigPath = '';
         let server = actionCfg.gitHubEnterpriseServer;
         let token = actionCfg.gitHubEnterpriseToken;
+        // For dev versions, normalize to latest before resolving enterprise config
+        let sapPiperVersion = actionCfg.sapPiperVersion;
+        if (sapPiperVersion.startsWith('dev:')) {
+            sapPiperVersion = 'latest';
+        }
         // For prerelease versions, use enterprise server and token
-        if (actionCfg.sapPiperVersion.startsWith('prerelease:')) {
-            const config = (0, enterprise_1.getPrereleaseConfig)(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
+        if (sapPiperVersion.startsWith('prerelease:')) {
+            const config = (0, enterprise_1.getPrereleaseConfig)(sapPiperVersion, actionCfg.gitHubEnterpriseApi, server, token);
             server = config.server;
             token = config.token;
         }
@@ -15909,7 +15918,7 @@ function downloadStageConfig(actionCfg) {
         }
         else {
             (0, core_1.info)('using default stage conditions');
-            stageConfigPath = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, actionCfg.gitHubEnterpriseApi, actionCfg.sapPiperVersion, token, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+            stageConfigPath = yield (0, enterprise_1.getEnterpriseConfigUrl)(enterprise_1.STAGE_CONFIG, actionCfg.gitHubEnterpriseApi, sapPiperVersion, token, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
             if (stageConfigPath === '') {
                 throw new Error('Can\'t download stage config: failed to get URL!');
             }
@@ -16477,6 +16486,10 @@ function getEnterpriseConfigUrl(configType, apiURL, version, token, owner, repos
             (0, core_1.debug)('configType is STAGE_CONFIG');
             assetName = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
             filename = exports.ENTERPRISE_STAGE_CONFIG_FILENAME;
+        }
+        // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+        if (version.startsWith('dev:')) {
+            version = 'latest';
         }
         // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
         if (version.startsWith('prerelease:')) {
