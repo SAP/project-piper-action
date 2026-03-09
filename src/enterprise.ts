@@ -86,8 +86,8 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
     filename = ENTERPRISE_STAGE_CONFIG_FILENAME
   }
 
-  // For dev/devel versions (dev:OWNER:REPO:BRANCH or devel:OWNER:REPO:BRANCH), use latest release defaults
-  if (version.startsWith('dev:') || version.startsWith('devel:')) {
+  // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+  if (version.startsWith('dev:')) {
     version = 'latest'
   }
 

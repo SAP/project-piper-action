@@ -180,8 +180,8 @@ function processCustomDefaultsPath (path: string): string {
 export async function downloadDefaultConfig (server: string, apiURL: string, version: string, token: string, owner: string, repository: string, customDefaultsPaths: string): Promise<UploadResponse> {
   let defaultsPaths: string[] = []
 
-  // For dev/devel versions, defaults come from the latest release of the standard enterprise repo
-  if (version.startsWith('dev:') || version.startsWith('devel:')) {
+  // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+  if (version.startsWith('dev:')) {
     version = 'latest'
   }
 
