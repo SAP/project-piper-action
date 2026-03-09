@@ -415,6 +415,35 @@ describe('Config', () => {
       expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     })
 
+    test('downloadDefaultConfig passes both tokens when prerelease server differs from original', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.original.example.com'
+      process.env.GITHUB_API_URL = 'https://github.original.example.com/api/v3'
+      process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.enterprise.com'
+      process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'enterprise-token'
+
+      const originalServer = 'https://github.original.example.com'
+      const originalToken = 'original-server-token'
+      const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+      const customDefaultsPath = 'https://github.original.example.com/api/v3/repos/org/repo/contents/.pipeline/config.yml'
+
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl, customDefaultsPath])
+      jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapDefaultsUrl, 'v1.0.0'])
+
+      await config.downloadDefaultConfig(
+        originalServer,
+        'https://github.original.example.com/api/v3',
+        'prerelease:ContinuousDelivery:piper-library:1.400.0',
+        originalToken,
+        'default-owner',
+        'default-repo',
+        customDefaultsPath
+      )
+
+      expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+        '--gitHubTokens', 'github.enterprise.com:enterprise-token,github.original.example.com:original-server-token'
+      ]))
+    })
+
     test('downloadStageConfig uses original server and token when not prerelease', async () => {
       process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
       process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'

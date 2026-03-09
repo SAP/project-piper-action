@@ -38,7 +38,6 @@ describe('Docker', () => {
     gitHubEnterpriseServer: '',
     gitHubEnterpriseApi: '',
     gitHubEnterpriseToken: '',
-    wdfGithubEnterpriseToken: '',
     dockerImage: '',
     dockerOptions: '',
     dockerEnvVars: '',
