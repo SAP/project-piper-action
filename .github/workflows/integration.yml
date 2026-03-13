@@ -18,7 +18,7 @@ jobs:
         step: [version]
         # step: [version, npmExecuteScripts]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run action to show Project Piper version
         uses: ./
         with:
