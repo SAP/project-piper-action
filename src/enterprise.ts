@@ -18,9 +18,8 @@ export interface PrereleaseConfig {
 }
 
 /**
- * Resolves prerelease configuration from version string and environment variables.
- * Format: prerelease:OWNER:REPO:TAG
- * Also applies enterprise server URL and token overrides from environment variables.
+ * Parses prerelease version format: prerelease:OWNER:REPO:TAG
+ * Applies enterprise server URL and token overrides from environment variables.
  */
 export function getPrereleaseConfig (
   version: string,
@@ -87,12 +86,12 @@ export async function getEnterpriseConfigUrl (configType: string, apiURL: string
     filename = ENTERPRISE_STAGE_CONFIG_FILENAME
   }
 
-  // if version starts with devel: then it should use inner source Piper
-  if (version.startsWith('devel:')) {
+  // For dev versions (dev:OWNER:REPO:BRANCH), use latest release defaults
+  if (version.startsWith('dev:')) {
     version = 'latest'
   }
+
   // For prerelease versions, extract owner, repo, and tag from format: prerelease:OWNER:REPO:TAG
-  // Also use PIPER_ENTERPRISE_SERVER_URL and enterprise token for prereleases
   if (version.startsWith('prerelease:')) {
     const config = getPrereleaseConfig(version, apiURL, '', token)
     owner = config.owner

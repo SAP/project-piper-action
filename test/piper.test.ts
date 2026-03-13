@@ -5,7 +5,6 @@ import * as core from '@actions/core'
 import * as piper from '../src/piper'
 import * as config from '../src/config'
 import * as execute from '../src/execute'
-import * as github from '../src/github'
 import * as download from '../src/download'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
@@ -28,7 +27,6 @@ describe('Piper', () => {
       'sap-piper-repository': '',
       'github-token': '',
       'github-enterprise-token': '',
-      'wdf-github-enterprise-token': '',
       'docker-image': '',
       'docker-options': '',
       'docker-env-vars': '',
@@ -45,7 +43,6 @@ describe('Piper', () => {
 
     fs.chmodSync = jest.fn()
     jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
-    jest.spyOn(github, 'buildPiperFromSource').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -87,7 +84,6 @@ describe('Piper', () => {
     inputs['step-name'] = 'sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
-    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
     inputs['sap-piper-owner'] = 'project-piper'
     inputs['sap-piper-repository'] = 'testRepo'
     inputs['create-check-if-step-active-maps'] = 'true'
@@ -102,21 +98,10 @@ describe('Piper', () => {
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
-      // inputs['wdf-github-enterprise-token'],
       inputs['sap-piper-owner'],
       inputs['sap-piper-repository']
     )
     expect(config.createCheckIfStepActiveMaps).toHaveBeenCalled()
-    expect(docker.cleanupContainers).toHaveBeenCalled()
-  })
-
-  test('development version build from source', async () => {
-    inputs['step-name'] = 'getConfig'
-    inputs['piper-version'] = 'devel:testOwner:testRepo:1.1.1'
-
-    await piper.run()
-
-    expect(github.buildPiperFromSource).toHaveBeenCalledWith(inputs['piper-version'])
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
@@ -146,7 +131,6 @@ describe('Piper', () => {
     inputs.flags = '--stepName sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
-    inputs['wdf-github-enterprise-token'] = 'testWDFToken'
     inputs['sap-piper-owner'] = 'project-piper'
     inputs['sap-piper-repository'] = 'testRepo'
     inputs['create-check-if-step-active-maps'] = 'true'

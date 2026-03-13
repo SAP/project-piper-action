@@ -415,6 +415,35 @@ describe('Config', () => {
       expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
     })
 
+    test('downloadDefaultConfig passes both tokens when prerelease server differs from original', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.original.example.com'
+      process.env.GITHUB_API_URL = 'https://github.original.example.com/api/v3'
+      process.env.PIPER_ENTERPRISE_SERVER_URL = 'https://github.enterprise.com'
+      process.env.PIPER_ACTION_WDF_GITHUB_ENTERPRISE_TOKEN = 'enterprise-token'
+
+      const originalServer = 'https://github.original.example.com'
+      const originalToken = 'original-server-token'
+      const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+      const customDefaultsPath = 'https://github.original.example.com/api/v3/repos/org/repo/contents/.pipeline/config.yml'
+
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl, customDefaultsPath])
+      jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapDefaultsUrl, 'v1.0.0'])
+
+      await config.downloadDefaultConfig(
+        originalServer,
+        'https://github.original.example.com/api/v3',
+        'prerelease:ContinuousDelivery:piper-library:1.400.0',
+        originalToken,
+        'default-owner',
+        'default-repo',
+        customDefaultsPath
+      )
+
+      expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expect.arrayContaining([
+        '--gitHubTokens', 'github.enterprise.com:enterprise-token,github.original.example.com:original-server-token'
+      ]))
+    })
+
     test('downloadStageConfig uses original server and token when not prerelease', async () => {
       process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
       process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
@@ -444,6 +473,73 @@ describe('Config', () => {
       await config.downloadStageConfig(actionCfg)
 
       expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
+    })
+
+    test('downloadDefaultConfig normalizes dev version to latest', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
+      process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
+
+      const sapDefaultsUrl = `http://mock.test/asset/${ENTERPRISE_DEFAULTS_FILENAME}`
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapDefaultsUrl])
+
+      const getReleaseAssetUrlSpy = jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapDefaultsUrl, 'v1.0.0'])
+
+      const errorCode = await config.downloadDefaultConfig(
+        'https://github.enterprise.example.com',
+        'https://github.enterprise.example.com/api/v3',
+        'dev:some-org:some-repo:main',
+        'token',
+        'default-owner',
+        'default-repo',
+        ''
+      )
+
+      expect(errorCode).toBe(0)
+      // Should have normalized dev: version to 'latest' for release lookup
+      expect(getReleaseAssetUrlSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        'latest',
+        'https://github.enterprise.example.com/api/v3',
+        'token',
+        'default-owner',
+        'default-repo'
+      )
+    })
+
+    test('downloadStageConfig normalizes dev version to latest', async () => {
+      process.env.GITHUB_SERVER_URL = 'https://github.acme.com'
+      process.env.GITHUB_API_URL = 'https://github.acme.com/api/v3'
+
+      const server = 'https://github.anything.com'
+      const host = 'github.anything.com'
+      const sapStageConfigUrl = `http://mock.test/asset/${ENTERPRISE_STAGE_CONFIG_FILENAME}`
+      const expectedPiperFlags = ['--useV1', '--defaultsFile', sapStageConfigUrl, '--gitHubTokens', `${host}:original-token`]
+      piperExecResultMock = generatePiperGetDefaultsOutput([sapStageConfigUrl])
+
+      const getReleaseAssetUrlSpy = jest.spyOn(github, 'getReleaseAssetUrl').mockResolvedValue([sapStageConfigUrl, 'v1.0.0'])
+
+      // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+      const actionCfg = {
+        gitHubEnterpriseServer: server,
+        gitHubEnterpriseApi: 'https://dummy-api.test/',
+        sapPiperVersion: 'dev:some-org:some-repo:main',
+        gitHubEnterpriseToken: 'original-token',
+        customStageConditionsPath: '',
+        sapPiperOwner: 'default-owner',
+        sapPiperRepo: 'default-repo'
+      } as config.ActionConfiguration
+      await config.downloadStageConfig(actionCfg)
+
+      expect(execute.executePiper).toHaveBeenCalledWith('getDefaults', expectedPiperFlags)
+      // Should have normalized dev: version to 'latest' for release lookup
+      expect(getReleaseAssetUrlSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        'latest',
+        expect.any(String),
+        'original-token',
+        'default-owner',
+        'default-repo'
+      )
     })
   })
 })

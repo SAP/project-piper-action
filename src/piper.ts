@@ -1,5 +1,4 @@
 import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
-import { buildPiperFromSource } from './github'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -16,7 +15,6 @@ import {
   changeToWorkingDirectory, cleanupMonorepoSymlinks,
   restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
 } from './utils'
-import { buildPiperInnerSource } from './build'
 import { downloadPiperBinary } from './download'
 import { debugDirectoryStructure } from './debug'
 
@@ -133,11 +131,6 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
       return prebuiltSapPiperPath
     }
 
-    // devel:ORG_NAME:REPO_NAME:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-    if (actionCfg.sapPiperVersion.startsWith('devel:') && !actionCfg.exportPipelineEnvironment) {
-      info('Building Piper from inner source')
-      return await buildPiperInnerSource(actionCfg.sapPiperVersion, actionCfg.wdfGithubEnterpriseToken)
-    }
     info('Downloading Piper Inner source binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
@@ -149,11 +142,6 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     return prebuiltPiperPath
   }
 
-  // devel:SAP:jenkins-library:ff8df33b8ab17c19e9f4c48472828ed809d4496a
-  if (actionCfg.piperVersion.startsWith('devel:')) {
-    info('Building OS Piper from source')
-    return await buildPiperFromSource(actionCfg.piperVersion)
-  }
   info('Downloading Piper OS binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }

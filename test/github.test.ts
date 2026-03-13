@@ -1,6 +1,5 @@
 import fs from 'fs'
 
-import * as toolCache from '@actions/tool-cache'
 import * as octokit from '@octokit/core'
 import * as core from '@actions/core'
 
