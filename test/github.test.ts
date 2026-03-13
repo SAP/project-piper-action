@@ -274,4 +274,3 @@ describe('Mirror download tests', () => {
     expect(core.info).not.toHaveBeenCalledWith('Trying to download from GHE mirror')
   })
 })
-
