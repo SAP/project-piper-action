@@ -38,6 +38,18 @@ describe('Config', () => {
     expect(execute.executePiper).toHaveBeenCalled()
   })
 
+  test('Load pipelineEnv - preserves process.env', async () => {
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false)
+    process.env.PIPER_ACTION_PIPELINE_ENV = testPipelineEnv
+    process.env.GITHUB_ACTIONS = 'true'
+
+    await loadPipelineEnv()
+
+    const execOptions = (execute.executePiper as jest.Mock).mock.calls[0][3]
+    expect(execOptions.env).toHaveProperty('PIPER_pipelineEnv', testPipelineEnv)
+    expect(execOptions.env).toHaveProperty('GITHUB_ACTIONS', 'true')
+  })
+
   test('Load pipelineEnv - pipelineEnv already exists', async () => {
     jest.spyOn(fs, 'existsSync').mockReturnValue(true)
     process.env.PIPER_ACTION_PIPELINE_ENV = testPipelineEnv
