@@ -1,3 +1,4 @@
 dist/*.js  linguist-generated=true
 dist/*.map linguist-generated=true
 dist/*.txt linguist-generated=true
+dist/** text eol=lf
