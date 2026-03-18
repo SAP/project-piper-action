@@ -139,9 +139,15 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
     return prebuiltSapPiperPath
   }
 
-  // Always try SAP Piper first for all steps
-  info('Downloading SAP Piper binary')
-  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  // Try SAP Piper first when enterprise config is available
+  if (actionCfg.sapPiperOwner !== '' && actionCfg.sapPiperRepo !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+    info('Downloading SAP Piper binary')
+    return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  }
+
+  // No enterprise config, download OS Piper directly
+  info('Downloading OS Piper binary')
+  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
 async function downloadAndSetOSPiper (actionCfg: ActionConfiguration): Promise<void> {

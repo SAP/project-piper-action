@@ -16938,9 +16938,14 @@ function preparePiperPath(actionCfg) {
             (0, core_1.info)(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`);
             return prebuiltSapPiperPath;
         }
-        // Always try SAP Piper first for all steps
-        (0, core_1.info)('Downloading SAP Piper binary');
-        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        // Try SAP Piper first when enterprise config is available
+        if (actionCfg.sapPiperOwner !== '' && actionCfg.sapPiperRepo !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+            (0, core_1.info)('Downloading SAP Piper binary');
+            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        }
+        // No enterprise config, download OS Piper directly
+        (0, core_1.info)('Downloading OS Piper binary');
+        return yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }
 function downloadAndSetOSPiper(actionCfg) {
