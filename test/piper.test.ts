@@ -187,7 +187,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with OS Piper fallback (exit code 1)')
+    expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with exit code 1')
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 })

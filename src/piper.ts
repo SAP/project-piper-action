@@ -88,14 +88,19 @@ export async function run (): Promise<void> {
 
       if (isDebug()) debugDirectoryStructure('Before step execution')
 
+      // Check if the step exists in SAP Piper by running --help
+      if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
+        const helpResult = await executePiper(actionCfg.stepName, ['--help'])
+        if (helpResult.exitCode !== 0) {
+          debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
+          await downloadAndSetOSPiper(actionCfg)
+        }
+      }
+
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
-        if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-          await fallbackToOSPiper(actionCfg, flags)
-        } else {
-          throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
-        }
+        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
       }
       endGroup()
 
@@ -139,11 +144,9 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
 }
 
-async function fallbackToOSPiper (actionCfg: ActionConfiguration, flags: string[]): Promise<void> {
-  info('SAP Piper failed, falling back to OS Piper')
-  endGroup()
+async function downloadAndSetOSPiper (actionCfg: ActionConfiguration): Promise<void> {
+  info('Step not found in SAP Piper, switching to OS Piper')
 
-  startGroup('Fallback: OS Piper')
   const osPiperPath = await downloadOSPiperBinary(actionCfg)
   chmodSync(osPiperPath, 0o775)
   internalActionVariables.piperBinPath = osPiperPath
@@ -153,11 +156,6 @@ async function fallbackToOSPiper (actionCfg: ActionConfiguration, flags: string[
   if (containerID !== '') {
     info('Copying OS Piper binary into running container')
     await exec('docker', ['cp', osPiperPath, `${containerID}:/piper/${basename(osPiperPath)}`])
-  }
-
-  const fallbackResult = await executePiper(actionCfg.stepName, flags)
-  if (fallbackResult.exitCode !== 0) {
-    throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`)
   }
 }
 
