@@ -9,7 +9,6 @@ import * as download from '../src/download'
 import * as docker from '../src/docker'
 import * as pipelineEnv from '../src/pipelineEnv'
 import * as utils from '../src/utils'
-import { GITHUB_COM_API_URL } from '../src/github'
 import { internalActionVariables } from '../src/piper'
 
 describe('Piper', () => {
