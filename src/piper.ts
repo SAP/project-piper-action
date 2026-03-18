@@ -89,7 +89,22 @@ export async function run (): Promise<void> {
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
-        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+        if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
+          info(`SAP Piper failed with exit code ${result.exitCode}, falling back to OS Piper`)
+          endGroup()
+
+          startGroup('Fallback: OS Piper')
+          const osPiperPath = await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+          chmodSync(osPiperPath, 0o775)
+          internalActionVariables.piperBinPath = osPiperPath
+
+          const fallbackResult = await executePiper(actionCfg.stepName, flags)
+          if (fallbackResult.exitCode !== 0) {
+            throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`)
+          }
+        } else {
+          throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
+        }
       }
       endGroup()
 
@@ -121,27 +136,14 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
-  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-    info('Preparing Piper binary for enterprise step')
-
-    // Check for pre-built SAP Piper binary from composite action
-    const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH
-    if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
-      info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
-      return prebuiltSapPiperPath
-    }
-
-    info('Downloading Piper Inner source binary')
-    return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+  // Check for pre-built SAP Piper binary from composite action
+  const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH ?? ''
+  if (prebuiltSapPiperPath !== '') {
+    info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
+    return prebuiltSapPiperPath
   }
 
-  // Check for pre-built OS Piper binary from composite action
-  const prebuiltPiperPath = process.env.PIPER_BINARY_PATH
-  if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
-    info(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`)
-    return prebuiltPiperPath
-  }
-
-  info('Downloading Piper OS binary')
-  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  // Always try SAP Piper first for all steps
+  info('Downloading SAP Piper binary')
+  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
 }

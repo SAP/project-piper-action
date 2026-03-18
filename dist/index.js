@@ -16888,7 +16888,21 @@ function run() {
                 (0, core_1.startGroup)(actionCfg.stepName);
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
-                    throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
+                    if (!(0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
+                        (0, core_1.info)(`SAP Piper failed with exit code ${result.exitCode}, falling back to OS Piper`);
+                        (0, core_1.endGroup)();
+                        (0, core_1.startGroup)('Fallback: OS Piper');
+                        const osPiperPath = yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+                        (0, fs_1.chmodSync)(osPiperPath, 0o775);
+                        exports.internalActionVariables.piperBinPath = osPiperPath;
+                        const fallbackResult = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+                        if (fallbackResult.exitCode !== 0) {
+                            throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`);
+                        }
+                    }
+                    else {
+                        throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
+                    }
                 }
                 (0, core_1.endGroup)();
                 if ((0, core_1.isDebug)())
@@ -16919,27 +16933,18 @@ function preparePiperBinary(actionCfg) {
     });
 }
 function preparePiperPath(actionCfg) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         (0, core_1.debug)('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)));
-        if ((0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
-            (0, core_1.info)('Preparing Piper binary for enterprise step');
-            // Check for pre-built SAP Piper binary from composite action
-            const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH;
-            if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
-                (0, core_1.info)(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`);
-                return prebuiltSapPiperPath;
-            }
-            (0, core_1.info)('Downloading Piper Inner source binary');
-            return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+        // Check for pre-built SAP Piper binary from composite action
+        const prebuiltSapPiperPath = (_a = process.env.SAP_PIPER_BINARY_PATH) !== null && _a !== void 0 ? _a : '';
+        if (prebuiltSapPiperPath !== '') {
+            (0, core_1.info)(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`);
+            return prebuiltSapPiperPath;
         }
-        // Check for pre-built OS Piper binary from composite action
-        const prebuiltPiperPath = process.env.PIPER_BINARY_PATH;
-        if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
-            (0, core_1.info)(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`);
-            return prebuiltPiperPath;
-        }
-        (0, core_1.info)('Downloading Piper OS binary');
-        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        // Always try SAP Piper first for all steps
+        (0, core_1.info)('Downloading SAP Piper binary');
+        return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
     });
 }
 

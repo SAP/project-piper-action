@@ -105,23 +105,29 @@ describe('Piper', () => {
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
-  test('open-source command', async () => {
+  test('open-source command downloads SAP Piper first', async () => {
     inputs['step-name'] = 'getConfig'
     inputs['piper-version'] = '1.2.2'
     inputs['github-token'] = 'testGithubToken'
     inputs['piper-owner'] = 'SAP'
     inputs['piper-repository'] = 'jenkins-library'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
 
     await piper.run()
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
       inputs['step-name'],
       '',
-      inputs['piper-version'],
-      GITHUB_COM_API_URL,
-      inputs['github-token'],
-      inputs['piper-owner'],
-      inputs['piper-repository']
+      inputs['sap-piper-version'],
+      'https://api.githubenterprise.test.com/',
+      inputs['github-enterprise-token'],
+      inputs['sap-piper-owner'],
+      inputs['sap-piper-repository']
     )
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
@@ -181,7 +187,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with exit code 1')
+    expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with OS Piper fallback (exit code 1)')
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 })
