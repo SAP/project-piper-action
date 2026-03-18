@@ -16945,7 +16945,7 @@ function fallbackToOSPiper(actionCfg, flags) {
         (0, core_1.info)('SAP Piper failed, falling back to OS Piper');
         (0, core_1.endGroup)();
         (0, core_1.startGroup)('Fallback: OS Piper');
-        const osPiperPath = yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        const osPiperPath = yield downloadOSPiperBinary(actionCfg);
         (0, fs_1.chmodSync)(osPiperPath, 0o775);
         exports.internalActionVariables.piperBinPath = osPiperPath;
         // If running in Docker, copy the OS Piper binary into the container's /piper/ mount
@@ -16958,6 +16958,23 @@ function fallbackToOSPiper(actionCfg, flags) {
         if (fallbackResult.exitCode !== 0) {
             throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`);
         }
+    });
+}
+function downloadOSPiperBinary(actionCfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Try GHE mirror first (SAP/jenkins-library on enterprise instance)
+        if (actionCfg.gitHubEnterpriseApi !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+            try {
+                (0, core_1.info)('Trying OS Piper download from GHE mirror');
+                return yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.piperOwner, actionCfg.piperRepo);
+            }
+            catch (err) {
+                (0, core_1.info)(`GHE mirror download failed: ${err instanceof Error ? err.message : String(err)}, falling back to github.com`);
+            }
+        }
+        // Fall back to public github.com
+        (0, core_1.info)('Downloading OS Piper from github.com');
+        return yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
     });
 }
 

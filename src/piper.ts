@@ -144,7 +144,7 @@ async function fallbackToOSPiper (actionCfg: ActionConfiguration, flags: string[
   endGroup()
 
   startGroup('Fallback: OS Piper')
-  const osPiperPath = await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  const osPiperPath = await downloadOSPiperBinary(actionCfg)
   chmodSync(osPiperPath, 0o775)
   internalActionVariables.piperBinPath = osPiperPath
 
@@ -159,4 +159,20 @@ async function fallbackToOSPiper (actionCfg: ActionConfiguration, flags: string[
   if (fallbackResult.exitCode !== 0) {
     throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`)
   }
+}
+
+async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<string> {
+  // Try GHE mirror first (SAP/jenkins-library on enterprise instance)
+  if (actionCfg.gitHubEnterpriseApi !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+    try {
+      info('Trying OS Piper download from GHE mirror')
+      return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.piperOwner, actionCfg.piperRepo)
+    } catch (err) {
+      info(`GHE mirror download failed: ${err instanceof Error ? err.message : String(err)}, falling back to github.com`)
+    }
+  }
+
+  // Fall back to public github.com
+  info('Downloading OS Piper from github.com')
+  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
