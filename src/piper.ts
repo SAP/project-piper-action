@@ -1,5 +1,7 @@
 import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
+import { exec } from '@actions/exec'
 import { chmodSync } from 'fs'
+import { basename } from 'path'
 import { executePiper } from './execute'
 import {
   type ActionConfiguration,
@@ -90,18 +92,7 @@ export async function run (): Promise<void> {
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
         if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-          info(`SAP Piper failed with exit code ${result.exitCode}, falling back to OS Piper`)
-          endGroup()
-
-          startGroup('Fallback: OS Piper')
-          const osPiperPath = await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
-          chmodSync(osPiperPath, 0o775)
-          internalActionVariables.piperBinPath = osPiperPath
-
-          const fallbackResult = await executePiper(actionCfg.stepName, flags)
-          if (fallbackResult.exitCode !== 0) {
-            throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`)
-          }
+          await fallbackToOSPiper(actionCfg, flags)
         } else {
           throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`)
         }
@@ -146,4 +137,26 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   // Always try SAP Piper first for all steps
   info('Downloading SAP Piper binary')
   return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+}
+
+async function fallbackToOSPiper (actionCfg: ActionConfiguration, flags: string[]): Promise<void> {
+  info('SAP Piper failed, falling back to OS Piper')
+  endGroup()
+
+  startGroup('Fallback: OS Piper')
+  const osPiperPath = await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  chmodSync(osPiperPath, 0o775)
+  internalActionVariables.piperBinPath = osPiperPath
+
+  // If running in Docker, copy the OS Piper binary into the container's /piper/ mount
+  const containerID = internalActionVariables.dockerContainerID
+  if (containerID !== '') {
+    info('Copying OS Piper binary into running container')
+    await exec('docker', ['cp', osPiperPath, `${containerID}:/piper/${basename(osPiperPath)}`])
+  }
+
+  const fallbackResult = await executePiper(actionCfg.stepName, flags)
+  if (fallbackResult.exitCode !== 0) {
+    throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`)
+  }
 }

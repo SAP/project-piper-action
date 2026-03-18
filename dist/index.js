@@ -16825,7 +16825,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = exports.internalActionVariables = void 0;
 const core_1 = __nccwpck_require__(2186);
+const exec_1 = __nccwpck_require__(1514);
 const fs_1 = __nccwpck_require__(7147);
+const path_1 = __nccwpck_require__(1017);
 const execute_1 = __nccwpck_require__(5938);
 const config_1 = __nccwpck_require__(6373);
 const pipelineEnv_1 = __nccwpck_require__(269);
@@ -16889,16 +16891,7 @@ function run() {
                 const result = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
                 if (result.exitCode !== 0) {
                     if (!(0, enterprise_1.isEnterpriseStep)(actionCfg.stepName, actionCfg.flags)) {
-                        (0, core_1.info)(`SAP Piper failed with exit code ${result.exitCode}, falling back to OS Piper`);
-                        (0, core_1.endGroup)();
-                        (0, core_1.startGroup)('Fallback: OS Piper');
-                        const osPiperPath = yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
-                        (0, fs_1.chmodSync)(osPiperPath, 0o775);
-                        exports.internalActionVariables.piperBinPath = osPiperPath;
-                        const fallbackResult = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
-                        if (fallbackResult.exitCode !== 0) {
-                            throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`);
-                        }
+                        yield fallbackToOSPiper(actionCfg, flags);
                     }
                     else {
                         throw new Error(`Step ${actionCfg.stepName} failed with exit code ${result.exitCode}`);
@@ -16945,6 +16938,26 @@ function preparePiperPath(actionCfg) {
         // Always try SAP Piper first for all steps
         (0, core_1.info)('Downloading SAP Piper binary');
         return yield (0, download_1.downloadPiperBinary)(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo);
+    });
+}
+function fallbackToOSPiper(actionCfg, flags) {
+    return __awaiter(this, void 0, void 0, function* () {
+        (0, core_1.info)('SAP Piper failed, falling back to OS Piper');
+        (0, core_1.endGroup)();
+        (0, core_1.startGroup)('Fallback: OS Piper');
+        const osPiperPath = yield (0, download_1.downloadPiperBinary)('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo);
+        (0, fs_1.chmodSync)(osPiperPath, 0o775);
+        exports.internalActionVariables.piperBinPath = osPiperPath;
+        // If running in Docker, copy the OS Piper binary into the container's /piper/ mount
+        const containerID = exports.internalActionVariables.dockerContainerID;
+        if (containerID !== '') {
+            (0, core_1.info)('Copying OS Piper binary into running container');
+            yield (0, exec_1.exec)('docker', ['cp', osPiperPath, `${containerID}:/piper/${(0, path_1.basename)(osPiperPath)}`]);
+        }
+        const fallbackResult = yield (0, execute_1.executePiper)(actionCfg.stepName, flags);
+        if (fallbackResult.exitCode !== 0) {
+            throw new Error(`Step ${actionCfg.stepName} failed with OS Piper fallback (exit code ${fallbackResult.exitCode})`);
+        }
     });
 }
 
