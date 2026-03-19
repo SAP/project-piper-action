@@ -2,6 +2,7 @@ import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/
 import { exec } from '@actions/exec'
 import { chmodSync } from 'fs'
 import { basename } from 'path'
+import { Writable } from 'stream'
 import { executePiper } from './execute'
 import {
   type ActionConfiguration,
@@ -90,8 +91,11 @@ export async function run (): Promise<void> {
 
       // Check if the step exists in SAP Piper by running --help
       if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-        // NOTE: When non-zero value is returned error appears in GH logs. That is why we use { silent: true }.
-        const helpResult = await executePiper(actionCfg.stepName, ['--help'], false, { silent: true })
+        const helpResult = await executePiper(actionCfg.stepName, ['--help'], false, {
+          silent: true,
+          outStream: devNull,
+          errStream: devNull
+        })
         if (helpResult.exitCode !== 0) {
           debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
           await downloadAndSetOSPiper(actionCfg)
@@ -181,3 +185,6 @@ async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<s
   info('Downloading OS Piper from github.com')
   return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
+
+// Suppress all output from the --help probe to avoid red error lines in GH Actions logs
+const devNull = new Writable({ write: (_chunk, _encoding, callback) => { callback() } })
