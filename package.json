@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "eslint src/**/*.ts test/**/*.ts",
     "lint:ci": "eslint src/**/*.ts test/**/*.ts --format json-relative --output-file reports/eslint-report.json",
-    "dist:build": "ncc build src/main.ts -o dist --source-map --license licenses.txt",
+    "dist:build": "ncc build src/main.ts -o dist --source-map --license licenses.txt --minify",
     "dist:update": "npm run dist:build && git add dist/** && git commit -m 'update dist folder' && git push",
     "test": "jest",
     "test:ci": "JEST_JUNIT_OUTPUT_DIR=reports/ JEST_JUNIT_OUTPUT_NAME=TEST-jest.xml jest --ci --reporters=default --reporters=jest-junit --reporters=jest-sonar --coverageReporters=text-summary --coverageReporters=cobertura --coverageReporters=lcovonly --coverageDirectory=reports/",
