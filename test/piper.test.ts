@@ -56,6 +56,8 @@ describe('Piper', () => {
     // jest.spyOn(utils, 'ensurePipelineSymlinksAfterLoad').mockImplementation()
     jest.spyOn(utils, 'restoreOriginalDirectory').mockImplementation()
     jest.spyOn(utils, 'cleanupMonorepoSymlinks').mockImplementation()
+    // Default: --help check passes (step exists in SAP Piper)
+    jest.spyOn(actionsExec, 'getExecOutput').mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 })
     jest.spyOn(core, 'setFailed').mockImplementation()
     jest.spyOn(core, 'getInput').mockImplementation((name: string, options?: core.InputOptions) => {
       const val = inputs[name]
@@ -209,10 +211,12 @@ describe('Piper', () => {
 
     const execSpy = jest.spyOn(actionsExec, 'exec').mockResolvedValue(0)
 
-    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    // --help check via getExecOutput: step not found in SAP Piper
+    jest.spyOn(actionsExec, 'getExecOutput').mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+
+    // executePiper calls: 1) version, 2) actual step
     jest.spyOn(execute, 'executePiper')
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
-      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
     // downloadPiperBinary calls: 1) SAP Piper, 2) OS Piper from mirror
@@ -242,10 +246,12 @@ describe('Piper', () => {
 
     const execSpy = jest.spyOn(actionsExec, 'exec').mockResolvedValue(0)
 
-    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    // --help check via getExecOutput: step not found in SAP Piper
+    jest.spyOn(actionsExec, 'getExecOutput').mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+
+    // executePiper calls: 1) version, 2) actual step
     jest.spyOn(execute, 'executePiper')
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
-      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
     jest.spyOn(download, 'downloadPiperBinary')
@@ -272,10 +278,12 @@ describe('Piper', () => {
     process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
     process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
 
-    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    // --help check via getExecOutput: step not found in SAP Piper
+    jest.spyOn(actionsExec, 'getExecOutput').mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+
+    // executePiper calls: 1) version, 2) actual step
     jest.spyOn(execute, 'executePiper')
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
-      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
     // downloadPiperBinary calls: 1) SAP Piper, 2) GHE mirror fails, 3) github.com

@@ -4,6 +4,7 @@ import { debug, info, warning } from '@actions/core'
 import path from 'path'
 import { existsSync, lstatSync, symlinkSync, unlinkSync } from 'fs'
 import { internalActionVariables } from './piper'
+import { Writable } from 'stream'
 
 function tokenize (input: string): string[] {
   // This regular expression looks for:
@@ -151,3 +152,6 @@ function cleanupMonorepoSymlinks (): void {
 export {
   tokenize, changeToWorkingDirectory, restoreOriginalDirectory, setupMonorepoSymlinks, cleanupMonorepoSymlinks
 }
+
+// Suppress all output from the --help probe to avoid red error lines in GH Actions logs
+export const devNull = new Writable({ write: (_chunk, _encoding, callback) => { callback() } })

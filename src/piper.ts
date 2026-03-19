@@ -2,7 +2,6 @@ import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/
 import { exec } from '@actions/exec'
 import { chmodSync } from 'fs'
 import { basename } from 'path'
-import { Writable } from 'stream'
 import { executePiper } from './execute'
 import {
   type ActionConfiguration,
@@ -13,7 +12,7 @@ import {
 } from './config'
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
-import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
+import { isEnterpriseStep, onGitHubEnterprise, existsInSapPiper } from './enterprise'
 import {
   changeToWorkingDirectory, cleanupMonorepoSymlinks,
   restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
@@ -89,18 +88,8 @@ export async function run (): Promise<void> {
 
       if (isDebug()) debugDirectoryStructure('Before step execution')
 
-      // Check if the step exists in SAP Piper by running --help
-      if (!isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-        const helpResult = await executePiper(actionCfg.stepName, ['--help'], false, {
-          silent: true,
-          outStream: devNull,
-          errStream: devNull
-        })
-        if (helpResult.exitCode !== 0) {
-          debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
-          await downloadAndSetOSPiper(actionCfg)
-        }
-      }
+      // If step doesn't exist in Inner Piper download OS Piper
+      await chooseCorrectBinary(actionCfg)
 
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
@@ -181,10 +170,18 @@ async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<s
     }
   }
 
-  // Fall back to public github.com
+  // Fall back to public GitHub.com
   info('Downloading OS Piper from github.com')
   return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
-// Suppress all output from the --help probe to avoid red error lines in GH Actions logs
-const devNull = new Writable({ write: (_chunk, _encoding, callback) => { callback() } })
+async function chooseCorrectBinary (actionCfg: ActionConfiguration): Promise<void> {
+  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags) ||
+    await existsInSapPiper(actionCfg.stepName)) {
+    return
+  }
+  // Check if the step exists in SAP Piper by running --help directly on host binary
+  // We bypass executePiper to avoid docker exec which leaks stderr to the runner
+  debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
+  await downloadAndSetOSPiper(actionCfg)
+}
