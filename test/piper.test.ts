@@ -1,6 +1,7 @@
 import fs from 'fs'
 
 import * as core from '@actions/core'
+import * as actionsExec from '@actions/exec'
 
 import * as piper from '../src/piper'
 import * as config from '../src/config'
@@ -188,5 +189,110 @@ describe('Piper', () => {
 
     expect(core.setFailed).toHaveBeenCalledWith('Step mavenBuild failed with exit code 1')
     expect(docker.cleanupContainers).toHaveBeenCalled()
+  })
+
+  test('step not in SAP Piper switches to OS Piper and copies binary into Docker container', async () => {
+    inputs['step-name'] = 'golangBuild'
+    inputs['piper-version'] = '1.2.2'
+    inputs['github-token'] = 'testGithubToken'
+    inputs['piper-owner'] = 'SAP'
+    inputs['piper-repository'] = 'jenkins-library'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
+
+    // Simulate a running Docker container
+    internalActionVariables.dockerContainerID = 'test-container-123'
+
+    const execSpy = jest.spyOn(actionsExec, 'exec').mockResolvedValue(0)
+
+    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    jest.spyOn(execute, 'executePiper')
+      .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+      .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
+
+    // downloadPiperBinary calls: 1) SAP Piper, 2) OS Piper from mirror
+    jest.spyOn(download, 'downloadPiperBinary')
+      .mockResolvedValueOnce('./sap-piper')
+      .mockResolvedValueOnce('./os-piper')
+
+    await piper.run()
+
+    // Verify docker cp was called to copy OS Piper binary into container
+    expect(execSpy).toHaveBeenCalledWith('docker', ['cp', './os-piper', 'test-container-123:/piper/os-piper'])
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  test('step not in SAP Piper switches to OS Piper without docker cp when no container', async () => {
+    inputs['step-name'] = 'golangBuild'
+    inputs['piper-version'] = '1.2.2'
+    inputs['github-token'] = 'testGithubToken'
+    inputs['piper-owner'] = 'SAP'
+    inputs['piper-repository'] = 'jenkins-library'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
+
+    const execSpy = jest.spyOn(actionsExec, 'exec').mockResolvedValue(0)
+
+    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    jest.spyOn(execute, 'executePiper')
+      .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+      .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
+
+    jest.spyOn(download, 'downloadPiperBinary')
+      .mockResolvedValueOnce('./sap-piper')
+      .mockResolvedValueOnce('./os-piper')
+
+    await piper.run()
+
+    // No docker cp since no container is running
+    expect(execSpy).not.toHaveBeenCalled()
+    expect(core.setFailed).not.toHaveBeenCalled()
+  })
+
+  test('OS Piper download tries GHE mirror first then falls back to github.com', async () => {
+    inputs['step-name'] = 'golangBuild'
+    inputs['piper-version'] = '1.2.2'
+    inputs['github-token'] = 'testGithubToken'
+    inputs['piper-owner'] = 'SAP'
+    inputs['piper-repository'] = 'jenkins-library'
+    inputs['sap-piper-version'] = '1.2.3'
+    inputs['github-enterprise-token'] = 'testToolsToken'
+    inputs['sap-piper-owner'] = 'project-piper'
+    inputs['sap-piper-repository'] = 'testRepo'
+    process.env.GITHUB_SERVER_URL = 'https://githubenterprise.test.com/'
+    process.env.GITHUB_API_URL = 'https://api.githubenterprise.test.com/'
+
+    // executePiper calls: 1) version, 2) --help check (not found), 3) actual step
+    jest.spyOn(execute, 'executePiper')
+      .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: 'unknown command', exitCode: 1 })
+      .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
+
+    // downloadPiperBinary calls: 1) SAP Piper, 2) GHE mirror fails, 3) github.com
+    jest.spyOn(download, 'downloadPiperBinary')
+      .mockResolvedValueOnce('./sap-piper')
+      .mockRejectedValueOnce(new Error('mirror not available'))
+      .mockResolvedValueOnce('./os-piper')
+
+    await piper.run()
+
+    expect(download.downloadPiperBinary).toHaveBeenCalledTimes(3)
+    expect(download.downloadPiperBinary).toHaveBeenNthCalledWith(2,
+      '', '', '1.2.2', 'https://api.githubenterprise.test.com/', 'testToolsToken', 'SAP', 'jenkins-library'
+    )
+    expect(download.downloadPiperBinary).toHaveBeenNthCalledWith(3,
+      '', '', '1.2.2', 'https://api.github.com', 'testGithubToken', 'SAP', 'jenkins-library'
+    )
+    expect(core.setFailed).not.toHaveBeenCalled()
   })
 })
