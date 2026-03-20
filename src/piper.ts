@@ -10,12 +10,12 @@ import {
 } from './config'
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
-import { isEnterpriseStep, onGitHubEnterprise } from './enterprise'
+import { isEnterpriseStep, onGitHubEnterprise, existsInSapPiper } from './enterprise'
 import {
   changeToWorkingDirectory, cleanupMonorepoSymlinks,
   restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
 } from './utils'
-import { downloadPiperBinary } from './download'
+import { downloadAndSetOSPiper, downloadPiperBinary } from './download'
 import { debugDirectoryStructure } from './debug'
 
 // Global runtime variables that is accessible within a single action execution
@@ -86,6 +86,9 @@ export async function run (): Promise<void> {
 
       if (isDebug()) debugDirectoryStructure('Before step execution')
 
+      // If step doesn't exist in Inner Piper download OS Piper
+      await chooseCorrectBinary(actionCfg)
+
       startGroup(actionCfg.stepName)
       const result = await executePiper(actionCfg.stepName, flags)
       if (result.exitCode !== 0) {
@@ -121,27 +124,31 @@ async function preparePiperBinary (actionCfg: ActionConfiguration): Promise<void
 async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string> {
   debug('Preparing Piper binary path with configuration '.concat(JSON.stringify(actionCfg)))
 
-  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags)) {
-    info('Preparing Piper binary for enterprise step')
+  // Check for pre-built SAP Piper binary from composite action
+  const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH ?? ''
+  if (prebuiltSapPiperPath !== '') {
+    info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
+    return prebuiltSapPiperPath
+  }
 
-    // Check for pre-built SAP Piper binary from composite action
-    const prebuiltSapPiperPath = process.env.SAP_PIPER_BINARY_PATH
-    if (prebuiltSapPiperPath !== undefined && prebuiltSapPiperPath !== '') {
-      info(`Using pre-built SAP Piper binary from: ${prebuiltSapPiperPath}`)
-      return prebuiltSapPiperPath
-    }
-
-    info('Downloading Piper Inner source binary')
+  // Try SAP Piper first when enterprise config is available
+  if (actionCfg.sapPiperOwner !== '' && actionCfg.sapPiperRepo !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+    info('Downloading SAP Piper binary')
     return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
 
-  // Check for pre-built OS Piper binary from composite action
-  const prebuiltPiperPath = process.env.PIPER_BINARY_PATH
-  if (prebuiltPiperPath !== undefined && prebuiltPiperPath !== '') {
-    info(`Using pre-built OS Piper binary from: ${prebuiltPiperPath}`)
-    return prebuiltPiperPath
-  }
+  // No enterprise config, download OS Piper directly
+  info('Downloading OS Piper binary')
+  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
 
-  info('Downloading Piper OS binary')
-  return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+async function chooseCorrectBinary (actionCfg: ActionConfiguration): Promise<void> {
+  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags) ||
+    await existsInSapPiper(actionCfg.stepName)) {
+    return
+  }
+  // Check if the step exists in SAP Piper by running --help directly on host binary
+  // We bypass executePiper to avoid docker exec which leaks stderr to the runner
+  debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
+  await downloadAndSetOSPiper(actionCfg)
 }
