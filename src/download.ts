@@ -7,6 +7,11 @@ import {
   getReleaseAssetUrl
 } from './github'
 import { fetchRetry } from './fetch'
+import type { ActionConfiguration } from './config'
+import { chmodSync } from 'fs'
+import { exec } from '@actions/exec'
+import { basename } from 'path'
+import { internalActionVariables } from './piper'
 
 export async function downloadPiperBinary (
   stepName: string, flags: string, version: string, apiURL: string, token: string, owner: string, repo: string
@@ -50,6 +55,37 @@ export async function downloadPiperBinary (
   )
 
   return piperPath
+}
+
+async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<string> {
+  // Try GHE mirror first (SAP/jenkins-library on enterprise instance)
+  if (actionCfg.gitHubEnterpriseApi !== '' && actionCfg.gitHubEnterpriseToken !== '') {
+    try {
+      info('Trying OS Piper download from GHE mirror')
+      return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.piperOwner, actionCfg.piperRepo)
+    } catch (err) {
+      info(`GHE mirror download failed: ${err instanceof Error ? err.message : String(err)}, falling back to github.com`)
+    }
+  }
+
+  // Fall back to public GitHub.com
+  info('Downloading OS Piper from github.com')
+  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+}
+
+export async function downloadAndSetOSPiper (actionCfg: ActionConfiguration): Promise<void> {
+  info('Step not found in SAP Piper, switching to OS Piper')
+
+  const osPiperPath = await downloadOSPiperBinary(actionCfg)
+  chmodSync(osPiperPath, 0o775)
+  internalActionVariables.piperBinPath = osPiperPath
+
+  // If running in Docker, copy the OS Piper binary into the container's /piper/ mount
+  const containerID = internalActionVariables.dockerContainerID
+  if (containerID !== '') {
+    info('Copying OS Piper binary into running container')
+    await exec('docker', ['cp', osPiperPath, `${containerID}:/piper/${basename(osPiperPath)}`])
+  }
 }
 
 export async function getPiperDownloadURL (piper: string, version: string): Promise<string> {
