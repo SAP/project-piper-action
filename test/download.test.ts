@@ -5,6 +5,7 @@ import { downloadTool } from '@actions/tool-cache'
 import { downloadAndSetOSPiper } from '../src/download'
 import { internalActionVariables } from '../src/piper'
 import type { ActionConfiguration } from '../src/config'
+import * as fs from 'fs'
 
 jest.mock('../src/fetch')
 jest.mock('@actions/core')
@@ -13,6 +14,11 @@ jest.mock('@actions/tool-cache')
 jest.mock('../src/github', () => ({
   ...jest.requireActual('../src/github'),
   getReleaseAssetUrl: jest.fn()
+}))
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  chmodSync: jest.fn(),
+  existsSync: jest.fn().mockReturnValue(false)
 }))
 
 const mockedGetReleaseAssetUrl = getReleaseAssetUrl as jest.MockedFunction<typeof getReleaseAssetUrl>
@@ -55,8 +61,6 @@ describe('getTag', () => {
 })
 
 describe('downloadAndSetOSPiper', () => {
-  const fs = require('fs')
-
   const baseActionCfg: ActionConfiguration = {
     stepName: 'golangBuild',
     flags: '',
@@ -88,8 +92,7 @@ describe('downloadAndSetOSPiper', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    fs.chmodSync = jest.fn()
-    fs.existsSync = jest.fn().mockReturnValue(false)
+    ;(fs.existsSync as jest.Mock).mockReturnValue(false)
     internalActionVariables.dockerContainerID = ''
     internalActionVariables.piperBinPath = ''
     mockedDownloadTool.mockImplementation(async (_url: string, dest?: string) => dest ?? './piper')
