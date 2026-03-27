@@ -16219,7 +16219,8 @@ exports.getOrchestratorEnvVars = getOrchestratorEnvVars;
 function getVaultEnvVars() {
     return [
         '--env', 'PIPER_vaultAppRoleID',
-        '--env', 'PIPER_vaultAppRoleSecretID'
+        '--env', 'PIPER_vaultAppRoleSecretID',
+        '--env', 'PIPER_vaultToken'
     ];
 }
 exports.getVaultEnvVars = getVaultEnvVars;
