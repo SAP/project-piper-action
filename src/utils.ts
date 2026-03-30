@@ -16,14 +16,7 @@ function tokenize (input: string): string[] {
     return []
   }
 
-  return matches.map(arg => {
-    // Preserve the double quotes around arguments
-    if (arg.startsWith('"') && arg.endsWith('"')) {
-      return arg
-    }
-
-    return arg
-  })
+  return matches.map(arg => arg)
 }
 
 // workingDir - The working directory from action configuration (e.g., 'backend')
