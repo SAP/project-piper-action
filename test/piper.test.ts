@@ -42,7 +42,8 @@ describe('Piper', () => {
     }
 
     fs.chmodSync = jest.fn()
-    jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve('./piper'))
+    jest.spyOn(download, 'downloadSapPiper').mockReturnValue(Promise.resolve('./sap-piper'))
+    jest.spyOn(download, 'downloadOSPiper').mockReturnValue(Promise.resolve('./piper'))
     jest.spyOn(execute, 'executePiper').mockImplementation()
     jest.spyOn(config, 'getDefaultConfig').mockImplementation()
     jest.spyOn(config, 'readContextConfig').mockImplementation()
@@ -94,8 +95,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      'sap-piper',
+    expect(download.downloadSapPiper).toHaveBeenCalledWith(
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -121,8 +121,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      'sap-piper',
+    expect(download.downloadSapPiper).toHaveBeenCalledWith(
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -145,8 +144,7 @@ describe('Piper', () => {
 
     await piper.run()
 
-    expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      'sap-piper',
+    expect(download.downloadSapPiper).toHaveBeenCalledWith(
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -162,7 +160,7 @@ describe('Piper', () => {
     inputs['github-token'] = 'testGithubToken'
     inputs['piper-owner'] = 'SAP'
     inputs['piper-repository'] = 'jenkins-library'
-    jest.spyOn(download, 'downloadPiperBinary').mockReturnValue(Promise.resolve(''))
+    jest.spyOn(download, 'downloadOSPiper').mockReturnValue(Promise.resolve(''))
 
     await piper.run()
     expect(core.setFailed).toHaveBeenCalledWith('Piper binary path is empty. Please check your action inputs.')
@@ -214,8 +212,7 @@ describe('Piper', () => {
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
-    // downloadPiperBinary call: SAP Piper
-    jest.spyOn(download, 'downloadPiperBinary')
+    jest.spyOn(download, 'downloadSapPiper')
       .mockResolvedValueOnce('./sap-piper')
 
     // Mock downloadAndSetOSPiper — its internals are tested in download.test.ts
@@ -251,7 +248,7 @@ describe('Piper', () => {
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
-    jest.spyOn(download, 'downloadPiperBinary')
+    jest.spyOn(download, 'downloadSapPiper')
       .mockResolvedValueOnce('./sap-piper')
 
     const downloadAndSetOSPiperSpy = jest.spyOn(download, 'downloadAndSetOSPiper').mockImplementation(async () => {
@@ -286,8 +283,7 @@ describe('Piper', () => {
       .mockResolvedValueOnce({ stdout: 'v1.0.0', stderr: '', exitCode: 0 })
       .mockResolvedValueOnce({ stdout: 'success', stderr: '', exitCode: 0 })
 
-    // downloadPiperBinary call: SAP Piper
-    jest.spyOn(download, 'downloadPiperBinary')
+    jest.spyOn(download, 'downloadSapPiper')
       .mockResolvedValueOnce('./sap-piper')
 
     // Mock downloadAndSetOSPiper — GHE fallback logic is tested in download.test.ts

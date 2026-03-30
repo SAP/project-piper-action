@@ -15,7 +15,7 @@ import {
   changeToWorkingDirectory, cleanupMonorepoSymlinks,
   restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
 } from './utils'
-import { downloadAndSetOSPiper, downloadPiperBinary } from './download'
+import { downloadAndSetOSPiper, downloadSapPiper, downloadOSPiper } from './download'
 import { debugDirectoryStructure } from './debug'
 
 // Global runtime variables that is accessible within a single action execution
@@ -134,12 +134,12 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   // Try SAP Piper first when enterprise config is available
   if (actionCfg.sapPiperOwner !== '' && actionCfg.sapPiperRepo !== '' && actionCfg.gitHubEnterpriseToken !== '') {
     info('Downloading SAP Piper binary')
-    return await downloadPiperBinary('sap-piper', actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+    return await downloadSapPiper(actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
 
   // No enterprise config, download OS Piper directly
   info('Downloading OS Piper binary')
-  return await downloadPiperBinary('piper', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  return await downloadOSPiper(actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
 async function chooseCorrectBinary (actionCfg: ActionConfiguration): Promise<void> {
