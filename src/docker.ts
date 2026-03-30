@@ -124,7 +124,8 @@ export function getOrchestratorEnvVars (): string[] {
 export function getVaultEnvVars (): string[] {
   return [
     '--env', 'PIPER_vaultAppRoleID',
-    '--env', 'PIPER_vaultAppRoleSecretID'
+    '--env', 'PIPER_vaultAppRoleSecretID',
+    '--env', 'PIPER_vaultToken'
   ]
 }
 
