@@ -82,7 +82,7 @@ describe('Piper', () => {
     internalActionVariables.sidecarContainerID = ''
   })
 
-  test('isEnterpriseStep', async () => {
+  test('enterprise step downloads sap-piper', async () => {
     inputs['step-name'] = 'sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
     inputs['github-enterprise-token'] = 'testToolsToken'
@@ -95,8 +95,7 @@ describe('Piper', () => {
     await piper.run()
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      inputs['step-name'],
-      '',
+      'sap-piper',
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -123,8 +122,7 @@ describe('Piper', () => {
     await piper.run()
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      inputs['step-name'],
-      '',
+      'sap-piper',
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],
@@ -134,7 +132,7 @@ describe('Piper', () => {
     expect(docker.cleanupContainers).toHaveBeenCalled()
   })
 
-  test('getConfig command to get enterprise step config', async () => {
+  test('getConfig command downloads sap-piper with enterprise config', async () => {
     inputs['step-name'] = 'getConfig'
     inputs.flags = '--stepName sapGenerateEnvironmentInfo'
     inputs['sap-piper-version'] = '1.2.3'
@@ -148,8 +146,7 @@ describe('Piper', () => {
     await piper.run()
 
     expect(download.downloadPiperBinary).toHaveBeenCalledWith(
-      inputs['step-name'],
-      inputs.flags,
+      'sap-piper',
       inputs['sap-piper-version'],
       'https://api.githubenterprise.test.com/',
       inputs['github-enterprise-token'],

@@ -1,7 +1,6 @@
 import * as fs from 'fs'
 import { debug, info } from '@actions/core'
 import { downloadTool } from '@actions/tool-cache'
-import { isEnterpriseStep } from './enterprise'
 import {
   getDownloadUrlByTag,
   getReleaseAssetUrl
@@ -14,16 +13,15 @@ import { basename } from 'path'
 import { internalActionVariables } from './piper'
 
 export async function downloadPiperBinary (
-  stepName: string, flags: string, version: string, apiURL: string, token: string, owner: string, repo: string
+  binaryName: 'piper' | 'sap-piper', version: string, apiURL: string, token: string, owner: string, repo: string
 ): Promise<string> {
-  const isEnterprise = isEnterpriseStep(stepName, flags)
-  if (isEnterprise && token === '') throw new Error('Token is not provided for enterprise step')
+  if (binaryName === 'sap-piper' && token === '') throw new Error('Token is not provided for enterprise step')
   if (owner === '') throw new Error('owner is not provided')
   if (repo === '') throw new Error('repository is not provided')
 
   let binaryURL: string
   const headers: any = {}
-  const piperBinaryName: 'piper' | 'sap-piper' = await getPiperBinaryNameFromInputs(isEnterprise, version)
+  const piperBinaryName = binaryName
   debug(`version: ${version}`)
   if (token !== '') {
     debug('Fetching binary from GitHub API')
@@ -62,7 +60,7 @@ async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<s
   if (actionCfg.gitHubEnterpriseApi !== '' && actionCfg.gitHubEnterpriseToken !== '') {
     try {
       info('Trying OS Piper download from GHE mirror')
-      return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.piperOwner, actionCfg.piperRepo)
+      return await downloadPiperBinary('piper', actionCfg.piperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.piperOwner, actionCfg.piperRepo)
     } catch (err) {
       info(`GHE mirror download failed: ${err instanceof Error ? err.message : String(err)}, falling back to github.com`)
     }
@@ -70,7 +68,7 @@ async function downloadOSPiperBinary (actionCfg: ActionConfiguration): Promise<s
 
   // Fall back to public GitHub.com
   info('Downloading OS Piper from github.com')
-  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  return await downloadPiperBinary('piper', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
 export async function downloadAndSetOSPiper (actionCfg: ActionConfiguration): Promise<void> {
@@ -97,10 +95,4 @@ export async function getPiperDownloadURL (piper: string, version: string): Prom
   } catch (err) {
     throw new Error(`Can't get the tag: ${(err as Error).message}`)
   }
-}
-
-async function getPiperBinaryNameFromInputs (isEnterpriseStep: boolean, version: string): Promise<'piper' | 'sap-piper'> {
-  if (version === 'master') info('using _master binaries is deprecated. Using latest release version instead.')
-
-  return isEnterpriseStep ? 'sap-piper' : 'piper'
 }

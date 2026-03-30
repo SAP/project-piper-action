@@ -10,7 +10,7 @@ import {
 } from './config'
 import { loadPipelineEnv, exportPipelineEnv } from './pipelineEnv'
 import { cleanupContainers, runContainers } from './docker'
-import { isEnterpriseStep, onGitHubEnterprise, existsInSapPiper } from './enterprise'
+import { onGitHubEnterprise, existsInSapPiper } from './enterprise'
 import {
   changeToWorkingDirectory, cleanupMonorepoSymlinks,
   restoreOriginalDirectory, setupMonorepoSymlinks, tokenize
@@ -134,21 +134,17 @@ async function preparePiperPath (actionCfg: ActionConfiguration): Promise<string
   // Try SAP Piper first when enterprise config is available
   if (actionCfg.sapPiperOwner !== '' && actionCfg.sapPiperRepo !== '' && actionCfg.gitHubEnterpriseToken !== '') {
     info('Downloading SAP Piper binary')
-    return await downloadPiperBinary(actionCfg.stepName, actionCfg.flags, actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
+    return await downloadPiperBinary('sap-piper', actionCfg.sapPiperVersion, actionCfg.gitHubEnterpriseApi, actionCfg.gitHubEnterpriseToken, actionCfg.sapPiperOwner, actionCfg.sapPiperRepo)
   }
 
   // No enterprise config, download OS Piper directly
   info('Downloading OS Piper binary')
-  return await downloadPiperBinary('', '', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
+  return await downloadPiperBinary('piper', actionCfg.piperVersion, actionCfg.gitHubApi, actionCfg.gitHubToken, actionCfg.piperOwner, actionCfg.piperRepo)
 }
 
 async function chooseCorrectBinary (actionCfg: ActionConfiguration): Promise<void> {
-  if (isEnterpriseStep(actionCfg.stepName, actionCfg.flags) ||
-    await existsInSapPiper(actionCfg.stepName)) {
-    return
-  }
-  // Check if the step exists in SAP Piper by running --help directly on host binary
-  // We bypass executePiper to avoid docker exec which leaks stderr to the runner
+  if (await existsInSapPiper(actionCfg.stepName)) return
+
   debug(`Step ${actionCfg.stepName} not found in SAP Piper, switching to OS Piper`)
   await downloadAndSetOSPiper(actionCfg)
 }
