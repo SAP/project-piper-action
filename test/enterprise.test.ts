@@ -4,24 +4,12 @@ import {
   STAGE_CONFIG,
   getEnterpriseConfigUrl,
   getPrereleaseConfig,
-  isEnterpriseStep,
   onGitHubEnterprise
 } from '../src/enterprise'
 import { GITHUB_COM_SERVER_URL } from '../src/github'
 import * as github from '../src/github'
 
 describe('test enterprise.ts', () => {
-  describe('isEnterpriseStep', () => {
-    it.each([
-      ['', false],
-      ['version', false],
-      ['mavenBuild', false],
-      ['sapInternalStep', true]
-    ])('expects result for %p to be %p', (stepName: string, state: boolean) => {
-      expect(isEnterpriseStep(stepName)).toBe(state)
-    })
-  })
-
   describe('onGitHubEnterprise', () => {
     const envClone = Object.assign({}, process.env)
 

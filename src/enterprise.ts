@@ -1,12 +1,13 @@
 import { GITHUB_COM_SERVER_URL, getReleaseAssetUrl } from './github'
 import { debug } from '@actions/core'
+import { internalActionVariables } from './piper'
+import { getExecOutput } from '@actions/exec'
 
 export const DEFAULT_CONFIG = 'DefaultConfig'
 export const STAGE_CONFIG = 'StageConfig'
 export const ENTERPRISE_DEFAULTS_FILENAME = 'piper-defaults.yml'
 export const ENTERPRISE_DEFAULTS_FILENAME_ON_RELEASE = 'piper-defaults-github.yml'
 export const ENTERPRISE_STAGE_CONFIG_FILENAME = 'piper-stage-config.yml'
-const ENTERPRISE_STEPNAME_PREFIX = 'sap'
 
 export interface PrereleaseConfig {
   owner: string
@@ -53,19 +54,17 @@ export function getPrereleaseConfig (
   }
 }
 
-export function isEnterpriseStep (stepName: string, flags: string = ''): boolean {
-  if (stepName === '') {
-    // in this case OS Piper could be needed for getDefaults, checkIfStepActive etc
+export async function existsInSapPiper (stepName: string): Promise<boolean> {
+  const helpResult = await getExecOutput(
+    internalActionVariables.piperBinPath,
+    [stepName, '--help'],
+    { silent: true, ignoreReturnCode: true, errStream: process.stdout }
+  )
+  if (helpResult.exitCode !== 0) {
+    debug(`Step ${stepName} not found in SAP Piper, switching to OS Piper`)
     return false
   }
-  if (stepName === 'getConfig') {
-    // in this case getConfig could be used to get enterprise step config
-    if (flags.includes(`--stepName ${ENTERPRISE_STEPNAME_PREFIX}`) ||
-        flags.includes(`--stepName=${ENTERPRISE_STEPNAME_PREFIX}`)) {
-      return true
-    }
-  }
-  return stepName.startsWith(ENTERPRISE_STEPNAME_PREFIX)
+  return true
 }
 
 export function onGitHubEnterprise (): boolean {
