@@ -42,7 +42,7 @@ export async function startContainer (actionCfg: ActionConfiguration, ctxConfig:
   if (dockerOptions !== undefined) {
     dockerOptionsArray = Array.isArray(dockerOptions)
       ? dockerOptions.map(option => option.split(' ')).flat()
-      : dockerOptionsArray = dockerOptions.split(' ')
+      : dockerOptions.split(' ')
   }
 
   const dockerRunArgs: string[] = [
@@ -184,12 +184,11 @@ export async function dockerExecReadOutput (dockerRunArgs: string[]): Promise<st
   dockerError = dockerError.trim()
 
   if (exitCode !== 0) {
-    const errorMessage = dockerError.length > 0
-      ? dockerError
-      : dockerOutput.length > 0
-        ? dockerOutput
-        : 'Unknown error'
-    throw new Error(`docker execute failed with exit code ${exitCode}: ${errorMessage}`)
+    const errMsg = `docker execute failed with exit code ${exitCode}`
+    if (dockerError.length > 0) throw new Error(`${errMsg}: ${dockerError}`)
+    if (dockerOutput.length > 0) throw new Error(`${errMsg}: ${dockerOutput}`)
+
+    throw new Error(`${errMsg}: Unknown error`)
   }
 
   return dockerOutput
