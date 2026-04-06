@@ -1,8 +1,9 @@
 # ⚠️ Deprecation Notice:
 
-This repository, `projec-piper-action`, is no longer maintained and will be archived. The project has moved to a new location within the SAP organization. Please use the updated GitHub Action reference:
+This repository, `projec-piper-action`, is no longer maintained and will be archived. The project has been moved to SAP’s internal GitHub instance and will become read-only on `github.com` instance. For future updates and maintenance, please refer to (works only in internal GitHub instance):
+
 `uses: piper/piper-action@main`
-For the latest updates and support, refer to the new repository.
+
 
 ## Piper GitHub Action
 
