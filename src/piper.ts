@@ -31,6 +31,7 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
+  core.warning("This action is deprecated and will no longer receive updates. Please use 'piper/piper-action@main' from the piper organization for future workflows.");
   try {
     startGroup('Setup')
     info('Getting action configuration')
