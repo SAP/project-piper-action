@@ -31,7 +31,7 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
-  warning("This action is deprecated and will no longer receive updates. Please use 'piper/piper-action@main' from the GHE piper organization for future workflows.")
+  warning("This action is deprecated and will no longer receive updates. Please replace all calls of `SAP/project-piper-action` to 'piper/piper-action@v1'. Note that it only works in SAP's internal GitHub instances and not in github.com. If you're running this action in github.com, use `SAP/project-piper-action@v1.27.0` to disable this warning message.")
   try {
     startGroup('Setup')
     info('Getting action configuration')
