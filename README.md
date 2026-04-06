@@ -4,7 +4,7 @@ This repository, `projec-piper-action`, is no longer maintained and will be arch
 `uses: piper/piper-action@main`
 For the latest updates and support, refer to the new repository.
 
-# Piper GitHub Action
+## Piper GitHub Action
 
 [![CI](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml)
 [![REUSE Compliance Check](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml)
