@@ -1,4 +1,10 @@
-# Piper GitHub Action
+# ⚠️ Deprecation Notice ⚠️
+
+This repository, `projec-piper-action`, is no longer maintained and will be archived. The project has been moved to SAP’s internal GitHub instance and will become read-only on `github.com` instance. For future updates and maintenance, please refer to (works only in internal GitHub instance):
+
+`uses: piper/piper-action@main`
+
+## Piper GitHub Action
 
 [![CI](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/ci.yaml)
 [![REUSE Compliance Check](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml/badge.svg)](https://github.com/SAP/project-piper-action/actions/workflows/reuse.yaml)
