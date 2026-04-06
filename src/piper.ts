@@ -1,4 +1,4 @@
-import { debug, setFailed, info, startGroup, endGroup, isDebug } from '@actions/core'
+import { debug, setFailed, info, warning, startGroup, endGroup, isDebug } from '@actions/core'
 import { chmodSync } from 'fs'
 import { executePiper } from './execute'
 import {
@@ -31,7 +31,7 @@ export const internalActionVariables = {
 }
 
 export async function run (): Promise<void> {
-  core.warning("This action is deprecated and will no longer receive updates. Please use 'piper/piper-action@main' from the piper organization for future workflows.");
+  warning("This action is deprecated and will no longer receive updates. Please use 'piper/piper-action@main' from the GHE piper organization for future workflows.")
   try {
     startGroup('Setup')
     info('Getting action configuration')
